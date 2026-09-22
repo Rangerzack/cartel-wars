@@ -2,7 +2,7 @@
 -- New accounts get immune_until = now() (0 hours), and anyone still protected loses it now.
 -- The immune_until column and the checks that read it stay, but they never trigger.
 
-create or replace function _cfg(key text) returns numeric language sql immutable as $$
+create or replace function _cfg(key text) returns numeric language sql immutable set search_path = public as $$
   select case key
     when 'regen_minutes'      then 10     -- every 10 min: +2 stamina, +2 health, -1 heat
     when 'heat_yellow'        then 40
