@@ -2,7 +2,10 @@
 # Spins up a throwaway local Postgres, applies a Supabase-compatible auth stub,
 # then all migrations. Usage: scripts/local-db.sh [start|reset|stop|psql]
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Work from the repo root with *relative* paths: on GitHub runners /home/runner isn't searchable by the
+# postgres user, so absolute paths into the checkout fail even though the checkout itself is readable.
+cd "$(dirname "$0")/.."
+ROOT=.
 PGBIN="${PGBIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)}"
 DATA="${PGDATA_DIR:-/tmp/cartel-pg}"
 PORT="${PGPORT:-54329}"
