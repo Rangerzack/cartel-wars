@@ -43,7 +43,7 @@ export default function Player() {
           <Ribbons list={p.ribbons} />
           <div className="grid3">
             <Stat k="Health" v={`${num(p.health)}/${num(p.health_max)}`} />
-            <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} />
+            <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} cls="sm" />
             <Stat k="Actions" v={num(p.actions)} />
           </div>
           {!isMe && (

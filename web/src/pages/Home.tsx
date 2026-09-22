@@ -33,7 +33,7 @@ export default function Home() {
   const links: { to: string; ic: string; t: string; s: string }[] = [
     { to: '/items', ic: '🎒', t: 'Inventory & Setups', s: `${me.inventory_slots} slots · att ${off.att} / def ${def.def}` },
     { to: '/economy', ic: '🏭', t: 'Grow Houses & Storage', s: `${me.grow_houses.length} houses · ${num(me.storage_used)}/${num(me.storage_cap)} stored${ready ? ` · ${ready} ready` : ''}` },
-    { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}` : 'Crews hold blocks and run turf wars' },
+    { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}${me.crew.applications ? ` · ${me.crew.applications} application${me.crew.applications > 1 ? 's' : ''} waiting` : ''}${me.crew.invites ? ` · ${me.crew.invites} cartel invite${me.crew.invites > 1 ? 's' : ''}` : ''}` : 'Crews hold blocks and run turf wars' },
     { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', t: me.cartel ? me.cartel.name : 'Cartels', s: me.cartel ? (me.cartel.is_don ? 'You are the Don' : 'Your cartel') : 'Alliances of crews' },
     { to: '/territory', ic: '🗺', t: 'Territory', s: 'Hoods & blocks across four islands' },
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
@@ -65,7 +65,7 @@ export default function Home() {
         <Stat k="Diamonds" v={`💎 ${num(me.diamonds)}`} cls="dia" />
         <Stat k="Attack" v={off.att} />
         <Stat k="Defense" v={def.def} />
-        <Stat k="Fights" v={`${me.fights_won}W · ${me.fights_lost}L`} />
+        <Stat k="Fights" v={`${me.fights_won}W · ${me.fights_lost}L`} cls="sm" />
       </div>
 
       <Card title="Storage" right={<small>{num(me.storage_used)} / {num(me.storage_cap)}</small>}>

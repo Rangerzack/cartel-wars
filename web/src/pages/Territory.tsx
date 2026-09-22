@@ -56,7 +56,7 @@ export default function Territory() {
           <div className="blocks">
             {h.blocks.map(b => (
               <div key={b.id} className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${sel?.block.id === b.id ? 'sel' : ''}`} onClick={() => { setSel({ hood: h, block: b }); setIntel(null) }}>
-                <div className="em">{b.owner ? b.owner.emblem : '·'}</div>
+                <div className="em">{b.owner ? b.owner.emblem : '\u00a0'}</div>
                 <div>{b.name.split('— ')[1] ?? b.name}</div>
                 <div className="muted" style={{ fontSize: 10 }}>{b.owner ? (b.garrison_size !== null ? `${num(b.garrison_size)} guards` : b.garrisoned ? 'guarded' : 'unguarded') : money(b.claim_price)}</div>
               </div>

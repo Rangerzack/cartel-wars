@@ -51,7 +51,7 @@ function CrewHub() {
       <Card>
         {!list && <Empty><span className="spin" /></Empty>}
         {list?.length === 0 && <Empty>No crews yet. Be the first.</Empty>}
-        {list?.map(c => (
+        {list?.filter(c => c.id !== me.crew?.id).map(c => (
           <div key={c.id} className="row link" onClick={() => nav(`/crew/${c.id}`)}>
             <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{c.emblem}</span>
             <div className="grow"><div className="t">{c.name} {c.cartel && <span className="muted small">· {c.cartel}</span>}</div><div className="s">{c.members} members · {c.blocks} blocks{c.description ? ` · ${c.description}` : ''}</div></div>
@@ -91,7 +91,7 @@ function CrewPage({ id }: { id: string }) {
             {c.bank !== null ? <Stat k="Crew bank" v={money(c.bank)} cls="gold" /> : <Stat k="Founded" v={ago(c.created_at)} />}
             <Stat k="Crew attack" v={num(c.power.att)} />
             <Stat k="Crew defense" v={num(c.power.def)} />
-            <Stat k="Crew fights" v={`${c.fights.filter(f => f.we_attacked === f.won).length}W · ${c.fights.filter(f => f.we_attacked !== f.won).length}L`} />
+            <Stat k="Crew fights" v={`${c.fights.filter(f => f.we_attacked === f.won).length}W · ${c.fights.filter(f => f.we_attacked !== f.won).length}L`} cls="sm" />
           </div>
           {!mine && me.crew && !sameCartel && (
             <div className="stack">
@@ -112,7 +112,7 @@ function CrewPage({ id }: { id: string }) {
               <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}>💬 Crew Chat</Btn>
               <Btn className="sm" onClick={() => nav('/territory')}>🗺 Territory</Btn>
               {c.is_capo && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
-              <Btn className="sm ghost red" onClick={() => { if (confirm(c.is_capo ? 'Leave? Leadership passes to your longest-standing member, or the crew disbands.' : 'Leave the crew?')) return act(api.crewLeave, () => 'You left the crew') }}>Leave</Btn>
+              <Btn className="sm ghost red" onClick={() => { if (confirm(c.is_capo ? 'Leave? Leadership passes to your longest-standing member, or the crew disbands.' : 'Leave the crew?')) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew') }) }}>Leave</Btn>
             </div>
           )}
           {edit && (

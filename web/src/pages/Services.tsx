@@ -71,7 +71,7 @@ export default function Services() {
         {(['stamina', 'health'] as const).map(kind => (
           <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
             <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(kind === 'stamina' ? me.stamina : me.health)}/{num(kind === 'stamina' ? me.stamina_max : me.health_max)}</span></div>
-            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` })}>💎 {cfg.refill_diamonds}</Btn>
+            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max; if (cur >= max) return; if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
             {catalog.commodities.map(c => {
               const units = kind === 'stamina' ? c.refill_stamina : c.refill_health
               return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}` })}>{commodityIcon[c.code]} {units}</Btn>

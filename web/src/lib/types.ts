@@ -35,7 +35,7 @@ export interface Me {
   actions_done: number; fights_won: number; fights_lost: number; market_volume: number; imports: number
   next_tick: string
   power: Record<SetupKind, Power>
-  crew: { id: string; name: string; emblem: string; capo_id: string; is_capo: boolean; cartel_id: string | null; members: number } | null
+  crew: { id: string; name: string; emblem: string; capo_id: string; is_capo: boolean; cartel_id: string | null; members: number; applications: number; invites: number } | null
   cartel: { id: string; name: string; don_id: string; is_don: boolean } | null
   storage: Record<Commodity, number>
   storage_used: number

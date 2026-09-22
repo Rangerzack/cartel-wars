@@ -91,13 +91,14 @@ begin
     select case when f.winner_id = f.attacker_id then f.attacker_id else f.defender_id end,
            case when f.winner_id = f.attacker_id then 'fight_win' else 'defense' end, 1, f.created_at from fights f;
   insert into accolade_events (player_id, kind, amount, created_at)
-    select ids[1 + (random() * 23)::int], (array['action','action','action','import','market','turf'])[1 + (random() * 5)::int],
-           case (random() * 2)::int when 0 then 1 when 1 then 50 else 20000 end, now() - (random() * 13 || ' days')::interval
-      from generate_series(1, 600);
+    select ids[1 + (random() * 23)::int], k.kind, case k.kind when 'action' then 1 when 'import' then 8 + (random() * 60)::int when 'market' then 500 + (random() * 40000)::int else 1 end,
+           now() - (random() * 13 || ' days')::interval
+      from generate_series(1, 600), lateral (select (array['action','action','action','import','market','turf'])[1 + (random() * 5)::int] as kind) k;
   for i in 1..10 loop
     insert into territory_log (block_id, attacker_id, crew_id, success, attack, resistance, created_at)
-    select x.bid, x.pid, x.cid, random() < 0.5, 200 + (random() * 3000)::int, 200 + (random() * 2500)::int, now() - (random() * 2 || ' days')::interval
-      from (select b.id bid, p.id pid, p.crew_id cid from blocks b, profiles p where p.crew_id is not null order by random() limit 1) x;
+    select x.bid, x.pid, x.cid, y.a > y.r, y.a, y.r, now() - (random() * 2 || ' days')::interval
+      from (select b.id bid, p.id pid, p.crew_id cid from blocks b, profiles p where p.crew_id is not null order by random() limit 1) x,
+           (select 200 + (random() * 3000)::int a, 200 + (random() * 2500)::int r) y;
   end loop;
 
   -- chat

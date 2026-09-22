@@ -39,7 +39,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const toast = useCallback((text: string, kind: Toast['kind'] = 'info') => {
     const id = ++toastId.current
-    setToasts(t => [...t, { id, kind, text }])
+    setToasts(t => [...t, { id, kind, text }].slice(-3))
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), kind === 'bad' ? 4500 : 3200)
   }, [])
 

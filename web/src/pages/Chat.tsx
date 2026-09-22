@@ -18,6 +18,9 @@ export default function Chat() {
     { v: 'dms', l: 'Conversations' },
   ]
   const isDm = channel.startsWith('dm:')
+  const valid = channel === 'global' || channel === 'dms' || /^(crew|cartel):[0-9a-f-]{36}$/.test(channel) || /^dm:[0-9a-f-]{36}:[0-9a-f-]{36}$/.test(channel)
+  useEffect(() => { if (!valid) nav('/chat', { replace: true }) }, [valid, nav])
+  if (!valid) return null
   return (
     <div className="page" style={{ gap: 8 }}>
       <div className="seg">
@@ -41,12 +44,13 @@ function Channel({ channel }: { channel: string }) {
     load()
     const otherId = channel.startsWith('dm:') ? channel.split(':').slice(1).find(x => x !== me.id) : undefined
     if (otherId) api.player(otherId).then(p => setOther(p.name)).catch(() => {})
-    // realtime: new rows on this channel
+    // realtime: new rows on this channel; poll fast until the subscription is confirmed, slowly after
+    let live = false
     const sub = supabase.channel('chat:' + channel)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel=eq.${channel}` },
         payload => setMsgs(m => (m && !m.some(x => x.id === (payload.new as Message).id) ? [...m, payload.new as Message] : m)))
-      .subscribe()
-    const poll = setInterval(load, 15_000) // belt and braces if realtime isn't enabled
+      .subscribe(status => { live = status === 'SUBSCRIBED' })
+    const poll = setInterval(() => { if (!live || document.visibilityState === 'visible') load() }, 4_000)
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [channel, load, me.id])
   useEffect(() => { logRef.current?.scrollTo({ top: 1e9 }) }, [msgs])

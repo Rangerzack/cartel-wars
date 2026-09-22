@@ -272,7 +272,9 @@ begin
     'power', jsonb_build_object('offense', to_jsonb(po), 'defense', to_jsonb(pd), 'jail', to_jsonb(pj)),
     'crew', (select jsonb_build_object('id', c.id, 'name', c.name, 'emblem', c.emblem, 'capo_id', c.capo_id,
                                        'is_capo', c.capo_id = u, 'cartel_id', c.cartel_id,
-                                       'members', (select count(*) from profiles where crew_id = c.id))
+                                       'members', (select count(*) from profiles where crew_id = c.id),
+                                       'applications', case when c.capo_id = u then (select count(*) from crew_applications where crew_id = c.id) else 0 end,
+                                       'invites', case when c.capo_id = u and c.cartel_id is null then (select count(*) from cartel_invites where crew_id = c.id) else 0 end)
              from crews c where c.id = pr.crew_id),
     'cartel', (select jsonb_build_object('id', ca.id, 'name', ca.name, 'don_id', ca.don_id, 'is_don', ca.don_id = u)
                from crews c join cartels ca on ca.id = c.cartel_id where c.id = pr.crew_id),

@@ -76,8 +76,9 @@ Launched from a rival crew's page by any member (5 Stamina). Your crew's total
 Attack (every member's active setup; hospitalized members sit out) against
 their total Defense, each rolled ±15%. The winner takes 5% of the loser's
 Crew Bank; everyone on the losing side loses 10–25 Health, the winners 3–8.
-One hit per attacker→defender pair per hour; no fights inside a cartel. The
-defending crew gets a line in its Crew Chat. *(ours — the original had crew
+One hit per attacker→defender pair per hour; no fights inside a cartel, none
+from jail. The initiator gains 3 Heat and rolls for a bust like any attack.
+The defending crew gets a line in its Crew Chat. *(ours — the original had crew
 fights "launched from crew profiles" but no surviving details.)*
 
 ## Heat, police and jail
@@ -128,8 +129,9 @@ The city has **four islands**, each with Hoods, each Hood with Blocks.
 
 - A **Block** is held by a Crew. Holding a majority of a Hood's blocks makes
   your Crew the **Hood owner**; the Hood pays daily income: 80% to the owning
-  Crew's bank, 20% to its Cartel's bank *(wiki)*. Hoods cost $16k–$50k to
-  claim when unowned and pay $320k–$1M/day *(wiki)*.
+  Crew's bank, 20% to its Cartel's bank *(wiki)*. Hoods cost $16k–$50k and pay
+  $320k–$1M/day *(wiki)*; here the price is split across the hood's four
+  blocks, paid when you take an unclaimed block ($4k–$12.5k each).
 - **Hoodlums** *(wiki)* are bought in Services and stationed on a block or
   used to attack one. Price rises with quantity held.
 

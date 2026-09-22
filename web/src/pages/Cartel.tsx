@@ -17,10 +17,23 @@ function CartelHub() {
   const nav = useNavigate()
   const [list, setList] = useState<CartelSummary[] | null>(null)
   const [name, setName] = useState('')
+  const [invites, setInvites] = useState<{ id: string; name: string }[]>([])
   useEffect(() => { api.listCartels().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
+  useEffect(() => { if (me.crew?.is_capo) api.crew(me.crew.id).then(c => setInvites(c.invites ?? [])).catch(() => {}) }, [me.crew, toast])
   useEffect(() => { if (me.cartel) nav(`/cartel/${me.cartel.id}`, { replace: true }) }, [me.cartel, nav])
   return (
     <div className="page">
+      {invites.length > 0 && (
+        <Card title="Invitations for your crew">
+          {invites.map(i => (
+            <div key={i.id} className="row">
+              <div className="grow t">🕴 {i.name}</div>
+              <Btn className="sm gold" onClick={async () => { const r = await run(() => api.cartelAccept(i.id, true), { ok: () => `Joined ${i.name}` }); if (r) nav(`/cartel/${i.id}`) }}>Accept</Btn>
+              <Btn className="sm ghost" onClick={async () => { await run(() => api.cartelAccept(i.id, false)); setInvites(v => v.filter(x => x.id !== i.id)) }}>Decline</Btn>
+            </div>
+          ))}
+        </Card>
+      )}
       {me.crew?.is_capo ? (
         <Card title="Found a Cartel">
           <div className="bd stack">

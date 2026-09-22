@@ -31,7 +31,7 @@ export const categoryLabel: Record<string, string> = {
 export const hoodlumIcon: Record<string, string> = { thug: '🧢', spy: '🕶️', mercenary: '🔫', enforcer: '🛡️' }
 
 export const accoladeMeta: Record<string, { label: string; icon: string; unit: (n: number) => string }> = {
-  fight_win: { label: 'Fights won', icon: '⚔️', unit: n => `${num(n)} wins` },
+  fight_win: { label: 'Fights won', icon: '⚔️', unit: n => `${num(n)} ${n === 1 ? 'win' : 'wins'}` },
   defense: { label: 'Defenses', icon: '🛡️', unit: n => `${num(n)} held` },
   action: { label: 'Actions', icon: '💼', unit: n => `${num(n)} actions` },
   import: { label: 'Imports', icon: '🚚', unit: n => `${num(n)} units` },

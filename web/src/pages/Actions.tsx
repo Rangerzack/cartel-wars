@@ -8,7 +8,7 @@ import type { ActionDef } from '../lib/types'
 export default function Actions() {
   const me = useMe()
   const { catalog, run } = useGame()
-  const [result, setResult] = useState<{ a: ActionDef; pay: number; busted: boolean } | null>(null)
+  const [result, setResult] = useState<{ a: ActionDef; pay: number; busted: boolean; heat: number; stamina: number } | null>(null)
   if (!catalog) return <Empty><span className="spin" /></Empty>
 
   const list = catalog.actions.filter(a => a.is_jail === me.jailed)
@@ -18,7 +18,7 @@ export default function Actions() {
 
   async function go(a: ActionDef) {
     const r = await run(() => api.doAction(a.id), { silent: true })
-    if (r) setResult({ a, pay: r.pay, busted: r.busted })
+    if (r) setResult({ a, pay: r.pay, busted: r.busted, heat: r.heat, stamina: r.stamina })
   }
 
   return (
@@ -58,6 +58,7 @@ export default function Actions() {
           ) : (
             <>
               <p className="gold" style={{ fontSize: 26, fontWeight: 800, margin: '4px 0' }}>+{money(result.pay)}</p>
+              <div className="small muted">⚡ −{result.a.stamina_cost} stamina ({result.stamina} left) · 🔥 +{result.a.heat_gain} heat (now {result.heat})</div>
               {result.busted && <p className="red">Your heat was in the red and a patrol caught you. You're in jail — regular weapons are confiscated, jail setup is active.</p>}
             </>
           )}
