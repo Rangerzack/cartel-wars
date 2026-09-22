@@ -34,11 +34,13 @@ export default function Layout() {
           <div className="title" onClick={() => nav('/profile')} style={{ cursor: 'pointer' }}>
             <span style={{ marginRight: 6 }}>{me.avatar}</span>{me.name}<small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small>
           </div>
-          <div className="money tabular">{money(me.cash)}<span className="dia">💎 {num(me.diamonds)}</span></div>
+          <div className="money tabular">
+            {money(me.cash)}<span className="dia">💎 {num(me.diamonds)}</span>
+            <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} />
+          </div>
           <div className="bars">
             <Bar cls="stamina" label="Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
             <Bar cls="health" label="Health" value={me.health} max={me.health_max} />
-            <Bar cls={`heat ${me.heat_level}`} label="Heat" value={me.heat} max={me.heat_max} />
           </div>
         </header>
       )}

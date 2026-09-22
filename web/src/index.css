@@ -37,13 +37,15 @@ input, select, textarea { font: inherit; }
 }
 .topbar .title { font-weight: 700; letter-spacing: .3px; font-size: 16px; }
 .topbar .title small { color: var(--muted); font-weight: 500; margin-left: 6px; }
-.topbar .money { text-align: right; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.topbar .money { display: flex; align-items: center; justify-content: flex-end; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
 .topbar .money .dia { color: var(--diamond); margin-left: 10px; }
-.bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .bar { font-size: 11px; color: var(--muted); }
 .bar .lbl { display: flex; justify-content: space-between; margin-bottom: 2px; font-variant-numeric: tabular-nums; }
 .bar .track { height: 6px; background: #0a0a0c; border-radius: 3px; overflow: hidden; border: 1px solid #000; }
 .bar .fill { height: 100%; border-radius: 3px; transition: width .4s; }
+.bar.mini { width: 78px; margin-left: 10px; font-weight: 500; }
+.bar.mini .lbl { margin-bottom: 1px; }
 .bar.stamina .fill { background: linear-gradient(#7dd3fc, #2f8fd8); }
 .bar.health .fill { background: linear-gradient(#86efac, #22a34a); }
 .bar.heat.green .fill { background: linear-gradient(#86efac, #2e9c4f); }
