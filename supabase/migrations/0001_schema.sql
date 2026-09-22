@@ -9,7 +9,7 @@ create extension if not exists pgcrypto;
 -- ---------------------------------------------------------------------------
 create type item_category as enum ('weapon', 'jail_weapon', 'protection', 'transport');
 create type setup_kind as enum ('offense', 'defense', 'jail');
-create type listing_status as enum ('open', 'sold', 'cancelled', 'expired');
+create type listing_status as enum ('open', 'sold', 'cancelled', 'expired', 'returned');  -- returned = product waiting for storage room
 
 -- ---------------------------------------------------------------------------
 -- Static content
@@ -84,7 +84,7 @@ create table cartels (
 create table crews (
   id          uuid primary key default gen_random_uuid(),
   name        text not null unique,
-  emblem      text not null default '🏴',
+  emblem      text not null default '🏴' check (char_length(emblem) between 1 and 8),
   description text not null default '',
   capo_id     uuid,                            -- fk added below
   cartel_id   uuid references cartels(id) on delete set null,
@@ -172,7 +172,7 @@ create table listings (
   id          uuid primary key default gen_random_uuid(),
   seller_id   uuid not null references profiles(id) on delete cascade,
   commodity   text not null references commodities(code),
-  qty         integer not null check (qty > 0),
+  qty         integer not null check (qty >= 0),
   unit_price  integer not null check (unit_price > 0),
   status      listing_status not null default 'open',
   created_at  timestamptz not null default now(),
@@ -312,7 +312,7 @@ create index accolade_events_week_idx on accolade_events(kind, created_at, playe
 -- ---------------------------------------------------------------------------
 create table messages (
   id          bigserial primary key,
-  channel     text not null,      -- 'global' | 'crew:<uuid>' | 'cartel:<uuid>' | 'dm:<uuid>:<uuid>' (sorted)
+  channel     text not null check (channel ~ '^(global|crew:[0-9a-f-]{36}|cartel:[0-9a-f-]{36}|dm:[0-9a-f-]{36}:[0-9a-f-]{36})$'),  -- dm uuids sorted
   sender_id   uuid not null references profiles(id) on delete cascade,
   sender_name text not null,
   body        text not null check (char_length(body) between 1 and 500),

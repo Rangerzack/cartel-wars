@@ -53,7 +53,7 @@ export default function Player() {
               {p.crew && <Btn className="sm ghost" onClick={() => nav(`/crew/${p.crew!.id}`)}>{p.crew.emblem} Crew</Btn>}
             </div>
           )}
-          {!isMe && (p.immune ? <div className="small muted">New players can't be attacked yet.</div> : p.hospital ? <div className="small muted">They're in the hospital — let them heal up.</div> : null)}
+          {!isMe && (p.immune ? <div className="small muted">New players can't be attacked yet.</div> : p.hospital ? <div className="small muted">They're in the hospital — let them heal up.</div> : me.immune ? <div className="small muted">Attacking ends your own new-player immunity.</div> : null)}
         </div>
       </Card>
 
@@ -79,7 +79,7 @@ export default function Player() {
               <Stat k="Damage dealt" v={result.damage_dealt} cls="green" />
               <Stat k="Damage taken" v={result.damage_taken} cls="red" />
             </div>
-            <p style={{ margin: 0 }} className={result.won ? 'gold' : 'red'}>{result.won ? `You took ${money(result.cash)} off ${p.name}.` : `${p.name} took ${money(result.cash)} off you.`}</p>
+            <p style={{ margin: 0 }} className={result.won ? 'gold' : 'red'}>{result.dry ? `${p.name} has been shaken down enough this hour — no cash changed hands.` : result.won ? `You took ${money(result.cash)} off ${p.name}.` : `${p.name} took ${money(result.cash)} off you.`}</p>
             <div className="small muted">Your attack {result.my_att} vs their defense {result.their_def}. Their health is now {result.their_health}; yours {result.my_health}.</div>
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
             {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}

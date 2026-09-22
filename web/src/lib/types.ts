@@ -20,7 +20,7 @@ export interface GrowHouse {
 export interface HustlerTrip {
   id: string; commodity: Commodity; count: number; units: number; cash_due: number; returns_at: string; back: boolean
 }
-export interface MyListing { id: string; commodity: Commodity; qty: number; unit_price: number; expires_at: string }
+export interface MyListing { id: string; commodity: Commodity; qty: number; unit_price: number; expires_at: string; held: boolean }
 
 export interface Me {
   id: string; name: string; created_at: string
@@ -85,7 +85,7 @@ export interface PublicPlayer {
 }
 export interface FightResult {
   won: boolean; damage_dealt: number; damage_taken: number; cash: number; their_health: number; my_health: number
-  hospitalized_them: boolean; hospitalized_me: boolean; busted: boolean; my_att: number; their_def: number
+  hospitalized_them: boolean; hospitalized_me: boolean; busted: boolean; my_att: number; their_def: number; dry: boolean
 }
 export interface FightLog {
   id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
@@ -124,7 +124,7 @@ export interface CartelDetail {
 
 export interface CrewRef { id: string; name: string; emblem: string }
 export interface Block {
-  id: number; name: string; owner: CrewRef | null; mine: boolean; garrison_size: number
+  id: number; name: string; owner: CrewRef | null; mine: boolean; garrisoned: boolean; garrison_size: number | null
   garrison: Record<string, number> | null; claim_price: number
 }
 export interface Hood {

@@ -34,7 +34,7 @@ export const api = {
   bribePolice: (points: number) => rpc<{ cost: number; heat: number }>('bribe_police', { points }),
   bailOut: () => rpc<{ cost: number }>('bail_out'),
   refill: (kind: 'stamina' | 'health', method: string) => rpc<{ gain: number }>('refill', { kind, method }),
-  upgradeStat: (kind: 'stamina' | 'health' | 'heat' | 'slots') => rpc<{ cost: number }>('upgrade_stat', { kind }),
+  upgradeStat: (kind: 'stamina' | 'health' | 'slots') => rpc<{ cost: number }>('upgrade_stat', { kind }),
   bankDeposit: (amount: number) => rpc<{ bank: number }>('bank_deposit', { amount }),
   bankWithdraw: (amount: number) => rpc<{ bank: number }>('bank_withdraw', { amount }),
   sendCash: (target: string, amount: number) => rpc<{ sent: number }>('send_cash', { target, amount }),
@@ -58,7 +58,7 @@ export const api = {
   // market
   market: (commodity?: string) => rpc<Market>('get_market', { commodity: commodity ?? null }),
   listProduct: (commodity: string, n: number, unit_price: number) => rpc<{ id: string }>('list_product', { commodity, n, unit_price }),
-  cancelListing: (listing: string) => rpc<{ returned: number }>('cancel_listing', { listing }),
+  cancelListing: (listing: string) => rpc<{ returned: number; held: number }>('cancel_listing', { listing }),
   buyListing: (listing: string, n: number) => rpc<{ cost: number; units: number }>('buy_listing', { listing, n }),
 
   // crews

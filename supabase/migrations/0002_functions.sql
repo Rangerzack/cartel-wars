@@ -1,7 +1,7 @@
 -- Cartel Wars — game logic (RPCs)
 -- Every function runs as SECURITY DEFINER and validates auth.uid() itself.
 
-set check_function_bodies = off;
+set check_function_bodies = on;
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -15,6 +15,10 @@ end $$;
 
 create or replace function _fail(msg text) returns void language plpgsql as $$
 begin raise exception '%', msg using errcode = 'P0001'; end $$;
+
+-- Reject NULL arguments up front so `null <= 0` style guards can't be skipped.
+create or replace function _nn(v anyelement, what text) returns void language plpgsql immutable as $$
+begin if v is null then raise exception 'Missing %', what using errcode = 'P0001'; end if; end $$;
 
 create or replace function _rand_between(lo integer, hi integer) returns integer
 language sql volatile as $$ select lo + floor(random() * (hi - lo + 1))::integer $$;
@@ -57,14 +61,31 @@ begin
    where c.code = sp.commodity and sp.updated_at < now() - interval '10 minutes';
 end $$;
 
+-- Put product back in a player's storage, respecting the cap. Overflow stays on the listing row
+-- (status 'returned') so the player can reclaim it once they have room.
+create or replace function _return_product(p uuid, com text, n integer, listing uuid, final listing_status) returns integer
+language plpgsql as $$
+declare cap int; used int; fit int;
+begin
+  select storage_cap into cap from profiles where id = p for update;
+  select coalesce(sum(qty), 0) into used from storage where player_id = p;
+  fit := greatest(0, least(n, cap - used));
+  if fit > 0 then
+    insert into storage as st (player_id, commodity, qty) values (p, com, fit)
+      on conflict (player_id, commodity) do update set qty = st.qty + excluded.qty;
+  end if;
+  if fit = n then update listings set status = final, qty = 0 where id = listing;
+  else update listings set status = 'returned', qty = n - fit where id = listing; end if;
+  return fit;
+end $$;
+
 -- World tick: expire listings, pay hoods. Cheap; called from get_me.
 create or replace function _tick_world() returns void language plpgsql as $$
 declare l record; h record; periods int; income bigint; cartel uuid;
 begin
+  -- expired listings go back to storage; whatever doesn't fit waits in a 'returned' holding listing
   for l in select * from listings where status = 'open' and expires_at <= now() for update skip locked loop
-    update listings set status = 'expired' where id = l.id;
-    insert into storage (player_id, commodity, qty) values (l.seller_id, l.commodity, l.qty)
-      on conflict (player_id, commodity) do update set qty = storage.qty + excluded.qty;
+    perform _return_product(l.seller_id, l.commodity, l.qty, l.id, 'expired');
   end loop;
 
   for h in select * from hoods where last_payout_at + interval '24 hours' <= now() for update skip locked loop
@@ -97,21 +118,19 @@ begin
     pr.last_tick := pr.last_tick + ticks * step;
   end if;
   if pr.jail_until is not null and pr.jail_until <= now() then pr.jail_until := null; end if;
-  if pr.refills_reset_at <= now() - interval '24 hours' then
-    pr.refills_used := 0; pr.refills_reset_at := now();
+  if pr.refills_used > 0 and pr.refills_reset_at <= now() - interval '24 hours' then
+    pr.refills_used := 0;
   end if;
-  pr.last_seen := now();
   update profiles set stamina = pr.stamina, health = pr.health, heat = pr.heat, last_tick = pr.last_tick,
-         jail_until = pr.jail_until, refills_used = pr.refills_used, refills_reset_at = pr.refills_reset_at,
-         last_seen = pr.last_seen
+         jail_until = pr.jail_until, refills_used = pr.refills_used
    where id = p;
   return pr;
 end $$;
 
-create or replace function _jailed(pr profiles) returns boolean language sql immutable as $$
+create or replace function _jailed(pr profiles) returns boolean language sql stable as $$
   select pr.jail_until is not null and pr.jail_until > now() $$;
 
-create or replace function _hospital(pr profiles) returns boolean language sql immutable as $$
+create or replace function _hospital(pr profiles) returns boolean language sql stable as $$
   select pr.health <= 19 $$;
 
 -- Attack / defense from a setup. Barehands baseline 20/20. Best single transport counts.
@@ -136,6 +155,7 @@ end $$;
 
 create or replace function _bust_roll(pr profiles) returns profiles language plpgsql as $$
 begin
+  if _jailed(pr) then return pr; end if;
   if pr.heat >= _cfg('heat_red') and random() < (pr.heat - _cfg('heat_red') + 1) / 40.0 then
     pr.jail_until := now() + make_interval(mins => _cfg('jail_minutes')::int);
     pr.heat := _cfg('heat_yellow')::int;
@@ -171,7 +191,7 @@ create or replace function _ribbons(p uuid) returns jsonb language sql stable as
   from (
     select kind, rank() over (partition by kind order by total desc) as rank, player_id
       from (select kind, player_id, sum(amount) as total from accolade_events
-             where created_at >= date_trunc('week', now()) - interval '7 days' and created_at < date_trunc('week', now())
+             where created_at >= date_trunc('week', now() at time zone 'utc') at time zone 'utc' - interval '7 days' and created_at < date_trunc('week', now() at time zone 'utc') at time zone 'utc'
              group by kind, player_id) t
   ) r where r.player_id = p and r.rank <= 3 $$;
 
@@ -230,6 +250,7 @@ begin
   perform _refresh_prices();
   perform _tick_world();
   pr := _tick(u);
+  update profiles set last_seen = now() where id = u;
   select * into po from _power(u, 'offense');
   select * into pd from _power(u, 'defense');
   select * into pj from _power(u, 'jail');
@@ -282,8 +303,8 @@ begin
     'transport_capacity', (select coalesce(max(d.capacity), 0) from inventory i join item_defs d on d.id = i.item_id
                            where i.player_id = u and i.qty > 0 and d.category = 'transport'),
     'listings', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'commodity', commodity, 'qty', qty,
-                      'unit_price', unit_price, 'expires_at', expires_at) order by created_at desc), '[]'::jsonb)
-                 from listings where seller_id = u and status = 'open'),
+                      'unit_price', unit_price, 'expires_at', expires_at, 'held', status = 'returned') order by created_at desc), '[]'::jsonb)
+                 from listings where seller_id = u and status in ('open', 'returned')),
     'ribbons', _ribbons(u),
     'server_time', now()
   );
@@ -314,6 +335,7 @@ create or replace function do_action(action_id integer) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; a action_defs; pay int; busted boolean := false; crew_n int; was_jailed boolean;
 begin
+  perform _nn(action_id, 'action');
   pr := _tick(u);
   was_jailed := _jailed(pr);
   select * into a from action_defs where id = action_id;
@@ -360,8 +382,9 @@ create or replace function attack(target uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); me profiles; them profiles; pa record; pd record;
         base int; sit int; bonus int; dmg_a int; dmg_d int; taken bigint := 0; win boolean; pct numeric;
-        sa setup_kind; sd setup_kind; f fights;
+        sa setup_kind; sd setup_kind; f fights; recent int;
 begin
+  perform _nn(target, 'target');
   if target = u then perform _fail('You cannot attack yourself'); end if;
   if not exists (select 1 from profiles where id = target) then perform _fail('No such player'); end if;
   -- lock in id order to avoid deadlocks
@@ -371,6 +394,9 @@ begin
   if _hospital(them) then perform _fail('That player is in the hospital'); end if;
   if me.stamina < 2 then perform _fail('You need at least 2 stamina to fight'); end if;
   if them.immune_until > now() then perform _fail('That player has new-player immunity'); end if;
+  if me.immune_until > now() then me.immune_until := now(); end if;   -- attacking forfeits your own immunity
+  -- the same wallet can only be shaken down so often: after 3 hits on a target in an hour the cash dries up
+  select count(*) into recent from fights where attacker_id = u and defender_id = target and created_at > now() - interval '1 hour';
 
   sa := case when _jailed(me) then 'jail' else 'offense' end;
   sd := case when _jailed(them) then 'jail' else 'defense' end;
@@ -387,7 +413,7 @@ begin
   dmg_d := greatest(0, round(0.35 * (60.0 * pd.att / (pd.att + pa.def) + _rand_between(0, 10))));
 
   win := dmg_a > dmg_d;
-  pct := _rand_between(5, 10) / 100.0;
+  pct := case when recent >= 3 then 0 else _rand_between(5, 10) / 100.0 end;
   if win then
     taken := floor(them.cash * pct);
     me.cash := me.cash + taken; them.cash := them.cash - taken;
@@ -403,14 +429,14 @@ begin
   me := _bust_roll(me);
 
   update profiles set cash = me.cash, health = me.health, heat = me.heat, jail_until = me.jail_until,
-         fights_won = me.fights_won, fights_lost = me.fights_lost where id = u;
+         fights_won = me.fights_won, fights_lost = me.fights_lost, immune_until = me.immune_until where id = u;
   update profiles set cash = them.cash, health = them.health, fights_won = them.fights_won, fights_lost = them.fights_lost where id = target;
 
   insert into fights (attacker_id, defender_id, attacker_dmg, defender_dmg, cash_taken, winner_id)
   values (u, target, dmg_a, dmg_d, taken, case when win then u else target end) returning * into f;
   if win then perform _event(u, 'fight_win'); else perform _event(target, 'defense'); end if;
   perform _award_milestones(u);
-  return jsonb_build_object('won', win, 'damage_dealt', dmg_a, 'damage_taken', dmg_d, 'cash', taken,
+  return jsonb_build_object('won', win, 'damage_dealt', dmg_a, 'damage_taken', dmg_d, 'cash', taken, 'dry', recent >= 3,
                             'their_health', them.health, 'my_health', me.health,
                             'hospitalized_them', them.health <= 19, 'hospitalized_me', me.health <= 19,
                             'busted', _jailed(me) and sa <> 'jail', 'my_att', pa.att, 'their_def', pd.def);
@@ -482,6 +508,7 @@ create or replace function bribe_police(points integer) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; n int; cost int;
 begin
+  perform _nn(points, 'amount');
   pr := _tick(u);
   n := least(points, pr.heat);
   if n <= 0 then perform _fail('No heat to bribe away'); end if;
@@ -509,6 +536,7 @@ create or replace function refill(kind text, method text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; c commodities; units int; missing int; gain int; have int;
 begin
+  perform _nn(kind, 'refill kind'); perform _nn(method, 'refill method');
   pr := _tick(u);
   if kind not in ('stamina','health') then perform _fail('Bad refill'); end if;
   missing := case when kind = 'stamina' then pr.stamina_max - pr.stamina else pr.health_max - pr.health end;
@@ -525,20 +553,22 @@ begin
     if coalesce(have, 0) < units then perform _fail(format('Needs %s %s', units, c.name)); end if;
     update storage set qty = qty - units where player_id = u and commodity = method;
     gain := case when pr.refills_used >= 3 then ceil(missing / 2.0) else missing end;
-    update profiles set refills_used = refills_used + 1 where id = u;
+    update profiles set refills_used = refills_used + 1,
+           refills_reset_at = case when pr.refills_used = 0 then now() else refills_reset_at end where id = u;
   end if;
   if kind = 'stamina' then update profiles set stamina = stamina + gain where id = u;
   else update profiles set health = health + gain where id = u; end if;
   return jsonb_build_object('gain', gain);
 end $$;
 
--- kind: stamina (+5 / 10💎, max 150) | health (+25 / 10💎, max 500) | heat (+1 / 30💎) | slots (+1 / 15💎)
+-- kind: stamina (+5 / 10💎, max 150) | health (+25 / 10💎, max 500) | slots (+1 / 15💎)
 create or replace function upgrade_stat(kind text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; cost int;
 begin
+  perform _nn(kind, 'upgrade');
   pr := _tick(u);
-  cost := case kind when 'stamina' then 10 when 'health' then 10 when 'heat' then 30 when 'slots' then 15 else null end;
+  cost := case kind when 'stamina' then 10 when 'health' then 10 when 'slots' then 15 else null end;
   if cost is null then perform _fail('Bad upgrade'); end if;
   if pr.diamonds < cost then perform _fail(format('Costs %s diamonds', cost)); end if;
   if kind = 'stamina' then
@@ -547,8 +577,6 @@ begin
   elsif kind = 'health' then
     if pr.health_max >= 500 then perform _fail('Health is maxed'); end if;
     update profiles set health_max = least(500, health_max + 25), health = health + 25 where id = u;
-  elsif kind = 'heat' then
-    update profiles set heat_max = heat_max + 1 where id = u;
   else
     update profiles set inventory_slots = inventory_slots + 1 where id = u;
   end if;
@@ -560,6 +588,7 @@ create or replace function bank_deposit(amount bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles;
 begin
+  perform _nn(amount, 'amount');
   pr := _tick(u);
   if amount <= 0 or amount > pr.cash then perform _fail('Invalid amount'); end if;
   update profiles set cash = cash - amount, bank = bank + amount where id = u;
@@ -570,6 +599,7 @@ create or replace function bank_withdraw(amount bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles;
 begin
+  perform _nn(amount, 'amount');
   pr := _tick(u);
   if amount <= 0 or amount > pr.bank then perform _fail('Invalid amount'); end if;
   update profiles set cash = cash + amount, bank = bank - amount where id = u;
@@ -580,6 +610,7 @@ create or replace function send_cash(target uuid, amount bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles;
 begin
+  perform _nn(amount, 'amount');
   pr := _tick(u);
   if target = u then perform _fail('Cannot send to yourself'); end if;
   if amount <= 0 or amount > pr.cash then perform _fail('Invalid amount'); end if;
@@ -593,6 +624,7 @@ create or replace function send_diamonds(target uuid, n integer) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles;
 begin
+  perform _nn(n, 'amount');
   pr := _tick(u);
   if target = u then perform _fail('Cannot send to yourself'); end if;
   if n <= 0 or n > pr.diamonds then perform _fail('Invalid amount'); end if;
@@ -609,6 +641,7 @@ create or replace function buy_item(item integer, n integer default 1) returns j
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; d item_defs; cost bigint;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   select * into d from item_defs where id = item;
   if d.id is null or n <= 0 then perform _fail('Bad item'); end if;
@@ -625,6 +658,7 @@ create or replace function sell_item(item integer, n integer default 1) returns 
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); have int; used int; d item_defs; refund bigint;
 begin
+  perform _nn(n, 'quantity');
   perform _tick(u);
   select * into d from item_defs where id = item;
   select qty into have from inventory where player_id = u and item_id = item;
@@ -640,6 +674,7 @@ create or replace function equip(s setup_kind, item integer, n integer) returns 
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; d item_defs; have int; slots_used int; cur int;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   select * into d from item_defs where id = item;
   if d.id is null then perform _fail('Bad item'); end if;
@@ -679,12 +714,19 @@ end $$;
 
 -- Freezes produced units into `banked`, so start/stop/upgrade don't lose progress.
 create or replace function _grow_settle(g grow_houses) returns grow_houses language plpgsql as $$
-declare c commodities;
+declare c commodities; rate numeric; units int; cap int;
 begin
   select * into c from commodities where code = g.commodity;
   if g.running then
-    g.banked := least(c.grow_cap * g.level, g.banked + floor(extract(epoch from now() - g.started_at) / 3600 * c.grow_rate * g.level)::int);
-    g.started_at := now();
+    rate := c.grow_rate * g.level;                       -- units per hour
+    cap := c.grow_cap * g.level;
+    units := floor(extract(epoch from now() - g.started_at) / 3600 * rate)::int;
+    if g.banked + units >= cap then
+      g.banked := cap; g.started_at := now();            -- capped: progress beyond the cap is lost anyway
+    else
+      g.banked := g.banked + units;
+      g.started_at := g.started_at + make_interval(secs => units / rate * 3600);   -- keep the fractional unit
+    end if;
   end if;
   return g;
 end $$;
@@ -763,6 +805,7 @@ create or replace function hire_hustlers(commodity text, n integer) returns json
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; c commodities; have int; units int; cost int; price int; due bigint;
 begin
+  perform _nn(n, 'count');
   pr := _tick(u);
   perform _refresh_prices();
   select * into c from commodities where code = hire_hustlers.commodity;
@@ -812,6 +855,7 @@ create or replace function list_product(commodity text, n integer, unit_price in
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; have int; street int; cap int; l listings;
 begin
+  perform _nn(n, 'quantity'); perform _nn(unit_price, 'price');
   pr := _tick(u);
   perform _refresh_prices();
   if n < _cfg('listing_min') or n > _cfg('listing_max') then
@@ -831,20 +875,20 @@ end $$;
 
 create or replace function cancel_listing(listing uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare u uuid := _uid(); l listings;
+declare u uuid := _uid(); l listings; fit int;
 begin
   perform _tick(u);
-  select * into l from listings where id = listing and seller_id = u and status = 'open' for update;
+  select * into l from listings where id = listing and seller_id = u and status in ('open', 'returned') for update;
   if l.id is null then perform _fail('No such listing'); end if;
-  update listings set status = 'cancelled' where id = l.id;
-  update storage set qty = qty + l.qty where player_id = u and commodity = l.commodity;
-  return jsonb_build_object('returned', l.qty);
+  fit := _return_product(u, l.commodity, l.qty, l.id, 'cancelled');
+  return jsonb_build_object('returned', fit, 'held', l.qty - fit);
 end $$;
 
 create or replace function buy_listing(listing uuid, n integer) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; l listings; used int; cost bigint;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   select * into l from listings where id = listing and status = 'open' and expires_at > now() for update;
   if l.id is null then perform _fail('That listing is gone'); end if;
@@ -873,7 +917,9 @@ begin
   pr := _tick(u);
   if pr.crew_id is not null then perform _fail('Leave your crew first'); end if;
   if char_length(trim(nm)) not between 3 and 24 then perform _fail('Crew name must be 3–24 characters'); end if;
-  insert into crews (name, emblem, description, capo_id) values (trim(nm), coalesce(nullif(emblem,''), '🏴'), left(description, 500), u) returning * into c;
+  if exists (select 1 from crews where lower(name) = lower(trim(nm))) then perform _fail('That crew name is taken'); end if;
+  insert into crews (name, emblem, description, capo_id)
+  values (trim(nm), left(coalesce(nullif(emblem, ''), '🏴'), 8), left(coalesce(description, ''), 500), u) returning * into c;
   update profiles set crew_id = c.id where id = u;
   return jsonb_build_object('id', c.id);
 end $$;
@@ -882,7 +928,9 @@ create or replace function crew_update(emblem text, description text) returns js
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid();
 begin
-  update crews set emblem = coalesce(nullif(emblem,''), crews.emblem), description = left(description, 500) where capo_id = u;
+  update crews c set emblem = left(coalesce(nullif(crew_update.emblem, ''), c.emblem), 8),
+                     description = left(coalesce(crew_update.description, ''), 500)
+   where c.capo_id = u;
   if not found then perform _fail('Only the Capo can do that'); end if;
   return jsonb_build_object('ok', true);
 end $$;
@@ -894,6 +942,18 @@ language sql security definer set search_path = public stable as $$
            'blocks', (select count(*) from blocks where owner_crew_id = c.id),
            'cartel', (select name from cartels where id = c.cartel_id)) order by c.created_at), '[]'::jsonb)
   from crews c where q = '' or c.name ilike '%' || q || '%' $$;
+
+-- Crew power: sum of every member's setup (jail setup while jailed). Hospitalized members sit out.
+create or replace function _crew_power(cid uuid, offense boolean) returns integer language plpgsql stable as $$
+declare total int := 0; m profiles; pw record;
+begin
+  for m in select * from profiles where crew_id = cid loop
+    if _hospital(m) then continue; end if;
+    select * into pw from _power(m.id, case when _jailed(m) then 'jail'::setup_kind when offense then 'offense' else 'defense' end);
+    total := total + case when offense then pw.att else pw.def end;
+  end loop;
+  return total;
+end $$;
 
 create or replace function get_crew(cid uuid) returns jsonb
 language plpgsql security definer set search_path = public stable as $$
@@ -949,7 +1009,7 @@ create or replace function crew_decide(pid uuid, accept boolean) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); c crews; n int;
 begin
-  select * into c from crews where capo_id = u;
+  select * into c from crews where capo_id = u for update;
   if c.id is null then perform _fail('Only the Capo can do that'); end if;
   if not exists (select 1 from crew_applications where crew_id = c.id and player_id = pid) then perform _fail('No such application'); end if;
   delete from crew_applications where crew_id = c.id and player_id = pid;
@@ -1008,6 +1068,7 @@ create or replace function crew_bank(amount bigint) returns jsonb  -- positive d
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; c crews;
 begin
+  perform _nn(amount, 'amount');
   pr := _tick(u);
   select * into c from crews where id = pr.crew_id for update;
   if c.id is null then perform _fail('You are not in a crew'); end if;
@@ -1016,24 +1077,12 @@ begin
     update profiles set cash = cash - amount where id = u;
     update crews set bank = bank + amount where id = c.id;
   elsif amount < 0 then
-    if c.capo_id <> u then perform _fail('Only the Capo can withdraw'); end if;
+    if c.capo_id is distinct from u then perform _fail('Only the Capo can withdraw'); end if;
     if -amount > c.bank then perform _fail('Not enough in the crew bank'); end if;
     update profiles set cash = cash - amount where id = u;
     update crews set bank = bank + amount where id = c.id;
   end if;
   return jsonb_build_object('bank', c.bank + amount);
-end $$;
-
--- Crew power: sum of every member's setup (jail setup while jailed). Hospitalized members sit out.
-create or replace function _crew_power(cid uuid, offense boolean) returns integer language plpgsql stable as $$
-declare total int := 0; m profiles; pw record;
-begin
-  for m in select * from profiles where crew_id = cid loop
-    if _hospital(m) then continue; end if;
-    select * into pw from _power(m.id, case when _jailed(m) then 'jail'::setup_kind when offense then 'offense' else 'defense' end);
-    total := total + case when offense then pw.att else pw.def end;
-  end loop;
-  return total;
 end $$;
 
 create or replace function crew_fight(target uuid) returns jsonb
@@ -1046,9 +1095,14 @@ begin
   if pr.crew_id is null then perform _fail('You are not in a crew'); end if;
   if _hospital(pr) then perform _fail('You are in the hospital'); end if;
   if pr.stamina < _cfg('crew_fight_stamina') then perform _fail(format('Crew fights cost %s stamina', _cfg('crew_fight_stamina'))); end if;
-  select * into mine from crews where id = pr.crew_id for update;
-  select * into theirs from crews where id = target for update;
-  if theirs.id is null then perform _fail('No such crew'); end if;
+  if _jailed(pr) then perform _fail('You cannot run a crew fight from jail'); end if;
+  if not exists (select 1 from crews where id = target) then perform _fail('No such crew'); end if;
+  -- lock both crews in id order to avoid deadlocks between opposing attacks
+  if pr.crew_id < target then
+    select * into mine from crews where id = pr.crew_id for update; select * into theirs from crews where id = target for update;
+  else
+    select * into theirs from crews where id = target for update; select * into mine from crews where id = pr.crew_id for update;
+  end if;
   if theirs.id = mine.id then perform _fail('That is your own crew'); end if;
   if mine.cartel_id is not null and mine.cartel_id = theirs.cartel_id then perform _fail('You cannot fight a crew in your own cartel'); end if;
   select max(created_at) into last_at from crew_fights where attacker_crew = mine.id and defender_crew = theirs.id;
@@ -1063,19 +1117,20 @@ begin
     taken := floor(theirs.bank * _cfg('crew_fight_stake_pct') / 100.0);
     update crews set bank = bank - taken where id = theirs.id;
     update crews set bank = bank + taken where id = mine.id;
-    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = theirs.id and health > 19;
-    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = mine.id and health > 19;
+    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = theirs.id and health > 19 and immune_until <= now() and id <> u;
+    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = mine.id and health > 19 and immune_until <= now() and id <> u;
   else
     taken := floor(mine.bank * _cfg('crew_fight_stake_pct') / 100.0);
     update crews set bank = bank - taken where id = mine.id;
     update crews set bank = bank + taken where id = theirs.id;
-    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = mine.id and health > 19;
-    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = theirs.id and health > 19;
+    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = mine.id and health > 19 and immune_until <= now() and id <> u;
+    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = theirs.id and health > 19 and immune_until <= now() and id <> u;
   end if;
   pr.stamina := pr.stamina - _cfg('crew_fight_stamina')::int;
   pr.heat := least(pr.heat_max, pr.heat + 3);
+  pr.health := greatest(1, pr.health - case when won then _rand_between(3, 8) else _rand_between(10, 25) end);
   pr := _bust_roll(pr);
-  update profiles set stamina = pr.stamina, heat = pr.heat, jail_until = pr.jail_until where id = u;
+  update profiles set stamina = pr.stamina, heat = pr.heat, jail_until = pr.jail_until, health = pr.health where id = u;
   insert into crew_fights (attacker_crew, defender_crew, started_by, attack_power, defense_power, won, cash_taken)
   values (mine.id, theirs.id, u, round(atk), round(def), won, taken) returning * into f;
   insert into messages (channel, sender_id, sender_name, body)
@@ -1105,10 +1160,11 @@ create or replace function cartel_create(nm text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); c crews; ca cartels;
 begin
-  select * into c from crews where capo_id = u;
+  select * into c from crews where capo_id = u for update;
   if c.id is null then perform _fail('Only a Capo can found a cartel'); end if;
   if c.cartel_id is not null then perform _fail('Your crew is already in a cartel'); end if;
   if char_length(trim(nm)) not between 3 and 24 then perform _fail('Cartel name must be 3–24 characters'); end if;
+  if exists (select 1 from cartels where lower(name) = lower(trim(nm))) then perform _fail('That cartel name is taken'); end if;
   insert into cartels (name, don_id) values (trim(nm), u) returning * into ca;
   update crews set cartel_id = ca.id where id = c.id;
   return jsonb_build_object('id', ca.id);
@@ -1179,6 +1235,7 @@ create or replace function cartel_bank(amount bigint) returns jsonb  -- positive
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; car cartels;
 begin
+  perform _nn(amount, 'amount');
   pr := _tick(u);
   select x.* into car from cartels x join crews c on c.cartel_id = x.id where c.id = pr.crew_id for update of x;
   if car.id is null then perform _fail('You are not in a cartel'); end if;
@@ -1187,7 +1244,7 @@ begin
     update profiles set cash = cash - amount where id = u;
     update cartels set bank = bank + amount where id = car.id;
   elsif amount < 0 then
-    if car.don_id <> u then perform _fail('Only the Don can withdraw'); end if;
+    if car.don_id is distinct from u then perform _fail('Only the Don can withdraw'); end if;
     if -amount > car.bank then perform _fail('Not enough in the cartel bank'); end if;
     update profiles set cash = cash - amount where id = u;
     update cartels set bank = bank + amount where id = car.id;
@@ -1208,14 +1265,16 @@ language sql security definer set search_path = public stable as $$
              'blocks', (select jsonb_agg(jsonb_build_object('id', b.id, 'name', b.name,
                           'owner', (select jsonb_build_object('id', c.id, 'name', c.name, 'emblem', c.emblem) from crews c where c.id = b.owner_crew_id),
                           'mine', b.owner_crew_id is not null and b.owner_crew_id = (select crew_id from profiles where id = auth.uid()),
-                          'garrison_size', (select coalesce(sum(qty), 0) from block_garrison where block_id = b.id),
+                          'garrisoned', exists (select 1 from block_garrison where block_id = b.id and qty > 0),
+                          'garrison_size', case when b.owner_crew_id = (select crew_id from profiles where id = auth.uid())
+                                           then (select coalesce(sum(qty), 0) from block_garrison where block_id = b.id) end,
                           'garrison', case when b.owner_crew_id = (select crew_id from profiles where id = auth.uid())
                                       then (select jsonb_object_agg(code, qty) from block_garrison where block_id = b.id and qty > 0) end,
                           'claim_price', h.price / (select count(*) from blocks where hood_id = h.id)) order by b.id)
                         from blocks b where b.hood_id = h.id)) order by h.id) as hoods
     from hoods h group by h.island) x $$;
 
-create or replace function hoodlum_price(kind text, owned integer, n integer) returns bigint
+create or replace function _hoodlum_price(kind text, owned integer, n integer) returns bigint
 language sql stable as $$
   select (select base_price from hoodlum_defs d where d.code = kind)::bigint * n
          * (1 + (owned + n / 2.0) / 2000.0) $$;
@@ -1224,11 +1283,12 @@ create or replace function buy_hoodlums(kind text, n integer) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; owned int; cost bigint;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   if n < 1 or n > 1000 then perform _fail('Buy between 1 and 1000 per transaction'); end if;
   if not exists (select 1 from hoodlum_defs d where d.code = kind) then perform _fail('Bad hoodlum'); end if;
   select coalesce(ph.qty, 0) into owned from player_hoodlums ph where ph.player_id = u and ph.code = kind;
-  cost := hoodlum_price(kind, coalesce(owned, 0), n);
+  cost := _hoodlum_price(kind, coalesce(owned, 0), n);
   if pr.cash < cost then perform _fail(format('Costs $%s', cost)); end if;
   update profiles set cash = cash - cost where id = u;
   insert into player_hoodlums as ph (player_id, code, qty) values (u, kind, n)
@@ -1240,6 +1300,7 @@ create or replace function station_hoodlums(block integer, kind text, n integer)
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; b blocks; have int;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   select * into b from blocks where id = block for update;
   if b.id is null or pr.crew_id is null or b.owner_crew_id is distinct from pr.crew_id then perform _fail('Your crew does not hold that block'); end if;
@@ -1255,10 +1316,11 @@ create or replace function withdraw_garrison(block integer, kind text, n integer
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; b blocks; c crews; have int;
 begin
+  perform _nn(n, 'quantity');
   pr := _tick(u);
   select * into b from blocks where id = block for update;
   select * into c from crews where id = pr.crew_id;
-  if b.id is null or c.id is null or b.owner_crew_id is distinct from c.id or c.capo_id <> u then perform _fail('Only your Capo can withdraw a garrison'); end if;
+  if b.id is null or c.id is null or b.owner_crew_id is distinct from c.id or c.capo_id is distinct from u then perform _fail('Only your Capo can withdraw a garrison'); end if;
   select bg.qty into have from block_garrison bg where bg.block_id = block and bg.code = kind;
   if n <= 0 or coalesce(have, 0) < n then perform _fail('Not that many stationed'); end if;
   update block_garrison bg set qty = bg.qty - n where bg.block_id = block and bg.code = kind;
@@ -1290,9 +1352,11 @@ begin
   select owner_crew_id, count(*) as n into best from blocks where hood_id = hid and owner_crew_id is not null
    group by owner_crew_id order by n desc limit 1;
   if best.owner_crew_id is not null and best.n * 2 > total then
-    update hoods set owner_crew_id = best.owner_crew_id where id = hid;
+    update hoods set owner_crew_id = best.owner_crew_id,
+           last_payout_at = case when owner_crew_id is distinct from best.owner_crew_id then now() else last_payout_at end
+     where id = hid;
   else
-    update hoods set owner_crew_id = null where id = hid;
+    update hoods set owner_crew_id = null, last_payout_at = now() where id = hid;
   end if;
 end $$;
 
@@ -1302,6 +1366,7 @@ language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); pr profiles; b blocks; h hoods; have_t int; have_m int; atk numeric; res numeric;
         claim int := 0; success boolean; loss_frac numeric; lost_t int; lost_m int; g record; gloss numeric; nblocks int;
 begin
+  perform _nn(thugs, 'thugs'); perform _nn(mercs, 'mercenaries');
   pr := _tick(u);
   if pr.crew_id is null then perform _fail('Join a crew to fight for territory'); end if;
   if _jailed(pr) then perform _fail('You cannot run a turf war from jail'); end if;
@@ -1319,20 +1384,23 @@ begin
     if pr.cash < claim then perform _fail(format('Claiming a block here costs $%s', claim)); end if;
   end if;
 
+  if pr.stamina < 3 then perform _fail('A turf war takes 3 stamina'); end if;
   atk := (thugs * 10 + mercs * 60) * (0.9 + random() * 0.2);
   res := h.base_resistance + coalesce((select sum(bg.qty * d.def) from block_garrison bg join hoodlum_defs d on d.code = bg.code where bg.block_id = block), 0);
+  if atk < res * 0.25 then perform _fail(format('That force would be laughed off the block — bring at least a quarter of the resistance (~%s)', round(res * 0.25))); end if;
   success := atk > res;
+  update profiles set stamina = stamina - 3 where id = u;
 
   -- attacker losses: proportional to how hard the resistance was, up to 50%
   loss_frac := least(1, res / greatest(atk, 1)) * 0.5;
-  lost_t := ceil(thugs * loss_frac); lost_m := ceil(mercs * loss_frac);
+  lost_t := floor(thugs * loss_frac); lost_m := floor(mercs * loss_frac);
   update player_hoodlums set qty = qty - lost_t where player_id = u and code = 'thug';
   update player_hoodlums set qty = qty - lost_m where player_id = u and code = 'mercenary';
 
-  -- garrison losses
+  -- garrison losses (rounded down — a token raid doesn't chip away at a big garrison)
   gloss := least(1, atk / greatest(res, 1)) * 0.5;
   for g in select * from block_garrison where block_id = block loop
-    update block_garrison set qty = qty - ceil(g.qty * gloss)::int where block_id = block and code = g.code;
+    update block_garrison set qty = qty - floor(g.qty * gloss)::int where block_id = block and code = g.code;
   end loop;
 
   if success then
@@ -1374,10 +1442,10 @@ create or replace function _accolade_board(from_ts timestamptz, to_ts timestampt
 create or replace function get_accolades() returns jsonb
 language sql security definer set search_path = public stable as $$
   select jsonb_build_object(
-    'week_start', date_trunc('week', now()),
-    'week_end', date_trunc('week', now()) + interval '7 days',
-    'this_week', _accolade_board(date_trunc('week', now()), date_trunc('week', now()) + interval '7 days'),
-    'last_week', _accolade_board(date_trunc('week', now()) - interval '7 days', date_trunc('week', now())),
+    'week_start', date_trunc('week', now() at time zone 'utc') at time zone 'utc',
+    'week_end', date_trunc('week', now() at time zone 'utc') at time zone 'utc' + interval '7 days',
+    'this_week', _accolade_board(date_trunc('week', now() at time zone 'utc') at time zone 'utc', date_trunc('week', now() at time zone 'utc') at time zone 'utc' + interval '7 days'),
+    'last_week', _accolade_board(date_trunc('week', now() at time zone 'utc') at time zone 'utc' - interval '7 days', date_trunc('week', now() at time zone 'utc') at time zone 'utc'),
     'mine', _ribbons(auth.uid())) $$;
 
 -- ---------------------------------------------------------------------------
@@ -1393,7 +1461,13 @@ begin
     select cartel_id into cartel from crews where id = pr.crew_id;
     return cartel is not null and channel = 'cartel:' || cartel::text;
   end if;
-  if channel like 'dm:%' then return position(u::text in channel) > 0; end if;
+  if channel ~ '^dm:[0-9a-f-]{36}:[0-9a-f-]{36}$' then
+    declare a uuid := split_part(channel, ':', 2)::uuid; b uuid := split_part(channel, ':', 3)::uuid;
+    begin
+      return a < b and (a = u or b = u);   -- canonical order, involves the caller, never a self-DM
+    exception when others then return false;
+    end;
+  end if;
   return false;
 end $$;
 
@@ -1405,14 +1479,18 @@ language sql security definer set search_path = public stable as $$
 drop policy if exists messages_read on messages;
 create policy messages_read on messages for select to authenticated using (can_use_channel(channel));
 
-create or replace function dm_channel(other uuid) returns text language sql stable as $$
-  select 'dm:' || least(auth.uid(), other)::text || ':' || greatest(auth.uid(), other)::text $$;
+create or replace function dm_channel(other uuid) returns text language plpgsql stable as $$
+begin
+  if other is null or other = auth.uid() then raise exception 'Bad conversation' using errcode = 'P0001'; end if;
+  return 'dm:' || least(auth.uid(), other)::text || ':' || greatest(auth.uid(), other)::text;
+end $$;
 
 create or replace function send_message(channel text, body text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare u uuid := _uid(); nm text; m messages;
 begin
-  if not _can_use_channel(u, channel) then perform _fail('You cannot post there'); end if;
+  if channel is null or not _can_use_channel(u, channel) then perform _fail('You cannot post there'); end if;
+  if char_length(trim(coalesce(body, ''))) = 0 then perform _fail('Say something first'); end if;
   select name into nm from profiles where id = u;
   insert into messages (channel, sender_id, sender_name, body) values (channel, u, nm, left(trim(body), 500)) returning * into m;
   return jsonb_build_object('id', m.id);
@@ -1438,8 +1516,27 @@ language sql security definer set search_path = public stable as $$
          order by channel, created_at desc) x $$;
 
 -- ---------------------------------------------------------------------------
+-- Account deletion: run leadership succession / disband before the profile goes away
+-- ---------------------------------------------------------------------------
+create or replace function _before_profile_delete() returns trigger language plpgsql security definer set search_path = public as $$
+declare c crews;
+begin
+  if old.crew_id is not null then
+    select * into c from crews where id = old.crew_id for update;
+    if c.id is not null then perform _crew_remove(c, old.id); end if;
+  end if;
+  return old;
+end $$;
+drop trigger if exists profiles_before_delete on profiles;
+create trigger profiles_before_delete before delete on profiles for each row execute function _before_profile_delete();
+
+-- ---------------------------------------------------------------------------
 -- Grants
 -- ---------------------------------------------------------------------------
+-- Supabase grants EXECUTE on new public functions to anon/authenticated by default; turn that off so
+-- anything added in a later migration is private until explicitly granted.
+alter default privileges in schema public revoke execute on functions from anon, authenticated, public;
+
 do $$
 declare f record;
 begin

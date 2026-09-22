@@ -58,7 +58,7 @@ export default function Territory() {
               <div key={b.id} className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${sel?.block.id === b.id ? 'sel' : ''}`} onClick={() => { setSel({ hood: h, block: b }); setIntel(null) }}>
                 <div className="em">{b.owner ? b.owner.emblem : '·'}</div>
                 <div>{b.name.split('— ')[1] ?? b.name}</div>
-                <div className="muted" style={{ fontSize: 10 }}>{b.owner ? `${num(b.garrison_size)} guards` : money(b.claim_price)}</div>
+                <div className="muted" style={{ fontSize: 10 }}>{b.owner ? (b.garrison_size !== null ? `${num(b.garrison_size)} guards` : b.garrisoned ? 'guarded' : 'unguarded') : money(b.claim_price)}</div>
               </div>
             ))}
           </div>
@@ -70,7 +70,7 @@ export default function Territory() {
         <Modal title={sel.block.name} onClose={() => setSel(null)}>
           <div className="stack">
             <div className="small muted">
-              {sel.block.owner ? <>Held by {sel.block.owner.emblem} {sel.block.owner.name} with {num(sel.block.garrison_size)} hoodlums stationed.</> : <>Unclaimed. Taking it costs {money(sel.block.claim_price)} on top of beating the base resistance of {num(sel.hood.base_resistance)}.</>}
+              {sel.block.owner ? <>Held by {sel.block.owner.emblem} {sel.block.owner.name}{sel.block.garrison_size !== null ? ` with ${num(sel.block.garrison_size)} hoodlums stationed.` : sel.block.garrisoned ? ' — there is a garrison. Send a spy to size it up.' : ' — no garrison.'}</> : <>Unclaimed. Taking it costs {money(sel.block.claim_price)} on top of beating the base resistance of {num(sel.hood.base_resistance)}.</>}
             </div>
             {sel.block.garrison && (
               <div className="hstack">{Object.entries(sel.block.garrison).map(([k, v]) => <span key={k} className="pill">{hoodlumIcon[k]} {num(v)} {k}</span>)}</div>
@@ -104,9 +104,9 @@ export default function Territory() {
                   <label className="f">🧢 Thugs (10 att) · have {num(thugs)}<input className="input" inputMode="numeric" value={force.thugs} onChange={e => setForce({ ...force, thugs: Math.min(thugs, Number(e.target.value) || 0) })} /></label>
                   <label className="f">🔫 Mercenaries (60 att) · have {num(mercs)}<input className="input" inputMode="numeric" value={force.mercs} onChange={e => setForce({ ...force, mercs: Math.min(mercs, Number(e.target.value) || 0) })} /></label>
                 </div>
-                <div className="small muted">Attack strength ≈ <b>{num(attackPower)}</b> (±10%). Losses on both sides scale with how close the fight was. Spies reveal the exact resistance.</div>
+                <div className="small muted">Attack strength ≈ <b>{num(attackPower)}</b> (±10%). Costs 3 stamina; you need at least a quarter of the block's resistance to even get a fight. Losses on both sides scale with how close it was. Spies reveal the exact resistance.</div>
                 <div className="hstack">
-                  <Btn className="doit red" disabled={attackPower === 0 || me.jailed} onClick={attack}>Attack</Btn>
+                  <Btn className="doit red" disabled={attackPower === 0 || me.jailed || me.stamina < 3} onClick={attack}>Attack</Btn>
                   <Btn className="sm" disabled={spies < 1} onClick={async () => { const r = await run(() => api.spyBlock(sel.block.id), { silent: true }); if (r) setIntel(r) }}>🕶 Send a Spy ({num(spies)})</Btn>
                   {thugs + mercs === 0 && <Btn className="sm ghost" onClick={() => nav('/services')}>Hire hoodlums</Btn>}
                 </div>

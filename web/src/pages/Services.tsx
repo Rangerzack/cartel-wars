@@ -85,7 +85,6 @@ export default function Services() {
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, dis: me.health_max >= 500 },
-          { k: 'heat' as const, t: 'Max heat +1', s: `${me.heat_max}`, c: 30, dis: false },
           { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots} slots`, c: 15, dis: false },
         ].map(u => (
           <div key={u.k} className="row">

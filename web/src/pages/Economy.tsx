@@ -162,8 +162,8 @@ function MarketTab() {
           {me.listings.map(l => (
             <div key={l.id} className="row">
               <span>{commodityIcon[l.commodity]}</span>
-              <div className="grow"><div className="t">{num(l.qty)} @ {money(l.unit_price)}</div><div className="s">expires in {timeLeft(l.expires_at, now)}</div></div>
-              <Btn className="sm ghost" onClick={async () => { await run(() => api.cancelListing(l.id), { ok: r => `${num(r.returned)} units back in storage` }); load() }}>Cancel</Btn>
+              <div className="grow"><div className="t">{num(l.qty)} @ {money(l.unit_price)}</div><div className="s">{l.held ? 'came back off the market — waiting for storage room' : `expires in ${timeLeft(l.expires_at, now)}`}</div></div>
+              <Btn className={`sm ${l.held ? 'gold' : 'ghost'}`} onClick={async () => { await run(() => api.cancelListing(l.id), { ok: r => r.held ? `${num(r.returned)} back in storage, ${num(r.held)} still waiting for room` : `${num(r.returned)} units back in storage` }); load() }}>{l.held ? 'Reclaim' : 'Cancel'}</Btn>
             </div>
           ))}
         </Card>

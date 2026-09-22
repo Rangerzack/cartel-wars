@@ -262,12 +262,37 @@ do $$ begin
   assert (select count(*) from blocks where owner_crew_id is not null) = 0, 'blocks freed';
 end $$;
 
--- listing expiry returns product
+-- listing expiry returns product, but never past the storage cap (storage is 600/500 here, so it's held)
 update listings set expires_at = now() - interval '1 minute';
 select get_me();
-do $$ begin
-  assert (select status from listings limit 1) = 'expired';
-  assert (select qty from storage where player_id = '11111111-1111-1111-1111-111111111111' and commodity = 'herb') = 1000 - 400 + 100, 'listing returned';
+do $$ declare r jsonb; begin
+  assert (select status from listings limit 1) = 'returned', 'overflow held on listing';
+  assert (select qty from listings limit 1) = 100;
+  assert (select qty from storage where player_id = '11111111-1111-1111-1111-111111111111' and commodity = 'herb') = 600, 'storage untouched';
+  assert jsonb_array_length(get_me()->'listings') = 1 and (get_me()->'listings'->0->>'held')::boolean, 'held listing visible';
+  update profiles set storage_cap = 5000 where id = auth.uid();
+  r := cancel_listing((select id from listings limit 1));
+  assert (r->>'returned')::int = 100 and (r->>'held')::int = 0, 'reclaimed after making room: ' || r::text;
+  assert (select qty from storage where player_id = auth.uid() and commodity = 'herb') = 700;
+end $$;
+
+-- review regressions
+do $$ declare r jsonb; begin
+  -- null args are rejected, not silently coerced
+  perform expect_error('select bribe_police(null)', 'Missing');
+  perform expect_error('select refill(null, ''diamonds'')', 'Missing');
+  -- DM channels must be canonical and involve the caller
+  perform expect_error('select send_message(''dm:11111111-1111-1111-1111-111111111111:junk:22222222-2222-2222-2222-222222222222'', ''x'')', 'cannot post');
+  perform expect_error('select send_message(''dm:22222222-2222-2222-2222-222222222222:11111111-1111-1111-1111-111111111111'', ''x'')', 'cannot post');
+  perform expect_error('select send_message(''global'', ''   '')', 'Say something');
+  perform expect_error('select dm_channel(auth.uid())', 'Bad conversation');
+  -- bust roll never extends an existing sentence
+  update profiles set jail_until = now() + interval '1 minute', heat = 100, stamina = 50 where id = auth.uid();
+  for i in 1..20 loop perform do_action((select id from action_defs where sort = 30)); end loop;
+  assert (select jail_until from profiles where id = auth.uid()) < now() + interval '2 minutes', 'sentence not extended';
+  update profiles set jail_until = null, heat = 0 where id = auth.uid();
+  -- upgrade_stat('heat') is gone
+  perform expect_error('select upgrade_stat(''heat'')', 'Bad upgrade');
 end $$;
 
 -- anon cannot call anything

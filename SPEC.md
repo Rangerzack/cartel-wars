@@ -58,8 +58,11 @@ Damage dealt to defender (max 80 *(wiki)*):
   same setup).
 
 The attacker takes a smaller counter-hit (`0.35 × mirror formula` *(ours)*).
-The winner (higher damage) takes 5–10% of the loser's cash on hand *(ours)*.
-Anyone dropping to ≤19 Health lands in Hospital. Attacking adds Heat.
+The winner (higher damage) takes 5–10% of the loser's cash on hand *(ours)*;
+after three hits on the same target within an hour the cash dries up (fights
+still happen, no money moves) *(ours, anti-farming)*. Attacking while under
+new-player immunity ends your immunity. Anyone dropping to ≤19 Health lands in
+Hospital. Attacking adds Heat.
 
 Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
@@ -104,7 +107,8 @@ Commodities: **Herb**, **Dust**, **Pills** (cheap→expensive, bulky→compact).
   departure. Collect when they're back.
 - **Marketplace** *(wiki)*: list 25–1,000 units at ≤ street price; listing
   needs Transport capacity ≥ batch size and expires in 48h. Buyers pay cash
-  and need storage room. Cancel returns product to storage.
+  and need storage room. Cancelled or expired product returns to storage up to
+  the cap; the rest waits on the listing until you make room.
 - **Bank**: personal bank — deposit/withdraw, no fee (none found in sources).
   Crew Bank and Cartel Bank receive hood income and accept deposits; the
   Capo / Don can withdraw.
@@ -136,10 +140,13 @@ The city has **four islands**, each with Hoods, each Hood with Blocks.
   | Mercenary | 60 | 0 | 0 | $4,000 |
   | Enforcer | 0 | 60 | 0 | $4,000 |
 
-- **Attack a block**: your attacking hoodlums' total Att vs the block's
-  resistance (base resistance + stationed hoodlums' Def). Both sides lose
-  hoodlums proportional to the damage they took; if attack > resistance the
-  block flips to your crew. Spies reveal a block's garrison before attacking.
+- **Attack a block** (3 Stamina): your attacking hoodlums' total Att vs the
+  block's resistance (base resistance + stationed hoodlums' Def). You must
+  bring at least a quarter of the resistance to get a fight. Both sides lose
+  hoodlums proportional to the damage they took (rounded down); if attack >
+  resistance the block flips to your crew and the hood's daily payout clock
+  restarts. Outsiders only see whether a block is garrisoned; Spies reveal the
+  exact garrison and resistance.
 
 ## Accolades
 
