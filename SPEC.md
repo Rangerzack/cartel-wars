@@ -171,6 +171,26 @@ and Turf (blocks captured). Top three on each board wear a gold, silver or
 bronze stripe on their profile for the following week. Everything is derived
 from an `accolade_events` log written by the RPCs.
 
+## Economy at a glance (for tuning)
+
+With base stamina regen (+12/hour) and the seeded numbers:
+
+| Income source | Cost | Return |
+|---|---|---|
+| Actions, low tier | 1 stamina | ~$180 → ~$2,200/hour of regen |
+| Actions, top tier (Minigun, crew of 6) | 12 stamina | ~$26,500 → ~$26,000/hour of regen |
+| Herb grow house L1 | $5,000 | 20 u/h × $60 = $1,200/hour (pays off in ~4h) |
+| Dust grow house L1 | $15,000 + 💎20 | 8 u/h × $200 = $1,600/hour (~9h) |
+| Pills grow house L1 | $40,000 + 💎20 | 3 u/h × $600 = $1,800/hour (~22h) |
+| Hustler (herb) | $400 + 16 herb | $960 after 4h (≈$560 net per trip) |
+| Marketplace | transport | up to street price, buyer pays |
+| Hood (crew) | claim + hoodlums | $320k–$1M/day, 80% crew bank / 20% cartel bank |
+
+Territory is by far the biggest faucet, as in the original — it's what makes
+crews and cartels matter. If solo play feels too slow, raise `grow_rate` or
+action payouts in the seed; if crews feel unstoppable, lower `daily_income`
+or raise `base_resistance`.
+
 ## Screens (mobile-first, black "Do It" buttons)
 
 Bottom bar: **Home · Actions · Economy · Fight · Services · Chat**.
