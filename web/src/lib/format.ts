@@ -29,3 +29,12 @@ export const categoryLabel: Record<string, string> = {
   weapon: 'Weapons', jail_weapon: 'Jail Weapons', protection: 'Protection', transport: 'Transport',
 }
 export const hoodlumIcon: Record<string, string> = { thug: '🧢', spy: '🕶️', mercenary: '🔫', enforcer: '🛡️' }
+
+export const accoladeMeta: Record<string, { label: string; icon: string; unit: (n: number) => string }> = {
+  fight_win: { label: 'Fights won', icon: '⚔️', unit: n => `${num(n)} wins` },
+  defense: { label: 'Defenses', icon: '🛡️', unit: n => `${num(n)} held` },
+  action: { label: 'Actions', icon: '💼', unit: n => `${num(n)} actions` },
+  import: { label: 'Imports', icon: '🚚', unit: n => `${num(n)} units` },
+  market: { label: 'Market', icon: '💰', unit: n => money(n) },
+  turf: { label: 'Turf', icon: '🏴', unit: n => `${num(n)} blocks` },
+}

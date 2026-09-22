@@ -4,6 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { Ribbons } from '../components/Ribbons'
 import type { FightResult, PublicPlayer } from '../lib/types'
 
 export default function Player() {
@@ -38,6 +39,7 @@ export default function Player() {
             <span className={`pill ${p.heat_level === 'red' ? 'red' : ''}`}>🔥 heat {p.heat_level}</span>
             {p.cartel && <span className="pill gold">🕴 {p.cartel.name}</span>}
           </div>
+          <Ribbons list={p.ribbons} />
           <div className="grid3">
             <Stat k="Health" v={`${num(p.health)}/${num(p.health_max)}`} />
             <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} />

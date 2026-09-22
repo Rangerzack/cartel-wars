@@ -14,6 +14,7 @@ import Cartel from './pages/Cartel'
 import Territory from './pages/Territory'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
+import Accolades from './pages/Accolades'
 import { Toasts } from './components/ui'
 
 function Gate() {
@@ -39,6 +40,7 @@ function Gate() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/chat/:channel" element={<Chat />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/accolades" element={<Accolades />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import type {
   CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewSummary, FightLog, FightResult, Island,
-  Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
+  Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
 } from './types'
 
 export class GameError extends Error {}
@@ -27,6 +27,7 @@ export const api = {
   player: (pid: string) => rpc<PublicPlayer>('get_player', { pid }),
   findPlayers: (q = '', limit_n = 40) => rpc<PlayerSummary[]>('find_players', { q, limit_n }),
   topUsers: () => rpc<TopUsers>('top_users'),
+  accolades: () => rpc<Accolades>('get_accolades'),
 
   // services
   hospitalCheckout: () => rpc<{ cost: number }>('hospital_checkout'),

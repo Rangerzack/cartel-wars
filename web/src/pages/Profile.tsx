@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Stat } from '../components/ui'
+import { Ribbons } from '../components/Ribbons'
 
 export default function Profile() {
   const me = useMe()
@@ -12,6 +13,7 @@ export default function Profile() {
     <div className="page">
       <Card title={me.name} right={<small>since {ago(me.created_at)}</small>}>
         <div className="bd stack">
+          <Ribbons list={me.ribbons} empty="No accolade stripes yet." />
           <div className="grid3">
             <Stat k="Cash" v={money(me.cash)} cls="gold" />
             <Stat k="Bank" v={money(me.bank)} />

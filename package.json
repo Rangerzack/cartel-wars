@@ -7,6 +7,7 @@
     "db:start": "scripts/local-db.sh start",
     "db:reset": "scripts/local-db.sh reset",
     "db:test": "scripts/local-db.sh test",
+    "db:demo": "scripts/local-db.sh demo",
     "dev:api": "node scripts/dev-server.mjs",
     "e2e": "node scripts/e2e.mjs"
   }

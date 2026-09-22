@@ -33,7 +33,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (!s) setMe(null) })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -58,7 +58,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [toast])
 
   useEffect(() => {
-    if (!session) { setMe(null); return }
+    if (!session) return
     refresh()
     api.catalog().then(setCatalog).catch(e => toast((e as Error).message, 'bad'))
     const t = setInterval(refresh, 60_000)

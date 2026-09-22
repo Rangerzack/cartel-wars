@@ -47,6 +47,7 @@ export interface Me {
   hoodlums: Partial<Record<string, number>>
   transport_capacity: number
   listings: MyListing[]
+  ribbons: Ribbon[]
   server_time: string
 }
 
@@ -80,7 +81,7 @@ export interface PlayerSummary {
 export interface PublicPlayer {
   id: string; name: string; created_at: string; fights: number; fights_won: number; actions: number
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
-  last_seen: string; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
+  last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
 }
 export interface FightResult {
   won: boolean; damage_dealt: number; damage_taken: number; cash: number; their_health: number; my_health: number
@@ -136,3 +137,8 @@ export interface TopUsers {
   traders: { id: string; name: string; value: number }[]
   crews: { id: string; name: string; emblem: string; value: number }[]
 }
+
+export type AccoladeKind = 'fight_win' | 'defense' | 'action' | 'import' | 'market' | 'turf'
+export interface Ribbon { kind: AccoladeKind; rank: number }
+export interface AccoladeBoard { [kind: string]: { id: string; name: string; value: number }[] }
+export interface Accolades { week_start: string; week_end: string; this_week: AccoladeBoard; last_week: AccoladeBoard; mine: Ribbon[] }

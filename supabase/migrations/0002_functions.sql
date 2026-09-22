@@ -159,6 +159,19 @@ begin
   end loop;
 end $$;
 
+create or replace function _event(p uuid, kind text, amount bigint default 1) returns void language sql as $$
+  insert into accolade_events (player_id, kind, amount) values (p, kind, amount) $$;
+
+-- Ribbons a player wears this week = their top-3 finishes last week.
+create or replace function _ribbons(p uuid) returns jsonb language sql stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('kind', kind, 'rank', rank) order by rank, kind), '[]'::jsonb)
+  from (
+    select kind, rank() over (partition by kind order by total desc) as rank, player_id
+      from (select kind, player_id, sum(amount) as total from accolade_events
+             where created_at >= date_trunc('week', now()) - interval '7 days' and created_at < date_trunc('week', now())
+             group by kind, player_id) t
+  ) r where r.player_id = p and r.rank <= 3 $$;
+
 -- ---------------------------------------------------------------------------
 -- Registration
 -- ---------------------------------------------------------------------------
@@ -268,6 +281,7 @@ begin
     'listings', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'commodity', commodity, 'qty', qty,
                       'unit_price', unit_price, 'expires_at', expires_at) order by created_at desc), '[]'::jsonb)
                  from listings where seller_id = u and status = 'open'),
+    'ribbons', _ribbons(u),
     'server_time', now()
   );
 end $$;
@@ -331,6 +345,7 @@ begin
 
   update profiles set stamina = pr.stamina, cash = pr.cash, heat = pr.heat, jail_until = pr.jail_until,
          actions_done = pr.actions_done where id = u;
+  perform _event(u, 'action');
   perform _award_milestones(u);
   return jsonb_build_object('pay', pay, 'busted', busted, 'heat', pr.heat, 'stamina', pr.stamina, 'cash', pr.cash);
 end $$;
@@ -390,6 +405,7 @@ begin
 
   insert into fights (attacker_id, defender_id, attacker_dmg, defender_dmg, cash_taken, winner_id)
   values (u, target, dmg_a, dmg_d, taken, case when win then u else target end) returning * into f;
+  if win then perform _event(u, 'fight_win'); else perform _event(target, 'defense'); end if;
   perform _award_milestones(u);
   return jsonb_build_object('won', win, 'damage_dealt', dmg_a, 'damage_taken', dmg_d, 'cash', taken,
                             'their_health', them.health, 'my_health', me.health,
@@ -420,7 +436,7 @@ begin
     'health', pr.health, 'health_max', pr.health_max,
     'heat_level', case when pr.heat >= _cfg('heat_red') then 'red' when pr.heat >= _cfg('heat_yellow') then 'yellow' else 'green' end,
     'jailed', _jailed(pr), 'hospital', _hospital(pr), 'immune', pr.immune_until > now(),
-    'last_seen', pr.last_seen,
+    'last_seen', pr.last_seen, 'ribbons', _ribbons(pr.id),
     'crew', (select jsonb_build_object('id', c.id, 'name', c.name, 'emblem', c.emblem) from crews c where c.id = pr.crew_id),
     'cartel', (select jsonb_build_object('id', ca.id, 'name', ca.name) from crews c join cartels ca on ca.id = c.cartel_id where c.id = pr.crew_id));
 end $$;
@@ -759,6 +775,7 @@ begin
   if total = 0 then perform _fail('No hustlers are back yet'); end if;
   update hustlers set collected = true where player_id = u and not collected and returns_at <= now();
   update profiles set cash = cash + total, imports = imports + units where id = u;
+  perform _event(u, 'import', units);
   return jsonb_build_object('cash', total, 'units', units);
 end $$;
 
@@ -823,6 +840,7 @@ begin
   if used + n > pr.storage_cap then perform _fail('Not enough storage room'); end if;
   update profiles set cash = cash - cost, market_volume = market_volume + cost where id = u;
   update profiles set cash = cash + cost, market_volume = market_volume + cost where id = l.seller_id;
+  perform _event(u, 'market', cost); perform _event(l.seller_id, 'market', cost);
   update storage set qty = qty + n where player_id = u and commodity = l.commodity;
   if n = l.qty then update listings set status = 'sold' where id = l.id;
   else update listings set qty = qty - n where id = l.id; end if;
@@ -1238,6 +1256,7 @@ begin
     update blocks set owner_crew_id = pr.crew_id, taken_at = now() where id = block;
     if claim > 0 then update profiles set cash = cash - claim where id = u; end if;
     perform _recompute_hood(h.id);
+    perform _event(u, 'turf');
   end if;
   insert into territory_log (block_id, attacker_id, crew_id, success, attack, resistance)
   values (block, u, pr.crew_id, success, round(atk), round(res));
@@ -1252,6 +1271,30 @@ language sql security definer set search_path = public stable as $$
   from (select * from territory_log order by created_at desc limit limit_n) l
   join blocks b on b.id = l.block_id join hoods h on h.id = b.hood_id
   left join profiles p on p.id = l.attacker_id left join crews c on c.id = l.crew_id $$;
+
+-- ---------------------------------------------------------------------------
+-- Accolades
+-- ---------------------------------------------------------------------------
+create or replace function _accolade_board(from_ts timestamptz, to_ts timestamptz) returns jsonb language sql stable as $$
+  select coalesce(jsonb_object_agg(kind, rows), '{}'::jsonb) from (
+    select kind, jsonb_agg(jsonb_build_object('id', player_id, 'name', name, 'value', total) order by total desc) as rows
+    from (
+      select e.kind, e.player_id, p.name, sum(e.amount) as total,
+             row_number() over (partition by e.kind order by sum(e.amount) desc) as rn
+        from accolade_events e join profiles p on p.id = e.player_id
+       where e.created_at >= from_ts and e.created_at < to_ts
+       group by e.kind, e.player_id, p.name
+    ) t where rn <= 10 group by kind
+  ) b $$;
+
+create or replace function get_accolades() returns jsonb
+language sql security definer set search_path = public stable as $$
+  select jsonb_build_object(
+    'week_start', date_trunc('week', now()),
+    'week_end', date_trunc('week', now()) + interval '7 days',
+    'this_week', _accolade_board(date_trunc('week', now()), date_trunc('week', now()) + interval '7 days'),
+    'last_week', _accolade_board(date_trunc('week', now()) - interval '7 days', date_trunc('week', now())),
+    'mine', _ribbons(auth.uid())) $$;
 
 -- ---------------------------------------------------------------------------
 -- Chat

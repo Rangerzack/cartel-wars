@@ -23,7 +23,7 @@ export default function Chat() {
       <div className="seg">
         {tabs.map(t => <button key={t.v} className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>{t.l}</button>)}
       </div>
-      {channel === 'dms' ? <Conversations /> : <Channel channel={channel} />}
+      {channel === 'dms' ? <Conversations /> : <Channel key={channel} channel={channel} />}
     </div>
   )
 }
@@ -38,11 +38,9 @@ function Channel({ channel }: { channel: string }) {
 
   const load = useCallback(() => api.messages(channel).then(setMsgs).catch(e => toast(e.message, 'bad')), [channel, toast])
   useEffect(() => {
-    setMsgs(null); load()
-    if (channel.startsWith('dm:')) {
-      const otherId = channel.split(':').slice(1).find(x => x !== me.id)
-      if (otherId) api.player(otherId).then(p => setOther(p.name)).catch(() => {})
-    } else setOther(null)
+    load()
+    const otherId = channel.startsWith('dm:') ? channel.split(':').slice(1).find(x => x !== me.id) : undefined
+    if (otherId) api.player(otherId).then(p => setOther(p.name)).catch(() => {})
     // realtime: new rows on this channel
     const sub = supabase.channel('chat:' + channel)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel=eq.${channel}` },

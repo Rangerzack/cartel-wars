@@ -219,6 +219,12 @@ do $$ declare r jsonb; t jsonb; b int; hid int; begin
   assert (select bank from cartels where name = 'Juárez') = 100 + 64000, 'cartel got 20%';
   assert jsonb_array_length(get_territory_log()) >= 5;
   assert top_users() ? 'crews';
+  assert jsonb_array_length(get_accolades()->'this_week'->'action') >= 1, 'accolade board has actions';
+  assert jsonb_array_length(get_accolades()->'this_week'->'turf') = 1, 'turf events';
+  -- backdate events a week and check ribbons
+  update accolade_events set created_at = created_at - interval '7 days';
+  assert jsonb_array_length(get_me()->'ribbons') >= 1, 'ribbons from last week: ' || (get_me()->'ribbons')::text;
+  update accolade_events set created_at = created_at + interval '7 days';
   assert jsonb_array_length(find_players('esc')) = 1;
   assert get_player('11111111-1111-1111-1111-111111111111')->'crew'->>'name' = 'Los Pollos';
 end $$;

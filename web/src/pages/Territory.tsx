@@ -13,7 +13,7 @@ export default function Territory() {
   const [islands, setIslands] = useState<Island[] | null>(null)
   const [log, setLog] = useState<TerritoryLog[] | null>(null)
   const [isl, setIsl] = useState(0)
-  const [sel, setSel] = useState<{ hood: Hood; block: Block } | null>(null)
+  const [selId, setSelId] = useState<{ hood: number; block: number } | null>(null)
   const [force, setForce] = useState({ thugs: 0, mercs: 0 })
   const [station, setStation] = useState({ code: 'thug', n: 1 })
   const [intel, setIntel] = useState<{ garrison: Record<string, number>; resistance: number } | null>(null)
@@ -21,9 +21,16 @@ export default function Territory() {
 
   const load = useCallback(() => Promise.all([api.territory(), api.territoryLog(15)]).then(([t, l]) => { setIslands(t); setLog(l) }).catch(e => toast(e.message, 'bad')), [toast])
   useEffect(() => { load() }, [load])
-  useEffect(() => { if (sel && islands) { const h = islands.flatMap(i => i.hoods).find(h => h.id === sel.hood.id); const b = h?.blocks.find(b => b.id === sel.block.id); if (h && b) setSel({ hood: h, block: b }) } }, [islands]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!islands) return <Empty><span className="spin" /></Empty>
+  // derive the selected block from the freshest territory data
+  const sel: { hood: Hood; block: Block } | null = (() => {
+    if (!selId) return null
+    const h = islands.flatMap(i => i.hoods).find(h => h.id === selId.hood)
+    const b = h?.blocks.find(b => b.id === selId.block)
+    return h && b ? { hood: h, block: b } : null
+  })()
+  const setSel = (v: { hood: Hood; block: Block } | null) => setSelId(v ? { hood: v.hood.id, block: v.block.id } : null)
   const thugs = me.hoodlums.thug ?? 0, mercs = me.hoodlums.mercenary ?? 0, spies = me.hoodlums.spy ?? 0
   const island = islands[isl]
   const attackPower = force.thugs * 10 + force.mercs * 60

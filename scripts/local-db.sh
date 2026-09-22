@@ -34,5 +34,6 @@ case "${1:-reset}" in
   stop)  "$PGBIN/pg_ctl" -D "$DATA" stop >/dev/null ;;
   psql)  shift; start; psql "$@" ;;
   test)  reset; psql -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/smoke-test.sql" ;;
-  *) echo "usage: $0 [start|reset|stop|test|psql]"; exit 1 ;;
+  demo)  start; psql -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/seed-demo.sql" ;;
+  *) echo "usage: $0 [start|reset|stop|test|demo|psql]"; exit 1 ;;
 esac

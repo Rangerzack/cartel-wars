@@ -3,6 +3,8 @@ import { useGame, useMe } from '../lib/game'
 import { commodityIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Card, Stat } from '../components/ui'
+import { Ribbons } from '../components/Ribbons'
+import { GettingStarted } from '../components/GettingStarted'
 
 function HeatGauge({ heat, max, yellow, red }: { heat: number; max: number; yellow: number; red: number }) {
   const segs = 20
@@ -34,6 +36,7 @@ export default function Home() {
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}` : 'Crews hold blocks and run turf wars' },
     { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', t: me.cartel ? me.cartel.name : 'Cartels', s: me.cartel ? (me.cartel.is_don ? 'You are the Don' : 'Your cartel') : 'Alliances of crews' },
     { to: '/territory', ic: '🗺', t: 'Territory', s: 'Hoods & blocks across four islands' },
+    { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
     { to: '/fight?tab=top', ic: '🏆', t: 'Top Users', s: 'Fighters, hustlers, traders, crews' },
   ]
 
@@ -47,6 +50,8 @@ export default function Home() {
       )}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
 
+      {me.ribbons.length > 0 && <Ribbons list={me.ribbons} />}
+      <GettingStarted me={me} />
       <Card title="Heat" right={<small className={me.heat_level}>{me.heat_level.toUpperCase()} · {me.heat}/{me.heat_max}</small>}>
         <div className="bd stack">
           <HeatGauge heat={me.heat} max={me.heat_max} yellow={cfg.heat_yellow ?? 40} red={cfg.heat_red ?? 75} />

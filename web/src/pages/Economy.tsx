@@ -132,27 +132,28 @@ function MarketTab() {
   const now = useNow()
   const [market, setMarket] = useState<Market | null>(null)
   const [filter, setFilter] = useState<Commodity | 'all'>('all')
-  const [sell, setSell] = useState<{ com: Commodity; n: number; price: number }>({ com: 'herb', n: 25, price: 0 })
+  const [sell, setSellRaw] = useState<{ com: Commodity; n: number; price: number | null }>({ com: 'herb', n: 25, price: null })
+  const setSell = (v: { com: Commodity; n: number; price: number | null }) => setSellRaw(v)
   const [buyQty, setBuyQty] = useState<Record<string, number>>({})
 
   const load = useCallback(() => api.market(filter === 'all' ? undefined : filter).then(setMarket).catch(e => toast(e.message, 'bad')), [filter, toast])
   useEffect(() => { load() }, [load])
-  useEffect(() => { setSell(s => ({ ...s, price: s.price || me.prices[s.com] })) }, [me.prices])
 
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const street = me.prices[sell.com]
+  const sellPrice = sell.price ?? street
   const minL = catalog.config.listing_min, maxL = catalog.config.listing_max
   return (
     <>
       <Card title="Sell" right={<small>truck capacity {num(me.transport_capacity)}</small>}>
         <div className="bd stack">
-          <Seg value={sell.com} onChange={v => setSell({ com: v, n: sell.n, price: me.prices[v] })} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
+          <Seg value={sell.com} onChange={v => setSell({ com: v, n: sell.n, price: null })} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
           <div className="grid2">
             <label className="f">Units ({minL}–{maxL})<input className="input" inputMode="numeric" value={sell.n} onChange={e => setSell({ ...sell, n: Number(e.target.value) || 0 })} /></label>
-            <label className="f">Price / unit (street {money(street)})<input className="input" inputMode="numeric" value={sell.price} onChange={e => setSell({ ...sell, price: Number(e.target.value) || 0 })} /></label>
+            <label className="f">Price / unit (street {money(street)})<input className="input" inputMode="numeric" value={sellPrice} onChange={e => setSell({ ...sell, price: Number(e.target.value) || 0 })} /></label>
           </div>
-          <div className="small muted">In storage: {num(me.storage[sell.com] ?? 0)}. Listings need a vehicle that can carry the batch and expire in 48h. Total: <b className="gold">{money(sell.n * sell.price)}</b></div>
-          <Btn className="doit block" onClick={async () => { const r = await run(() => api.listProduct(sell.com, sell.n, sell.price), { ok: () => 'Listed on the marketplace' }); if (r) load() }}>List It</Btn>
+          <div className="small muted">In storage: {num(me.storage[sell.com] ?? 0)}. Listings need a vehicle that can carry the batch and expire in 48h. Total: <b className="gold">{money(sell.n * sellPrice)}</b></div>
+          <Btn className="doit block" onClick={async () => { const r = await run(() => api.listProduct(sell.com, sell.n, sellPrice), { ok: () => 'Listed on the marketplace' }); if (r) load() }}>List It</Btn>
         </div>
       </Card>
 

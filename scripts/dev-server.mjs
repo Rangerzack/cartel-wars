@@ -35,8 +35,6 @@ const session = (u) => ({
 const userObj = (u) => ({ id: u.id, aud: 'authenticated', role: 'authenticated', email: u.email, email_confirmed_at: u.created_at,
   app_metadata: { provider: 'email' }, user_metadata: u.raw_user_meta_data, created_at: u.created_at, updated_at: u.created_at, identities: [] })
 
-// ensure a password column on the auth stub
-await pool.query(`alter table auth.users add column if not exists password text`)
 
 const argCache = new Map()
 async function fnArgs(fn) {

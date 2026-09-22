@@ -121,6 +121,9 @@ create table profiles (
   last_seen        timestamptz not null default now()
 );
 
+create index profiles_last_seen_idx on profiles(last_seen desc);
+create index profiles_crew_idx on profiles(crew_id);
+
 alter table crews   add constraint crews_capo_fk   foreign key (capo_id) references profiles(id) on delete set null;
 alter table cartels add constraint cartels_don_fk  foreign key (don_id)  references profiles(id) on delete set null;
 
@@ -176,6 +179,7 @@ create table listings (
   expires_at  timestamptz not null default now() + interval '48 hours'
 );
 create index listings_open_idx on listings(commodity, unit_price) where status = 'open';
+create index listings_seller_idx on listings(seller_id) where status = 'open';
 
 -- ---------------------------------------------------------------------------
 -- Items
@@ -250,6 +254,7 @@ create table blocks (
   taken_at       timestamptz
 );
 create index blocks_hood_idx on blocks(hood_id);
+create index blocks_owner_idx on blocks(owner_crew_id);
 
 create table player_hoodlums (
   player_id  uuid references profiles(id) on delete cascade,
@@ -275,6 +280,18 @@ create table territory_log (
   resistance  integer not null,
   created_at  timestamptz not null default now()
 );
+
+-- ---------------------------------------------------------------------------
+-- Accolades: weekly ranked stripes computed from an event log
+-- ---------------------------------------------------------------------------
+create table accolade_events (
+  id         bigserial primary key,
+  player_id  uuid not null references profiles(id) on delete cascade,
+  kind       text not null,      -- fight_win | defense | action | import | market | turf
+  amount     bigint not null default 1,
+  created_at timestamptz not null default now()
+);
+create index accolade_events_week_idx on accolade_events(kind, created_at, player_id);
 
 -- ---------------------------------------------------------------------------
 -- Chat
