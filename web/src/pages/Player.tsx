@@ -22,7 +22,7 @@ export default function Player() {
 
   if (!p) return <Empty><span className="spin" /></Empty>
   const isMe = p.id === me.id
-  const cantFight = isMe || me.hospital || p.hospital || p.immune || me.stamina < 2
+  const cantFight = isMe || me.hospital || p.hospital || me.stamina < 2
 
   async function fight() {
     const r = await run(() => api.attack(p!.id), { silent: true })
@@ -37,7 +37,6 @@ export default function Player() {
           <div className="hstack">
             {p.jailed && <span className="pill red">🔒 In jail</span>}
             {p.hospital && <span className="pill red">🏥 Hospital</span>}
-            {p.immune && <span className="pill blue">🛡 New player</span>}
             <span className={`pill ${p.heat_level === 'red' ? 'red' : ''}`}>🔥 heat {p.heat_level}</span>
             {p.cartel && <span className="pill gold">🕴 {p.cartel.name}</span>}
           </div>
@@ -55,7 +54,7 @@ export default function Player() {
               {p.crew && <Btn className="sm ghost" onClick={() => nav(`/crew/${p.crew!.id}`)}>{p.crew.emblem} Crew</Btn>}
             </div>
           )}
-          {!isMe && (p.immune ? <div className="small muted">New players can't be attacked yet.</div> : p.hospital ? <div className="small muted">They're in the hospital — let them heal up.</div> : me.immune ? <div className="small muted">Attacking ends your own new-player immunity.</div> : null)}
+          {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
         </div>
       </Card>
 

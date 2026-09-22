@@ -113,6 +113,7 @@ supabase/migrations/20260921000002_functions.sql  all game rules (actions, fight
 supabase/migrations/20260921000003_seed.sql       content: commodities, items, actions, hoodlums, hoods/blocks
 supabase/migrations/20260922000001_casino.sql     casino: slots, roulette, craps, blackjack, live hold'em tables
 supabase/migrations/20260923000001_forum.sql      forum: boards, threads, replies, admins
+supabase/migrations/20260924000001_remove_immunity.sql  removes new-player immunity
 web/src/lib/api.ts                      typed wrappers for every RPC
 web/src/lib/game.tsx                    session + player state (get_me) + toasts
 web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile, Casino, PokerTable, Forum

@@ -57,8 +57,8 @@ lists *(wiki: profile avatar)*.
 ## Fighting
 
 Attack from any player's profile (**One On One**). Requirements: attacker
-Stamina ≥2 (not consumed), both players' Health >19, target not under
-new-player immunity (48h *(ours)*), target not in Hospital.
+Stamina ≥2 (not consumed), both players' Health >19, target not in Hospital.
+No new-player immunity: new accounts can be attacked right away *(ours)*.
 
 Damage dealt to defender (max 80 *(wiki)*):
 
@@ -71,8 +71,7 @@ Damage dealt to defender (max 80 *(wiki)*):
 The attacker takes a smaller counter-hit (`0.35 × mirror formula` *(ours)*).
 The winner (higher damage) takes 5–10% of the loser's cash on hand *(ours)*;
 after three hits on the same target within an hour the cash dries up (fights
-still happen, no money moves) *(ours, anti-farming)*. Attacking while under
-new-player immunity ends your immunity. Anyone dropping to ≤19 Health lands in
+still happen, no money moves) *(ours, anti-farming)*. Anyone dropping to ≤19 Health lands in
 Hospital. Attacking adds Heat.
 
 Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.

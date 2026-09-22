@@ -49,7 +49,6 @@ function Players() {
             </div>
             {p.hospital && <span className="pill red">🏥</span>}
             {p.jailed && <span className="pill red">🔒</span>}
-            {p.immune && <span className="pill blue">🛡</span>}
             <span className="chev">›</span>
           </div>
         ))}
