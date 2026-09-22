@@ -149,8 +149,6 @@ end $$;
 select as_user('22222222-2222-2222-2222-222222222222');
 do $$ declare me jsonb; r jsonb; crew uuid; begin
   me := get_me(); assert me->>'name' = 'Lalo';
-  perform expect_error('select attack(''11111111-1111-1111-1111-111111111111'')', 'immunity');
-  update profiles set immune_until = now() where id <> auth.uid();
   update profiles set cash = 50000, health = 100 where id = auth.uid();
   r := attack('11111111-1111-1111-1111-111111111111');
   assert r ? 'won' and (r->>'damage_dealt')::int between 0 and 80, 'fight result ' || r::text;

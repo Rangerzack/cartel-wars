@@ -44,11 +44,10 @@ export default function Layout() {
           </div>
         </header>
       )}
-      {me && (me.jailed || me.hospital || me.immune) && (
+      {me && (me.jailed || me.hospital) && (
         <div className="status-strip">
           {me.jailed && <span className="pill red">🔒 In jail · {timeLeft(me.jail_until, now)}</span>}
           {me.hospital && <span className="pill red">🏥 Hospitalized</span>}
-          {me.immune && <span className="pill blue">🛡 New-player immunity · {timeLeft(me.immune_until, now)}</span>}
         </div>
       )}
       <Outlet />
