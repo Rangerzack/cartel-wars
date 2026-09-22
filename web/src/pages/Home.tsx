@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ago } from '../lib/format'
 import type { FightLog } from '../lib/types'
-import { useGame, useMe } from '../lib/game'
+import { useMe } from '../lib/game'
 import { commodityIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Card, Stat } from '../components/ui'
@@ -11,26 +11,10 @@ import { Ribbons } from '../components/Ribbons'
 import { GettingStarted } from '../components/GettingStarted'
 import { features } from '../lib/features'
 
-function HeatGauge({ heat, max, yellow, red }: { heat: number; max: number; yellow: number; red: number }) {
-  const segs = 20
-  const on = Math.round((heat / max) * segs)
-  return (
-    <div className="heat-gauge">
-      {Array.from({ length: segs }, (_, i) => {
-        const v = ((i + 1) / segs) * max
-        const cls = v >= red ? 'r' : v >= yellow ? 'y' : 'g'
-        return <div key={i} className={`seg-l ${i < on ? 'on ' + cls : ''}`} />
-      })}
-    </div>
-  )
-}
-
 export default function Home() {
   const me = useMe()
-  const { catalog } = useGame()
   const now = useNow()
   const nav = useNavigate()
-  const cfg = catalog?.config ?? {}
   const off = me.power.offense, def = me.power.defense
   const ready = me.grow_houses.filter(g => g.produced > 0).length
   const back = me.hustlers.filter(h => h.back).length
@@ -61,12 +45,6 @@ export default function Home() {
 
       {me.ribbons.length > 0 && <Ribbons list={me.ribbons} />}
       <GettingStarted me={me} />
-      <Card title="Heat" right={<small className={me.heat_level}>{me.heat_level.toUpperCase()} · {me.heat}/{me.heat_max}</small>}>
-        <div className="bd stack">
-          <HeatGauge heat={me.heat} max={me.heat_max} yellow={cfg.heat_yellow ?? 40} red={cfg.heat_red ?? 75} />
-          <div className="small muted">Actions and attacks raise heat. In the red, every move risks getting busted. Heat cools 1 point every 10 minutes, or bribe it down at the Police Station.</div>
-        </div>
-      </Card>
 
       <div className="grid3">
         <Stat k="Cash" v={money(me.cash)} cls="gold" />
