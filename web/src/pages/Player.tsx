@@ -15,6 +15,7 @@ export default function Player() {
   const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
   const [amount, setAmount] = useState(0)
+  const [dia, setDia] = useState(0)
 
   const load = useCallback(() => api.player(id).then(setP).catch(e => toast(e.message, 'bad')), [id, toast])
   useEffect(() => { load() }, [load])
@@ -57,10 +58,16 @@ export default function Player() {
       </Card>
 
       {!isMe && (
-        <Card title="Send Money">
-          <div className="bd hstack">
-            <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
-            <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => run(() => api.sendCash(p.id, amount), { ok: r => `Sent ${money(r.sent)} to ${p.name}` })}>Send</Btn>
+        <Card title="Send Money / Diamonds">
+          <div className="bd stack">
+            <div className="hstack" style={{ flexWrap: 'nowrap' }}>
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Cash amount" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
+              <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => run(() => api.sendCash(p.id, amount), { ok: r => `Sent ${money(r.sent)} to ${p.name}` })}>Send $</Btn>
+            </div>
+            <div className="hstack" style={{ flexWrap: 'nowrap' }}>
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" value={dia || ''} onChange={e => setDia(Number(e.target.value) || 0)} />
+              <Btn className="blue" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
+            </div>
           </div>
         </Card>
       )}

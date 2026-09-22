@@ -40,6 +40,9 @@ create or replace function _cfg(key text) returns numeric language sql immutable
     when 'starter_cash'       then 10000
     when 'starter_diamonds'   then 25
     when 'extra_grow_diamonds' then 20
+    when 'crew_fight_stamina' then 5
+    when 'crew_fight_cooldown_min' then 60
+    when 'crew_fight_stake_pct' then 5
     else 0 end $$;
 
 -- Street prices random-walk whenever read, at most every 10 minutes.
@@ -586,6 +589,19 @@ begin
   return jsonb_build_object('sent', amount);
 end $$;
 
+create or replace function send_diamonds(target uuid, n integer) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid(); pr profiles;
+begin
+  pr := _tick(u);
+  if target = u then perform _fail('Cannot send to yourself'); end if;
+  if n <= 0 or n > pr.diamonds then perform _fail('Invalid amount'); end if;
+  if not exists (select 1 from profiles where id = target) then perform _fail('No such player'); end if;
+  update profiles set diamonds = diamonds - n where id = u;
+  update profiles set diamonds = diamonds + n where id = target;
+  return jsonb_build_object('sent', n);
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- Items & setups
 -- ---------------------------------------------------------------------------
@@ -900,7 +916,15 @@ begin
     'applied', exists (select 1 from crew_applications where crew_id = c.id and player_id = u),
     'invites', case when c.capo_id = u then
        (select coalesce(jsonb_agg(jsonb_build_object('id', ca.id, 'name', ca.name)), '[]'::jsonb)
-        from cartel_invites i join cartels ca on ca.id = i.cartel_id where i.crew_id = c.id) end);
+        from cartel_invites i join cartels ca on ca.id = i.cartel_id where i.crew_id = c.id) end,
+    'power', jsonb_build_object('att', _crew_power(c.id, true), 'def', _crew_power(c.id, false)),
+    'fights', (select coalesce(jsonb_agg(jsonb_build_object('id', f.id, 'attacker', a.name, 'attacker_id', a.id, 'defender', d.name, 'defender_id', d.id,
+                  'won', f.won, 'attack', f.attack_power, 'defense', f.defense_power, 'cash', f.cash_taken, 'at', f.created_at,
+                  'we_attacked', f.attacker_crew = c.id) order by f.created_at desc), '[]'::jsonb)
+               from (select * from crew_fights where attacker_crew = c.id or defender_crew = c.id order by created_at desc limit 10) f
+               join crews a on a.id = f.attacker_crew join crews d on d.id = f.defender_crew),
+    'next_fight_at', (select max(created_at) + make_interval(mins => _cfg('crew_fight_cooldown_min')::int) from crew_fights
+                      where defender_crew = c.id and attacker_crew = (select crew_id from profiles where id = u)));
 end $$;
 
 create or replace function crew_apply(cid uuid) returns jsonb
@@ -998,6 +1022,66 @@ begin
     update crews set bank = bank + amount where id = c.id;
   end if;
   return jsonb_build_object('bank', c.bank + amount);
+end $$;
+
+-- Crew power: sum of every member's setup (jail setup while jailed). Hospitalized members sit out.
+create or replace function _crew_power(cid uuid, offense boolean) returns integer language plpgsql stable as $$
+declare total int := 0; m profiles; pw record;
+begin
+  for m in select * from profiles where crew_id = cid loop
+    if _hospital(m) then continue; end if;
+    select * into pw from _power(m.id, case when _jailed(m) then 'jail'::setup_kind when offense then 'offense' else 'defense' end);
+    total := total + case when offense then pw.att else pw.def end;
+  end loop;
+  return total;
+end $$;
+
+create or replace function crew_fight(target uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid(); pr profiles; mine crews; theirs crews; atk numeric; def numeric; won boolean; taken bigint := 0;
+        last_at timestamptz; cd int := _cfg('crew_fight_cooldown_min')::int; f crew_fights; was_jailed boolean;
+begin
+  pr := _tick(u);
+  was_jailed := _jailed(pr);
+  if pr.crew_id is null then perform _fail('You are not in a crew'); end if;
+  if _hospital(pr) then perform _fail('You are in the hospital'); end if;
+  if pr.stamina < _cfg('crew_fight_stamina') then perform _fail(format('Crew fights cost %s stamina', _cfg('crew_fight_stamina'))); end if;
+  select * into mine from crews where id = pr.crew_id for update;
+  select * into theirs from crews where id = target for update;
+  if theirs.id is null then perform _fail('No such crew'); end if;
+  if theirs.id = mine.id then perform _fail('That is your own crew'); end if;
+  if mine.cartel_id is not null and mine.cartel_id = theirs.cartel_id then perform _fail('You cannot fight a crew in your own cartel'); end if;
+  select max(created_at) into last_at from crew_fights where attacker_crew = mine.id and defender_crew = theirs.id;
+  if last_at is not null and last_at > now() - make_interval(mins => cd) then
+    perform _fail(format('Your crew already hit them recently — try again in %s min', ceil(extract(epoch from last_at + make_interval(mins => cd) - now()) / 60)));
+  end if;
+
+  atk := _crew_power(mine.id, true)  * (0.85 + random() * 0.3);
+  def := _crew_power(theirs.id, false) * (0.85 + random() * 0.3);
+  won := atk > def;
+  if won then
+    taken := floor(theirs.bank * _cfg('crew_fight_stake_pct') / 100.0);
+    update crews set bank = bank - taken where id = theirs.id;
+    update crews set bank = bank + taken where id = mine.id;
+    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = theirs.id and health > 19;
+    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = mine.id and health > 19;
+  else
+    taken := floor(mine.bank * _cfg('crew_fight_stake_pct') / 100.0);
+    update crews set bank = bank - taken where id = mine.id;
+    update crews set bank = bank + taken where id = theirs.id;
+    update profiles set health = greatest(1, health - _rand_between(10, 25)) where crew_id = mine.id and health > 19;
+    update profiles set health = greatest(1, health - _rand_between(3, 8))   where crew_id = theirs.id and health > 19;
+  end if;
+  pr.stamina := pr.stamina - _cfg('crew_fight_stamina')::int;
+  pr.heat := least(pr.heat_max, pr.heat + 3);
+  pr := _bust_roll(pr);
+  update profiles set stamina = pr.stamina, heat = pr.heat, jail_until = pr.jail_until where id = u;
+  insert into crew_fights (attacker_crew, defender_crew, started_by, attack_power, defense_power, won, cash_taken)
+  values (mine.id, theirs.id, u, round(atk), round(def), won, taken) returning * into f;
+  insert into messages (channel, sender_id, sender_name, body)
+  values ('crew:' || theirs.id, u, pr.name, format('⚔️ %s %s your crew (%s vs %s)%s', mine.name, case when won then 'hit' else 'was pushed back by' end,
+          round(atk), round(def), case when won then format(' — $%s taken from the crew bank', taken) else '' end));
+  return jsonb_build_object('won', won, 'attack', round(atk), 'defense', round(def), 'cash', taken, 'busted', _jailed(pr) and not was_jailed);
 end $$;
 
 -- ---------------------------------------------------------------------------

@@ -26,6 +26,9 @@ Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills
 Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
 halve in effect after 3 in a rolling 24h.
 
+Players can send cash and Diamonds to each other from a profile *(wiki:
+"Send Money / Diamonds" buttons)*.
+
 There are **no levels and no skill points**. Progression is cash, gear,
 production capacity, territory and accolades.
 
@@ -63,6 +66,16 @@ Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
 Slot count = Inventory slots (base 6 *(ours)*, upgradable with Diamonds).
 Only the single best Transport's att/def counts *(wiki)*.
+
+### Crew fights
+
+Launched from a rival crew's page by any member (5 Stamina). Your crew's total
+Attack (every member's active setup; hospitalized members sit out) against
+their total Defense, each rolled ±15%. The winner takes 5% of the loser's
+Crew Bank; everyone on the losing side loses 10–25 Health, the winners 3–8.
+One hit per attacker→defender pair per hour; no fights inside a cartel. The
+defending crew gets a line in its Crew Chat. *(ours — the original had crew
+fights "launched from crew profiles" but no surviving details.)*
 
 ## Heat, police and jail
 
@@ -130,8 +143,12 @@ The city has **four islands**, each with Hoods, each Hood with Blocks.
 
 ## Accolades
 
-Weekly ranked stripes (imports, fight wins, market volume, attacks, defense,
-property) *(wiki)*. Not in v1 — tracked counters exist so this can be added.
+Weekly ranked stripes *(wiki)*. Six boards, reset Monday 00:00 UTC: Fights
+won, Defenses (fights you were attacked in and won), Actions, Imports (units
+hustlers brought back), Market (cash traded on the Marketplace, both sides)
+and Turf (blocks captured). Top three on each board wear a gold, silver or
+bronze stripe on their profile for the following week. Everything is derived
+from an `accolade_events` log written by the RPCs.
 
 ## Screens (mobile-first, black "Do It" buttons)
 

@@ -215,6 +215,20 @@ create table fights (
 create index fights_attacker_idx on fights(attacker_id, created_at desc);
 create index fights_defender_idx on fights(defender_id, created_at desc);
 
+create table crew_fights (
+  id              bigserial primary key,
+  attacker_crew   uuid not null references crews(id) on delete cascade,
+  defender_crew   uuid not null references crews(id) on delete cascade,
+  started_by      uuid references profiles(id) on delete set null,
+  attack_power    integer not null,
+  defense_power   integer not null,
+  won             boolean not null,
+  cash_taken      bigint not null default 0,
+  created_at      timestamptz not null default now()
+);
+create index crew_fights_pair_idx on crew_fights(attacker_crew, defender_crew, created_at desc);
+create index crew_fights_def_idx on crew_fights(defender_crew, created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Crews / cartels social tables
 -- ---------------------------------------------------------------------------

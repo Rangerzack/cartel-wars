@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewSummary, FightLog, FightResult, Island,
+  CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Island,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
 } from './types'
 
@@ -38,6 +38,7 @@ export const api = {
   bankDeposit: (amount: number) => rpc<{ bank: number }>('bank_deposit', { amount }),
   bankWithdraw: (amount: number) => rpc<{ bank: number }>('bank_withdraw', { amount }),
   sendCash: (target: string, amount: number) => rpc<{ sent: number }>('send_cash', { target, amount }),
+  sendDiamonds: (target: string, n: number) => rpc<{ sent: number }>('send_diamonds', { target, n }),
 
   // items
   buyItem: (item: number, n = 1) => rpc<{ cost: number }>('buy_item', { item, n }),
@@ -71,6 +72,7 @@ export const api = {
   crewKick: (pid: string) => rpc<{ ok: boolean }>('crew_kick', { pid }),
   crewLeave: () => rpc<{ ok: boolean }>('crew_leave'),
   crewBank: (amount: number) => rpc<{ bank: number }>('crew_bank', { amount }),
+  crewFight: (target: string) => rpc<CrewFightResult>('crew_fight', { target }),
 
   // cartels
   cartelCreate: (nm: string) => rpc<{ id: string }>('cartel_create', { nm }),

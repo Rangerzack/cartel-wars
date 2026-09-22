@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
-import { Btn, Card, Empty, Stat } from '../components/ui'
-import type { CrewDetail, CrewSummary } from '../lib/types'
+import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { useNow } from '../lib/useNow'
+import { timeLeft } from '../lib/format'
+import type { CrewDetail, CrewFightResult, CrewSummary } from '../lib/types'
 
 export default function Crew() {
   const { id } = useParams()
@@ -22,11 +24,19 @@ function CrewHub() {
     const t = setTimeout(() => api.listCrews(q).then(setList).catch(e => toast(e.message, 'bad')), 200)
     return () => clearTimeout(t)
   }, [q, toast])
-  useEffect(() => { if (me.crew) nav(`/crew/${me.crew.id}`, { replace: true }) }, [me.crew, nav])
 
   return (
     <div className="page">
-      <Card title="Found a Crew">
+      {me.crew && (
+        <Card>
+          <div className="row link" onClick={() => nav(`/crew/${me.crew!.id}`)}>
+            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{me.crew.emblem}</span>
+            <div className="grow"><div className="t">{me.crew.name}</div><div className="s">Your crew · {me.crew.members} members{me.crew.is_capo ? ' · you are Capo' : ''}</div></div>
+            <span className="chev">›</span>
+          </div>
+        </Card>
+      )}
+      {!me.crew && <Card title="Found a Crew">
         <div className="bd stack">
           <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
             <label className="f">Emblem<input className="input" value={form.emblem} maxLength={4} onChange={e => setForm({ ...form, emblem: e.target.value })} /></label>
@@ -35,8 +45,8 @@ function CrewHub() {
           <label className="f">Description<textarea className="input" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
           <Btn className="doit block" disabled={form.name.trim().length < 3} onClick={async () => { const r = await run(() => api.crewCreate(form.name, form.emblem, form.description), { ok: () => 'Your crew is on the map' }); if (r) nav(`/crew/${r.id}`) }}>Found It</Btn>
         </div>
-      </Card>
-      <h2>Crews</h2>
+      </Card>}
+      <h2>{me.crew ? 'Other crews' : 'Crews'}</h2>
       <input className="input" placeholder="Search crews…" value={q} onChange={e => setQ(e.target.value)} />
       <Card>
         {!list && <Empty><span className="spin" /></Empty>}
@@ -60,11 +70,15 @@ function CrewPage({ id }: { id: string }) {
   const [c, setC] = useState<CrewDetail | null>(null)
   const [amount, setAmount] = useState(0)
   const [edit, setEdit] = useState<{ emblem: string; description: string } | null>(null)
+  const [fight, setFight] = useState<CrewFightResult | null>(null)
+  const now = useNow()
   const load = useCallback(() => api.crew(id).then(setC).catch(e => { toast(e.message, 'bad'); nav('/crew') }), [id, toast, nav])
   useEffect(() => { load() }, [load])
   if (!c) return <Empty><span className="spin" /></Empty>
   const mine = me.crew?.id === c.id
   const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load() }
+  const sameCartel = !!me.cartel && c.cartel?.id === me.cartel.id
+  const cooldown = c.next_fight_at && new Date(c.next_fight_at).getTime() > now
 
   return (
     <div className="page">
@@ -75,7 +89,19 @@ function CrewPage({ id }: { id: string }) {
             <Stat k="Members" v={c.members.length} />
             <Stat k="Blocks" v={c.blocks.length} />
             {c.bank !== null ? <Stat k="Crew bank" v={money(c.bank)} cls="gold" /> : <Stat k="Founded" v={ago(c.created_at)} />}
+            <Stat k="Crew attack" v={num(c.power.att)} />
+            <Stat k="Crew defense" v={num(c.power.def)} />
+            <Stat k="Crew fights" v={`${c.fights.filter(f => f.we_attacked === f.won).length}W · ${c.fights.filter(f => f.we_attacked !== f.won).length}L`} />
           </div>
+          {!mine && me.crew && !sameCartel && (
+            <div className="stack">
+              <Btn className="doit red block" disabled={!!cooldown || me.hospital} onClick={async () => { const r = await run(() => api.crewFight(c.id), { silent: true }); if (r) { setFight(r); load() } }}>
+                ⚔️ Crew Fight{cooldown ? ` · ${timeLeft(c.next_fight_at, now)}` : ''}
+              </Btn>
+              <div className="small muted">Your whole crew's attack against their defense. Costs 5 stamina, winner takes 5% of the loser's crew bank, everyone on the losing side takes a beating. One hit per crew per hour.</div>
+            </div>
+          )}
+          {!mine && sameCartel && <div className="small muted">Same cartel — no crew fights between allies.</div>}
           {!mine && !me.crew && (
             c.applied
               ? <Btn className="ghost block" onClick={() => act(() => api.crewWithdraw(c.id), () => 'Application withdrawn')}>Withdraw Application</Btn>
@@ -135,6 +161,21 @@ function CrewPage({ id }: { id: string }) {
         </Card>
       )}
 
+      {c.fights.length > 0 && (
+        <Card title="Crew fights">
+          {c.fights.map(f => {
+            const weWon = f.we_attacked === f.won
+            return (
+              <div key={f.id} className="row link" onClick={() => nav(`/crew/${f.we_attacked ? f.defender_id : f.attacker_id}`)}>
+                <span>{weWon ? '🏆' : '💀'}</span>
+                <div className="grow"><div className="t">{f.we_attacked ? `${c.name} attacked ${f.defender}` : `${f.attacker} attacked ${c.name}`}{' · '}{weWon ? 'won' : 'lost'}</div><div className="s">{num(f.attack)} vs {num(f.defense)} · {ago(f.at)}</div></div>
+                <b className={`tabular ${weWon ? 'gold' : 'red'}`}>{weWon ? '+' : '−'}{money(f.cash)}</b>
+              </div>
+            )
+          })}
+        </Card>
+      )}
+
       <Card title="Members">
         {c.members.map(m => (
           <div key={m.id} className="row">
@@ -151,6 +192,16 @@ function CrewPage({ id }: { id: string }) {
         <Card title="Blocks held">
           {c.blocks.map(b => <div key={b.id} className="row"><div className="grow"><div className="t">{b.name}</div><div className="s">{b.hood} · {b.island}</div></div></div>)}
         </Card>
+      )}
+
+      {fight && (
+        <Modal title={fight.won ? `${me.crew?.name} took the fight` : `${c.name} held the line`} onClose={() => setFight(null)}>
+          <div className="stack">
+            <div className="grid2"><Stat k="Your attack" v={num(fight.attack)} cls="green" /><Stat k="Their defense" v={num(fight.defense)} cls="red" /></div>
+            <p style={{ margin: 0 }} className={fight.won ? 'gold' : 'red'}>{fight.won ? `${money(fight.cash)} moved from their crew bank to yours.` : `${money(fight.cash)} moved from your crew bank to theirs.`}</p>
+            {fight.busted && <div className="notice red">The heat caught up with you — you're in jail.</div>}
+          </div>
+        </Modal>
       )}
 
       {mine && c.is_capo && !c.cartel && (

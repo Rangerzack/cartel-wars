@@ -75,9 +75,10 @@ begin
   -- marketplace listings
   for i in 1..12 loop
     pid := ids[1 + (random() * 23)::int];
+    -- note: random() in a select list gets correlated with `order by random()`, so pick the row first
     insert into listings (seller_id, commodity, qty, unit_price, expires_at)
-    select pid, c.code, 25 * (1 + (random() * 8)::int), greatest(1, (sp.price * (0.7 + random() * 0.3))::int), now() + (random() * 40 || ' hours')::interval
-      from commodities c join street_prices sp on sp.commodity = c.code order by random() limit 1;
+    select pid, x.code, 25 * (1 + (random() * 8)::int), greatest(1, (x.price * (0.7 + random() * 0.3))::int), now() + (random() * 40 || ' hours')::interval
+      from (select c.code, sp.price from commodities c join street_prices sp on sp.commodity = c.code order by random() limit 1) x;
   end loop;
 
   -- fights and turf log
@@ -95,8 +96,8 @@ begin
       from generate_series(1, 600);
   for i in 1..10 loop
     insert into territory_log (block_id, attacker_id, crew_id, success, attack, resistance, created_at)
-    select b.id, p.id, p.crew_id, random() < 0.5, (random() * 3000)::int, (random() * 2500)::int, now() - (random() * 2 || ' days')::interval
-      from blocks b, profiles p where p.crew_id is not null order by random() limit 1;
+    select x.bid, x.pid, x.cid, random() < 0.5, 200 + (random() * 3000)::int, 200 + (random() * 2500)::int, now() - (random() * 2 || ' days')::interval
+      from (select b.id bid, p.id pid, p.crew_id cid from blocks b, profiles p where p.crew_id is not null order by random() limit 1) x;
   end loop;
 
   -- chat

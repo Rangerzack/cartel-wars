@@ -229,6 +229,24 @@ do $$ declare r jsonb; t jsonb; b int; hid int; begin
   assert get_player('11111111-1111-1111-1111-111111111111')->'crew'->>'name' = 'Los Pollos';
 end $$;
 
+-- crew fights: make a rival crew with player 3
+insert into auth.users (id, raw_user_meta_data) values ('33333333-3333-3333-3333-333333333333', '{"name":"Tuco"}');
+select as_user('33333333-3333-3333-3333-333333333333');
+do $$ declare r jsonb; c jsonb; begin
+  perform crew_create('Salamancas', '🐂');
+  update crews set bank = 10000 where name = 'Salamancas';
+  perform expect_error('select crew_fight((select id from crews where name = ''Salamancas''))', 'your own crew');
+  r := crew_fight((select id from crews where name = 'Los Pollos'));
+  assert r ? 'won' and (r->>'attack')::int > 0, 'crew fight ran: ' || r::text;
+  perform expect_error('select crew_fight((select id from crews where name = ''Los Pollos''))', 'recently');
+  c := get_crew((select id from crews where name = 'Los Pollos'));
+  assert jsonb_array_length(c->'fights') = 1 and (c->'power'->>'att')::int > 0, 'crew fight logged';
+  assert (select count(*) from messages where channel = 'crew:' || (select id from crews where name = 'Los Pollos')) >= 2, 'crew notified';
+  r := send_diamonds('11111111-1111-1111-1111-111111111111', 5);
+  assert (select diamonds from profiles where name = 'Tuco') = 20, 'diamonds sent';
+  perform expect_error('select send_diamonds(''11111111-1111-1111-1111-111111111111'', 999)', 'Invalid');
+end $$;
+
 -- leaving: capo leaves, successor takes over crew and cartel
 select as_user('22222222-2222-2222-2222-222222222222');
 do $$ begin

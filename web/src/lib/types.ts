@@ -107,7 +107,15 @@ export interface CrewDetail {
   applications: { id: string; name: string; at: string }[] | null
   applied: boolean
   invites: { id: string; name: string }[] | null
+  power: { att: number; def: number }
+  fights: CrewFight[]
+  next_fight_at: string | null
 }
+export interface CrewFight {
+  id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
+  won: boolean; attack: number; defense: number; cash: number; at: string; we_attacked: boolean
+}
+export interface CrewFightResult { won: boolean; attack: number; defense: number; cash: number; busted: boolean }
 export interface CartelSummary { id: string; name: string; don: string; crews: number; blocks: number }
 export interface CartelDetail {
   id: string; name: string; don_id: string; is_don: boolean; don: string; created_at: string; bank: number | null; member: boolean

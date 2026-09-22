@@ -48,12 +48,24 @@ npm run dev:api              # tiny GoTrue+PostgREST stand-in on :54321 (see scr
 cd web && npm install && cp .env.local.example .env.local && npm run dev
 ```
 
+Optional: populate a demo world (24 bots, three crews, a cartel, held blocks,
+listings, chat) so the city looks alive, then sign in as `bot01@demo.local` /
+`secret123`:
+
+```sh
+npm run db:demo
+```
+
 Tests:
 
 ```sh
 npm run db:test              # SQL smoke test of every RPC (scripts/smoke-test.sql)
 npm run e2e                  # Playwright walkthrough of the UI against the local stack
+node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ```
+
+`npm run db:*` needs to run as a user that can start Postgres (on Linux:
+`sudo -u postgres env PGDATA_DIR=/tmp/cartel-pg npm run db:reset`).
 
 ## Layout
 
@@ -75,9 +87,9 @@ are in `0003_seed.sql`. Change, re-run `npm run db:test`, then `supabase db push
 
 ## Not yet built
 
-Accolades (weekly ranked stripes), Reputation actions with rare weapons, the
-Casino, and Diamond purchases. Counters for most of these already exist in
-`profiles`.
+Reputation actions with rare weapons (the 2011 "Reputation expansion"), the
+Casino (Cartel Reloaded), Diamond purchases, and the "Profession" stat. See
+SPEC.md for what's sourced and what's a fill-in.
 
 ---
 
