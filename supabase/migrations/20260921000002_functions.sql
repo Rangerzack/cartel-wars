@@ -1166,6 +1166,7 @@ create or replace function _cartel_drop_crew(cartel uuid, crew uuid) returns voi
 declare ca cartels; next_capo uuid;
 begin
   update crews set cartel_id = null where id = crew;
+  delete from cartel_votes where cartel_id = cartel and (crew_id = crew or candidate in (select capo_id from crews where id = crew));
   select * into ca from cartels where id = cartel;
   if ca.id is null then return; end if;
   if not exists (select 1 from crews where cartel_id = cartel) then
@@ -1210,8 +1211,11 @@ begin
     'crews', (select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'emblem', c.emblem, 'capo_id', c.capo_id,
                 'capo', (select name from profiles where id = c.capo_id),
                 'members', (select count(*) from profiles where crew_id = c.id),
-                'blocks', (select count(*) from blocks where owner_crew_id = c.id)) order by c.created_at), '[]'::jsonb)
-              from crews c where c.cartel_id = ca.id));
+                'blocks', (select count(*) from blocks where owner_crew_id = c.id),
+                'votes', (select count(*) from cartel_votes v where v.cartel_id = ca.id and v.candidate = c.capo_id),
+                'my_vote', exists (select 1 from cartel_votes v join crews mc on mc.id = v.crew_id where v.cartel_id = ca.id and mc.capo_id = u and v.candidate = c.capo_id)) order by c.created_at), '[]'::jsonb)
+              from crews c where c.cartel_id = ca.id),
+    'can_vote', exists (select 1 from crews where cartel_id = ca.id and capo_id = u));
 end $$;
 
 create or replace function cartel_invite(crew uuid) returns jsonb
@@ -1249,6 +1253,30 @@ begin
   if c.id is null or c.cartel_id is null then perform _fail('Your crew is not in a cartel'); end if;
   perform _cartel_drop_crew(c.cartel_id, c.id);
   return jsonb_build_object('ok', true);
+end $$;
+
+-- Capos vote to replace the Don; a strict majority of the cartel's crews decides.
+create or replace function cartel_vote_don(candidate uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid(); c crews; ca cartels; total int; votes int;
+begin
+  perform _nn(candidate, 'candidate');
+  select * into c from crews where capo_id = u;
+  if c.id is null or c.cartel_id is null then perform _fail('Only a Capo of a cartel crew can vote'); end if;
+  select * into ca from cartels where id = c.cartel_id for update;
+  if not exists (select 1 from crews where cartel_id = ca.id and capo_id = candidate) then perform _fail('The candidate must be a Capo in your cartel'); end if;
+  insert into cartel_votes (cartel_id, crew_id, candidate) values (ca.id, c.id, candidate)
+    on conflict (cartel_id, crew_id) do update set candidate = excluded.candidate, created_at = now();
+  select count(*) into total from crews where cartel_id = ca.id;
+  select count(*) into votes from cartel_votes where cartel_id = ca.id and cartel_votes.candidate = cartel_vote_don.candidate;
+  if votes * 2 > total and ca.don_id is distinct from candidate then
+    update cartels set don_id = candidate where id = ca.id;
+    delete from cartel_votes where cartel_id = ca.id;
+    insert into messages (channel, sender_id, sender_name, body)
+    select 'cartel:' || ca.id, u, p.name, format('👑 The Capos have spoken: %s is the new Don.', (select name from profiles where id = candidate)) from profiles p where p.id = u;
+    return jsonb_build_object('elected', true);
+  end if;
+  return jsonb_build_object('elected', false, 'votes', votes, 'needed', floor(total / 2) + 1);
 end $$;
 
 create or replace function cartel_bank(amount bigint) returns jsonb  -- positive deposits, negative withdraws (Don)

@@ -119,7 +119,8 @@ export interface CrewFightResult { won: boolean; attack: number; defense: number
 export interface CartelSummary { id: string; name: string; don: string; crews: number; blocks: number }
 export interface CartelDetail {
   id: string; name: string; don_id: string; is_don: boolean; don: string; created_at: string; bank: number | null; member: boolean
-  crews: { id: string; name: string; emblem: string; capo_id: string; capo: string; members: number; blocks: number }[]
+  crews: { id: string; name: string; emblem: string; capo_id: string; capo: string; members: number; blocks: number; votes: number; my_vote: boolean }[]
+  can_vote: boolean
 }
 
 export interface CrewRef { id: string; name: string; emblem: string }

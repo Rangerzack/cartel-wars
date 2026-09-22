@@ -247,6 +247,29 @@ do $$ declare r jsonb; c jsonb; begin
   perform expect_error('select send_diamonds(''11111111-1111-1111-1111-111111111111'', 999)', 'Invalid');
 end $$;
 
+-- Don vote: Tuco's crew joins Juárez, then both capos vote Tuco in
+select as_user('22222222-2222-2222-2222-222222222222');
+do $$ begin perform cartel_invite((select id from crews where name = 'Salamancas')); end $$;
+select as_user('33333333-3333-3333-3333-333333333333');
+do $$ declare r jsonb; cid uuid := (select id from cartels where name = 'Juárez'); begin
+  perform cartel_accept(cid, true);
+  r := cartel_vote_don('33333333-3333-3333-3333-333333333333');
+  assert not (r->>'elected')::boolean and (r->>'votes')::int = 1 and (r->>'needed')::int = 2, 'one of two: ' || r::text;
+  assert (get_cartel(cid)->'crews'->1->>'my_vote')::boolean, 'vote shown';
+end $$;
+select as_user('22222222-2222-2222-2222-222222222222');
+do $$ declare r jsonb; cid uuid := (select id from cartels where name = 'Juárez'); begin
+  r := cartel_vote_don('33333333-3333-3333-3333-333333333333');
+  assert (r->>'elected')::boolean, 'elected: ' || r::text;
+  assert (select don_id from cartels where id = cid) = '33333333-3333-3333-3333-333333333333';
+  assert (select count(*) from cartel_votes where cartel_id = cid) = 0, 'votes cleared';
+  perform expect_error('select cartel_vote_don(''11111111-1111-1111-1111-111111111111'')', 'must be a Capo');
+end $$;
+-- put things back for the succession test below: Tuco's crew leaves, Lalo is Don again
+select as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform cartel_leave(); end $$;
+do $$ begin assert (select don_id from cartels where name = 'Juárez') = '22222222-2222-2222-2222-222222222222', 'don falls back to remaining capo'; end $$;
+
 -- leaving: capo leaves, successor takes over crew and cartel
 select as_user('22222222-2222-2222-2222-222222222222');
 do $$ begin

@@ -129,9 +129,10 @@ Commodities: **Herb**, **Dust**, **Pills** (cheap→expensive, bulky→compact).
 
 - **Crew**: up to 12 members *(ours)*, leader is the **Capo**. Name, emblem
   (emoji), description. Players apply; Capo accepts/kicks. No invite codes.
-- **Cartel**: an alliance of Crews. Leader is the **Don** (the founding Capo;
-  Capos can vote to replace). Cartels own the Cartel Bank and share hood
-  bonuses. Cartel Chat.
+- **Cartel**: an alliance of Crews. Leader is the **Don** — the founding Capo,
+  replaceable by a vote: each member crew's Capo votes for a Capo, and a strict
+  majority of crews elects *(wiki: "Don, voted by Capos")*. Cartels own the
+  Cartel Bank and share hood bonuses. Cartel Chat.
 - Chat: global Live Chat, Crew chat, Cartel chat, private conversations.
 
 ## Territory (the Cartel Wars expansion)

@@ -244,6 +244,14 @@ create table crew_applications (
   primary key (crew_id, player_id)
 );
 
+create table cartel_votes (
+  cartel_id  uuid references cartels(id) on delete cascade,
+  crew_id    uuid references crews(id) on delete cascade,      -- the voting crew (its Capo votes)
+  candidate  uuid references profiles(id) on delete cascade,   -- a Capo in the cartel
+  created_at timestamptz not null default now(),
+  primary key (cartel_id, crew_id)
+);
+
 create table cartel_invites (
   cartel_id  uuid references cartels(id) on delete cascade,
   crew_id    uuid references crews(id) on delete cascade,

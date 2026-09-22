@@ -83,6 +83,7 @@ export const api = {
   cartelAccept: (cartel: string, accept = true) => rpc<{ ok: boolean }>('cartel_accept', { cartel, accept }),
   cartelLeave: () => rpc<{ ok: boolean }>('cartel_leave'),
   cartelBank: (amount: number) => rpc<{ bank: number }>('cartel_bank', { amount }),
+  cartelVoteDon: (candidate: string) => rpc<{ elected: boolean; votes?: number; needed?: number }>('cartel_vote_don', { candidate }),
 
   // territory
   territory: () => rpc<Island[]>('get_territory'),

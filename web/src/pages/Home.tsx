@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../lib/api'
+import { ago } from '../lib/format'
+import type { FightLog } from '../lib/types'
 import { useGame, useMe } from '../lib/game'
 import { commodityIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
@@ -29,6 +33,8 @@ export default function Home() {
   const off = me.power.offense, def = me.power.defense
   const ready = me.grow_houses.filter(g => g.produced > 0).length
   const back = me.hustlers.filter(h => h.back).length
+  const [fights, setFights] = useState<FightLog[]>([])
+  useEffect(() => { api.fights(3).then(setFights).catch(() => {}) }, [me.fights_won, me.fights_lost])
 
   const links: { to: string; ic: string; t: string; s: string }[] = [
     { to: '/items', ic: '🎒', t: 'Inventory & Setups', s: `${me.inventory_slots} slots · att ${off.att} / def ${def.def}` },
@@ -79,6 +85,18 @@ export default function Home() {
           ))}
         </div>
       </Card>
+
+      {fights.length > 0 && (
+        <Card title="Latest fights" right={<Link to="/fight?tab=log" className="small">all ›</Link>}>
+          {fights.map(f => (
+            <div key={f.id} className="row link" onClick={() => nav(`/player/${f.i_attacked ? f.defender_id : f.attacker_id}`)}>
+              <span>{f.won ? '🏆' : '💀'}</span>
+              <div className="grow"><div className="t">{f.i_attacked ? `You attacked ${f.defender}` : `${f.attacker} attacked you`}</div><div className="s">{f.won ? 'won' : 'lost'} · {ago(f.at)}</div></div>
+              <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>
+            </div>
+          ))}
+        </Card>
+      )}
 
       <Card>
         {links.map(l => (
