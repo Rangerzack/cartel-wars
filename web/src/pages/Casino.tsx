@@ -11,24 +11,30 @@ import Blackjack from '../components/casino/Blackjack'
 import Craps from '../components/casino/Craps'
 import Roulette from '../components/casino/Roulette'
 import Slots from '../components/casino/Slots'
+import { features } from '../lib/features'
 
-const GAMES = [
+const ALL_GAMES = [
   { v: 'poker', l: '♠ Poker' }, { v: 'blackjack', l: '🃏 Blackjack' }, { v: 'craps', l: '🎲 Craps' }, { v: 'roulette', l: '🎡 Roulette' }, { v: 'slots', l: '🎰 Slots' },
 ] as const
-type Game = typeof GAMES[number]['v']
+type Game = typeof ALL_GAMES[number]['v']
+const GAMES = ALL_GAMES.filter(g => (features.casinoGames as readonly string[]).includes(g.v))
 const GAME_LABEL: Record<string, string> = { poker: 'Poker', blackjack: 'Blackjack', craps: 'Craps', roulette: 'Roulette', slots: 'Slots' }
 
 export default function Casino() {
   const me = useMe()
-  const { game = 'poker' } = useParams()
+  const { game = GAMES[0].v } = useParams()
   const nav = useNavigate()
-  const g = (GAMES.some(x => x.v === game) ? game : 'poker') as Game
+  const g = (GAMES.some(x => x.v === game) ? game : GAMES[0].v) as Game
   const locked = me.jailed || me.hospital
   return (
     <div className="page">
-      <div className="seg casino-tabs">
-        {GAMES.map(t => <button key={t.v} className={g === t.v ? 'on' : ''} onClick={() => nav(`/casino/${t.v}`)}>{t.l}</button>)}
-      </div>
+      {GAMES.length > 1 ? (
+        <div className="seg casino-tabs">
+          {GAMES.map(t => <button key={t.v} className={g === t.v ? 'on' : ''} onClick={() => nav(`/casino/${t.v}`)}>{t.l}</button>)}
+        </div>
+      ) : (
+        <div className="notice gold">The slot machine is open. Tables — poker, blackjack, craps and roulette — are coming soon.</div>
+      )}
       {locked && <div className="notice red">{me.jailed ? 'No gambling from a cell.' : 'The casino won\'t seat you from a hospital bed.'} Come back when you're out.</div>}
       {g === 'poker' && <PokerLobby />}
       {g === 'blackjack' && <Blackjack />}

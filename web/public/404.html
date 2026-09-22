@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cartel Wars</title>
+<script>
+  // GitHub Pages serves this for any unknown path. Bounce to the right app (live or /staging/) with the path in ?r=.
+  (function () {
+    var segs = location.pathname.split('/')            // ['', repo, 'staging'?, ...]
+    var depth = segs[2] === 'staging' ? 3 : 2
+    var base = segs.slice(0, depth).join('/') + '/'
+    var rest = location.pathname.slice(base.length)
+    location.replace(base + '?r=' + encodeURIComponent(rest + location.search + location.hash))
+  })()
+</script>

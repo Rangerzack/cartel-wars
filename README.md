@@ -57,7 +57,23 @@ Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
    GitHub Pages automatically (`.github/workflows/pages.yml` — edit the two
    `VITE_SUPABASE_*` values there for your project). Vercel / Netlify /
    Cloudflare Pages also work; it's a single-page app, so route all paths to
-   `index.html` (`web/vercel.json` and `web/public/_redirects` are included).
+   `index.html` (`web/vercel.json` and `web/public/_redirects` are included;
+   `web/public/404.html` does the same job on GitHub Pages).
+
+## Live vs staging
+
+Two branches, one Pages site, one Supabase project:
+
+| branch    | URL                                             | build flag           | what's on |
+|-----------|-------------------------------------------------|----------------------|-----------|
+| `main`    | `https://<user>.github.io/cartel-wars/`         | —                    | the live game; casino shows **slots only** |
+| `staging` | `https://<user>.github.io/cartel-wars/staging/` | `VITE_STAGE=staging` | everything: full casino (poker, blackjack, craps, roulette), forum |
+
+`web/src/lib/features.ts` is the switch. Both builds share the live database
+(the free tier allows two active projects and both are taken), so a staging
+migration lands on live data — keep staging-only features behind the flag and
+promote them by merging `staging` into `main`. The Pages workflow builds both
+branches on every push to either.
 
 ## Run it fully local (no Supabase account, no Docker)
 
@@ -81,8 +97,8 @@ npm run db:demo
 Tests:
 
 ```sh
-npm run db:test              # SQL smoke tests of every RPC incl. the casino (resets the local DB — re-run db:demo after)
-npm run e2e                  # Playwright walkthroughs of the UI (core game, then casino with two players at a table)
+npm run db:test              # SQL smoke tests of every RPC incl. casino and forum (resets the local DB — re-run db:demo after)
+npm run e2e                  # Playwright walkthroughs: core game, casino (two players at a table), forum
 node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ```
 
@@ -96,9 +112,10 @@ supabase/migrations/20260921000001_schema.sql     tables, enums, RLS lockdown
 supabase/migrations/20260921000002_functions.sql  all game rules (actions, fights, economy, crews, territory, chat)
 supabase/migrations/20260921000003_seed.sql       content: commodities, items, actions, hoodlums, hoods/blocks
 supabase/migrations/20260922000001_casino.sql     casino: slots, roulette, craps, blackjack, live hold'em tables
+supabase/migrations/20260923000001_forum.sql      forum: boards, threads, replies, admins
 web/src/lib/api.ts                      typed wrappers for every RPC
 web/src/lib/game.tsx                    session + player state (get_me) + toasts
-web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile, Casino, PokerTable
+web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile, Casino, PokerTable, Forum
 scripts/                                local Postgres harness, dev API server, smoke test, e2e
 ```
 

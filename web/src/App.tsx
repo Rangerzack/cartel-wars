@@ -17,6 +17,8 @@ import Profile from './pages/Profile'
 import Accolades from './pages/Accolades'
 import Casino from './pages/Casino'
 import PokerTable from './pages/PokerTable'
+import Forum from './pages/Forum'
+import { features } from './lib/features'
 import { Toasts } from './components/ui'
 
 function Gate() {
@@ -44,8 +46,11 @@ function Gate() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/accolades" element={<Accolades />} />
         <Route path="/casino" element={<Casino />} />
-        <Route path="/casino/table/:id" element={<PokerTable />} />
+        {features.casinoGames.length > 1 && <Route path="/casino/table/:id" element={<PokerTable />} />}
         <Route path="/casino/:game" element={<Casino />} />
+        {features.forum && <Route path="/forum" element={<Forum />} />}
+        {features.forum && <Route path="/forum/t/:id" element={<Forum />} />}
+        {features.forum && <Route path="/forum/:cat" element={<Forum />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

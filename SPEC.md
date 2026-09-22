@@ -200,6 +200,15 @@ $10,000+ over the stake adds 2 Heat. House bets are $100–$500,000.
   player's net goes to the `gambler` accolade. Each table has its own chat
   channel (`table:<id>`), open to seated players.
 
+## Forum *(ours)*
+
+Seven boards: Game Updates (only admins start threads; anyone replies), New
+Player, Market, General, War, Off Topic, Suggestions. Threads and replies are
+plain text (4,000 characters), editable and deletable by their author;
+admins can pin, lock, move and delete anything. Cooldowns: one new thread a
+minute, one reply every ten seconds (admins exempt). Admins are the emails in
+the `admins` table (flagged on `profiles.is_admin` at registration).
+
 ## Economy at a glance (for tuning)
 
 With base stamina regen (+12/hour) and the seeded numbers:

@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type {
   CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Island,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
+  ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
 } from './types'
 
@@ -119,4 +120,14 @@ export const api = {
   pokerAct: (action: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) => rpc<PokerState>('poker_act', { action, amount: amount ?? null }),
   pokerState: (tid: number) => rpc<PokerState>('poker_state', { tid }),
   casinoHistory: (limit_n = 30) => rpc<CasinoHistory>('casino_history', { limit_n }),
+
+  // forum
+  forumCategories: () => rpc<ForumCategories>('forum_categories'),
+  forumList: (cat: ForumCategory, page = 0) => rpc<ForumList>('forum_list', { cat, page }),
+  forumThread: (tid: number, page = 0) => rpc<ForumThread>('forum_thread', { tid, page }),
+  forumCreateThread: (cat: ForumCategory, title: string, body: string) => rpc<{ id: number }>('forum_create_thread', { cat, title, body }),
+  forumReply: (tid: number, body: string) => rpc<{ id: number; page: number }>('forum_reply', { tid, body }),
+  forumEdit: (kind: 'thread' | 'post', id: number, body: string, title?: string) => rpc<{ ok: boolean }>('forum_edit', { kind, id, body, title: title ?? null }),
+  forumDelete: (kind: 'thread' | 'post', id: number) => rpc<{ ok: boolean }>('forum_delete', { kind, id }),
+  forumModerate: (tid: number, action: 'pin' | 'unpin' | 'lock' | 'unlock' | 'move', cat?: ForumCategory) => rpc<{ ok: boolean }>('forum_moderate', { tid, action, cat: cat ?? null }),
 }

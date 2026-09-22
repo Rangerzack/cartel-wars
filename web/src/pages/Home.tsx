@@ -9,6 +9,7 @@ import { useNow } from '../lib/useNow'
 import { Card, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { GettingStarted } from '../components/GettingStarted'
+import { features } from '../lib/features'
 
 function HeatGauge({ heat, max, yellow, red }: { heat: number; max: number; yellow: number; red: number }) {
   const segs = 20
@@ -42,7 +43,8 @@ export default function Home() {
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}${me.crew.applications ? ` · ${me.crew.applications} application${me.crew.applications > 1 ? 's' : ''} waiting` : ''}${me.crew.invites ? ` · ${me.crew.invites} cartel invite${me.crew.invites > 1 ? 's' : ''}` : ''}` : 'Crews hold blocks and run turf wars' },
     { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', t: me.cartel ? me.cartel.name : 'Cartels', s: me.cartel ? (me.cartel.is_don ? 'You are the Don' : 'Your cartel') : 'Alliances of crews' },
     { to: '/territory', ic: '🗺', t: 'Territory', s: 'Hoods & blocks across four islands' },
-    { to: '/casino', ic: '🎰', t: 'Casino', s: 'Live poker, blackjack, craps, roulette, slots' },
+    { to: '/casino', ic: '🎰', t: 'Casino', s: features.casinoGames.length > 1 ? 'Live poker, blackjack, craps, roulette, slots' : 'Slots are open · tables coming soon' },
+    ...(features.forum ? [{ to: '/forum', ic: '🗣', t: 'Forum', s: 'Game updates, help, market, war, suggestions' }] : []),
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
     { to: '/fight?tab=top', ic: '🏆', t: 'Top Users', s: 'Fighters, hustlers, traders, crews' },
   ]

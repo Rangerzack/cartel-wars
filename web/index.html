@@ -11,6 +11,16 @@
     <link rel="apple-touch-icon" href="icon-192.png" />
     <meta name="apple-mobile-web-app-title" content="Cartel Wars" />
     <title>Cartel Wars</title>
+    <script>
+      // GitHub Pages SPA fallback: 404.html bounces deep links here as ?r=<path>; restore it before the app boots.
+      (function () {
+        var m = location.search.match(/[?&]r=([^&]*)/)
+        if (m) {
+          var base = location.pathname.replace(/\/?$/, '/')
+          history.replaceState(null, '', base + decodeURIComponent(m[1]).replace(/^\//, ''))
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

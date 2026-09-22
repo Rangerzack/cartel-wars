@@ -192,3 +192,19 @@ export interface PokerState {
   server_time: string
 }
 export interface CasinoHistory { net: number; recent: { game: string; wager: number; payout: number; net: number; at: string }[] }
+
+// forum
+export type ForumCategory = 'updates' | 'new_player' | 'market' | 'general' | 'war' | 'off_topic' | 'suggestions'
+export interface ForumAuthor { id: string; name: string; avatar: string; is_admin: boolean; crew: { id: string; name: string; emblem: string } | null }
+export interface ForumCategoryRow { key: ForumCategory; threads: number; posts: number; last_post_at: string | null; last: { id: number; title: string; last_poster: string | null } | null }
+export interface ForumCategories { is_admin: boolean; categories: ForumCategoryRow[] }
+export interface ForumThreadSummary {
+  id: number; category: ForumCategory; title: string; snippet: string; author: ForumAuthor; pinned: boolean; locked: boolean
+  reply_count: number; last_post_at: string; last_poster: string | null; created_at: string
+}
+export interface ForumList { category: ForumCategory; page: number; pages: number; total: number; is_admin: boolean; can_post: boolean; threads: ForumThreadSummary[] }
+export interface ForumPost { id: number; author: ForumAuthor; body: string | null; deleted: boolean; created_at: string; edited_at: string | null; mine: boolean }
+export interface ForumThread {
+  thread: ForumThreadSummary & { body: string; edited_at: string | null; mine: boolean }
+  is_admin: boolean; can_reply: boolean; page: number; pages: number; posts: ForumPost[]
+}

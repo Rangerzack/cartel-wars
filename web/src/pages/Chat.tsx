@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { ago } from '../lib/format'
 import { Card, Empty } from '../components/ui'
 import type { Conversation, Message } from '../lib/types'
+import { features } from '../lib/features'
 
 export default function Chat() {
   const me = useMe()
@@ -25,6 +26,7 @@ export default function Chat() {
     <div className="page" style={{ gap: 8 }}>
       <div className="seg">
         {tabs.map(t => <button key={t.v} className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>{t.l}</button>)}
+        {features.forum && <button onClick={() => nav('/forum')}>Forum</button>}
       </div>
       {channel === 'dms' ? <Conversations /> : <Channel key={channel} channel={channel} />}
     </div>

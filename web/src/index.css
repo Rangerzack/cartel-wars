@@ -274,3 +274,10 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .actions { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
 .actions input[type=range] { width: 100%; }
 .chat.compact { height: 260px; }
+
+/* ---------- forum ---------- */
+.post { border-bottom: 1px solid var(--line); }
+.post:last-child { border-bottom: 0; }
+.post.reply { background: var(--panel-2); }
+.post .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+textarea.input { resize: vertical; font: inherit; }
