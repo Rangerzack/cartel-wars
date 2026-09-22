@@ -293,6 +293,18 @@ do $$ declare r jsonb; begin
   update profiles set jail_until = null, heat = 0 where id = auth.uid();
   -- upgrade_stat('heat') is gone
   perform expect_error('select upgrade_stat(''heat'')', 'Bad upgrade');
+  -- reputation actions and rare items
+  update profiles set stamina = 150, health = 100, cash = cash + 100000 where id = auth.uid();
+  r := do_action((select id from action_defs where sort = 40));
+  assert (r->>'rep')::int = 3 and (r->>'pay')::int = 0, 'rep action: ' || r::text;
+  assert (get_me()->>'reputation')::int = 3;
+  perform expect_error('select buy_item((select id from item_defs where name = ''Escobar''''s Machete''), 1)', 'Needs 40 reputation');
+  update profiles set reputation = 40 where id = auth.uid();
+  perform buy_item((select id from item_defs where name = 'Escobar''s Machete'), 1);
+  assert (get_me()->>'reputation')::int = 0 and (get_me()->>'cash')::bigint > 0;
+  perform expect_error('select sell_item((select id from item_defs where name = ''Escobar''''s Machete''), 1)', 'cannot be sold');
+  perform update_profile('🦂', 'Plata o plomo.');
+  assert get_me()->>'avatar' = '🦂' and get_me()->>'bio' = 'Plata o plomo.';
 end $$;
 
 -- anon cannot call anything

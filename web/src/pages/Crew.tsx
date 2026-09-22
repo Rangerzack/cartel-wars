@@ -180,7 +180,7 @@ function CrewPage({ id }: { id: string }) {
         {c.members.map(m => (
           <div key={m.id} className="row">
             <div className="grow link" onClick={() => nav(`/player/${m.id}`)}>
-              <div className="t">{m.is_capo ? '👑 ' : ''}{m.name}</div>
+              <div className="t">{m.avatar} {m.is_capo ? '👑 ' : ''}{m.name}</div>
               <div className="s">{num(m.fights_won)} wins · {num(m.actions)} actions · seen {ago(m.last_seen)}</div>
             </div>
             {c.is_capo && !m.is_capo && <Btn className="sm ghost" onClick={() => { if (confirm(`Kick ${m.name}?`)) return act(() => api.crewKick(m.id), () => `${m.name} is out`) }}>Kick</Btn>}

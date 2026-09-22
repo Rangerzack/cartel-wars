@@ -31,8 +31,9 @@ export default function Player() {
 
   return (
     <div className="page">
-      <Card title={<>{p.name} {p.crew && <span className="muted">{p.crew.emblem} {p.crew.name}</span>}</>} right={<small>seen {ago(p.last_seen)}</small>}>
+      <Card title={<><span style={{ fontSize: 20 }}>{p.avatar}</span> {p.name} {p.crew && <span className="muted">{p.crew.emblem} {p.crew.name}</span>}</>} right={<small>seen {ago(p.last_seen)}</small>}>
         <div className="bd stack">
+          {p.bio && <div className="small" style={{ fontStyle: 'italic' }}>“{p.bio}”</div>}
           <div className="hstack">
             {p.jailed && <span className="pill red">🔒 In jail</span>}
             {p.hospital && <span className="pill red">🏥 Hospital</span>}
@@ -45,6 +46,7 @@ export default function Player() {
             <Stat k="Health" v={`${num(p.health)}/${num(p.health_max)}`} />
             <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} cls="sm" />
             <Stat k="Actions" v={num(p.actions)} />
+            <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
           </div>
           {!isMe && (
             <div className="hstack">

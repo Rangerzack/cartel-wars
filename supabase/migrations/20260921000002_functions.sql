@@ -240,6 +240,16 @@ begin
   return get_me();
 end $$;
 
+create or replace function update_profile(avatar text default null, bio text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid();
+begin
+  update profiles p set avatar = left(coalesce(nullif(trim(update_profile.avatar), ''), p.avatar), 8),
+                        bio = left(coalesce(update_profile.bio, p.bio), 200)
+   where p.id = u;
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- Read: full private state
 -- ---------------------------------------------------------------------------
@@ -255,7 +265,7 @@ begin
   select * into pd from _power(u, 'defense');
   select * into pj from _power(u, 'jail');
   return jsonb_build_object(
-    'id', pr.id, 'name', pr.name, 'created_at', pr.created_at,
+    'id', pr.id, 'name', pr.name, 'created_at', pr.created_at, 'avatar', pr.avatar, 'bio', pr.bio, 'reputation', pr.reputation,
     'cash', pr.cash, 'bank', pr.bank, 'diamonds', pr.diamonds,
     'stamina', pr.stamina, 'stamina_max', pr.stamina_max,
     'health', pr.health, 'health_max', pr.health_max,
@@ -365,16 +375,17 @@ begin
   else
     pay := _rand_between(a.pay_min, a.pay_max);
     pr.cash := pr.cash + pay;
+    pr.reputation := pr.reputation + a.pay_rep;
     pr.heat := least(pr.heat_max, pr.heat + a.heat_gain);
     pr := _bust_roll(pr);
     busted := _jailed(pr) and not was_jailed;
   end if;
 
   update profiles set stamina = pr.stamina, cash = pr.cash, heat = pr.heat, jail_until = pr.jail_until,
-         actions_done = pr.actions_done where id = u;
+         actions_done = pr.actions_done, reputation = pr.reputation where id = u;
   perform _event(u, 'action');
   perform _award_milestones(u);
-  return jsonb_build_object('pay', pay, 'busted', busted, 'heat', pr.heat, 'stamina', pr.stamina, 'cash', pr.cash);
+  return jsonb_build_object('pay', pay, 'rep', a.pay_rep, 'busted', busted, 'heat', pr.heat, 'stamina', pr.stamina, 'cash', pr.cash);
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -462,7 +473,7 @@ begin
   perform _uid();
   select * into pr from profiles where id = pid;
   if pr.id is null then perform _fail('No such player'); end if;
-  return jsonb_build_object('id', pr.id, 'name', pr.name, 'created_at', pr.created_at,
+  return jsonb_build_object('id', pr.id, 'name', pr.name, 'created_at', pr.created_at, 'avatar', pr.avatar, 'bio', pr.bio, 'reputation', pr.reputation,
     'fights', pr.fights_won + pr.fights_lost, 'fights_won', pr.fights_won, 'actions', pr.actions_done,
     'health', pr.health, 'health_max', pr.health_max,
     'heat_level', case when pr.heat >= _cfg('heat_red') then 'red' when pr.heat >= _cfg('heat_yellow') then 'yellow' else 'green' end,
@@ -474,7 +485,7 @@ end $$;
 
 create or replace function find_players(q text default '', limit_n integer default 40) returns jsonb
 language sql security definer set search_path = public stable as $$
-  select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'name', p.name,
+  select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar,
            'crew', (select jsonb_build_object('name', c.name, 'emblem', c.emblem) from crews c where c.id = p.crew_id),
            'fights', p.fights_won + p.fights_lost, 'fights_won', p.fights_won,
            'hospital', p.health <= 19, 'jailed', p.jail_until is not null and p.jail_until > now(),
@@ -647,9 +658,15 @@ begin
   pr := _tick(u);
   select * into d from item_defs where id = item;
   if d.id is null or n <= 0 then perform _fail('Bad item'); end if;
-  cost := d.price::bigint * n;
-  if pr.cash < cost then perform _fail(format('Costs $%s', cost)); end if;
-  update profiles set cash = cash - cost where id = u;
+  if d.rep_price > 0 then
+    cost := d.rep_price::bigint * n;
+    if pr.reputation < cost then perform _fail(format('Needs %s reputation', cost)); end if;
+    update profiles set reputation = reputation - cost where id = u;
+  else
+    cost := d.price::bigint * n;
+    if pr.cash < cost then perform _fail(format('Costs $%s', cost)); end if;
+    update profiles set cash = cash - cost where id = u;
+  end if;
   insert into inventory (player_id, item_id, qty) values (u, item, n)
     on conflict (player_id, item_id) do update set qty = inventory.qty + excluded.qty;
   return jsonb_build_object('cost', cost);
@@ -666,6 +683,7 @@ begin
   select qty into have from inventory where player_id = u and item_id = item;
   select coalesce(max(qty), 0) into used from setup_items where player_id = u and item_id = item;
   if d.id is null or n <= 0 or coalesce(have, 0) - used < n then perform _fail('Not enough unequipped units to sell'); end if;
+  if d.rep_price > 0 then perform _fail('Rare items cannot be sold'); end if;
   refund := (d.price / 2)::bigint * n;
   update inventory set qty = qty - n where player_id = u and item_id = item;
   update profiles set cash = cash + refund where id = u;
@@ -967,7 +985,7 @@ begin
     'capo_id', c.capo_id, 'is_capo', c.capo_id = u, 'created_at', c.created_at,
     'bank', case when exists (select 1 from profiles where id = u and crew_id = c.id) then c.bank end,
     'cartel', (select jsonb_build_object('id', id, 'name', name, 'don_id', don_id) from cartels where id = c.cartel_id),
-    'members', (select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'name', p.name, 'fights_won', p.fights_won,
+    'members', (select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar, 'fights_won', p.fights_won,
                   'actions', p.actions_done, 'is_capo', p.id = c.capo_id, 'last_seen', p.last_seen) order by p.id = c.capo_id desc, p.name), '[]'::jsonb)
                 from profiles p where p.crew_id = c.id),
     'blocks', (select coalesce(jsonb_agg(jsonb_build_object('id', b.id, 'name', b.name, 'hood', h.name, 'island', h.island)), '[]'::jsonb)

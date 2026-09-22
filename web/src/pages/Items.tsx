@@ -71,16 +71,18 @@ export default function Items() {
               return (
                 <div key={i.id} className="row">
                   <div className="grow">
-                    <div className="t">{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
+                    <div className="t">{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}{i.combo_tag ? `· ${i.combo_tag}` : ''}</div>
                   </div>
-                  {have > 0 && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(i.price / 2)}</Btn>}
-                  <Btn className="sm gold" disabled={me.cash < i.price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Bought ${i.name}` })}>{money(i.price)}</Btn>
+                  {have > 0 && i.rep_price === 0 && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(i.price / 2)}</Btn>}
+                  {i.rep_price > 0
+                    ? <Btn className="sm blue" disabled={me.reputation < i.rep_price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Earned ${i.name}` })}>⭐ {num(i.rep_price)}</Btn>
+                    : <Btn className="sm gold" disabled={me.cash < i.price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Bought ${i.name}` })}>{money(i.price)}</Btn>}
                 </div>
               )
             })}
           </Card>
-          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price and only works for unequipped units.</div>
+          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price and only works for unequipped units. ★ Rare items are bought with Reputation (you have ⭐ {num(me.reputation)}) from reputation actions, and can't be sold.</div>
         </>
       )}
     </div>

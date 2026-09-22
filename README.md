@@ -83,9 +83,9 @@ node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ## Layout
 
 ```
-supabase/migrations/0001_schema.sql     tables, enums, RLS lockdown
-supabase/migrations/0002_functions.sql  all game rules (actions, fights, economy, crews, territory, chat)
-supabase/migrations/0003_seed.sql       content: commodities, items, actions, hoodlums, hoods/blocks
+supabase/migrations/20260921000001_schema.sql     tables, enums, RLS lockdown
+supabase/migrations/20260921000002_functions.sql  all game rules (actions, fights, economy, crews, territory, chat)
+supabase/migrations/20260921000003_seed.sql       content: commodities, items, actions, hoodlums, hoods/blocks
 web/src/lib/api.ts                      typed wrappers for every RPC
 web/src/lib/game.tsx                    session + player state (get_me) + toasts
 web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile
@@ -94,8 +94,8 @@ scripts/                                local Postgres harness, dev API server, 
 
 ## Tuning
 
-Game constants are in `_cfg()` at the top of `0002_functions.sql`; content tables
-are in `0003_seed.sql`. Change, re-run `npm run db:test`, then `supabase db push`
+Game constants are in `_cfg()` at the top of `20260921000002_functions.sql`; content tables
+are in `20260921000003_seed.sql`. Change, re-run `npm run db:test`, then `supabase db push`
 (new changes go in a new migration file once the project is live).
 
 ## Not yet built

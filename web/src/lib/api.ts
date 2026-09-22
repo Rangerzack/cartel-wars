@@ -17,9 +17,10 @@ export const api = {
   me: () => rpc<Me>('get_me'),
   ensureProfile: (wanted?: string) => rpc<Me>('ensure_profile', { wanted: wanted ?? null }),
   catalog: () => rpc<Catalog>('get_catalog'),
+  updateProfile: (avatar: string | null, bio: string | null) => rpc<{ ok: boolean }>('update_profile', { avatar, bio }),
 
   // actions
-  doAction: (action_id: number) => rpc<{ pay: number; busted: boolean; heat: number; stamina: number; cash: number }>('do_action', { action_id }),
+  doAction: (action_id: number) => rpc<{ pay: number; rep: number; busted: boolean; heat: number; stamina: number; cash: number }>('do_action', { action_id }),
 
   // fights
   attack: (target: string) => rpc<FightResult>('attack', { target }),

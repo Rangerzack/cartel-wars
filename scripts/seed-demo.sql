@@ -24,7 +24,10 @@ begin
       actions_done = (random() * 3000)::int, fights_won = (random() * 400)::int, fights_lost = (random() * 300)::int,
       imports = (random() * 20000)::int, market_volume = (random() * 3000000)::int,
       stamina_max = 25 + 5 * (random() * 10)::int, health_max = 100 + 25 * (random() * 6)::int,
-      heat = (random() * 90)::int
+      heat = (random() * 90)::int,
+      avatar = (array['🕶️','🐍','🦂','💀','🐺','🦅','🃏','🔥','🌵','🐊','🥷','👑'])[1 + (random() * 11)::int],
+      bio = (array['Plata o plomo.','Producers welcome, snitches not.','Runs the docks.','Never lost a block.','Buying pills, paying street.',''])[1 + (random() * 5)::int],
+      reputation = (random() * 80)::int
     where id = uid;
     update profiles set stamina = stamina_max, health = health_max where id = uid;
     -- gear: a weapon, protection and vehicle scaled by wealth

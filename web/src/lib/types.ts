@@ -23,7 +23,7 @@ export interface HustlerTrip {
 export interface MyListing { id: string; commodity: Commodity; qty: number; unit_price: number; expires_at: string; held: boolean }
 
 export interface Me {
-  id: string; name: string; created_at: string
+  id: string; name: string; created_at: string; avatar: string; bio: string; reputation: number
   cash: number; bank: number; diamonds: number
   stamina: number; stamina_max: number
   health: number; health_max: number
@@ -53,12 +53,12 @@ export interface Me {
 
 export interface ActionDef {
   id: number; name: string; description: string; stamina_cost: number; pay_min: number; pay_max: number
-  heat_gain: number; cash_cost: number; requires_item: number | null; min_crew: number; is_jail: boolean
+  pay_rep: number; heat_gain: number; cash_cost: number; requires_item: number | null; min_crew: number; is_jail: boolean
   effect: string | null; sort: number
 }
 export interface ItemDef {
   id: number; name: string; category: ItemCategory; att: number; def: number; capacity: number
-  price: number; combo_tag: string | null; sort: number
+  price: number; rep_price: number; combo_tag: string | null; sort: number
 }
 export interface CommodityDef {
   code: Commodity; name: string; base_price: number; hustler_units: number; refill_stamina: number
@@ -75,11 +75,11 @@ export interface Catalog {
 }
 
 export interface PlayerSummary {
-  id: string; name: string; crew: { name: string; emblem: string } | null
+  id: string; name: string; avatar: string; crew: { name: string; emblem: string } | null
   fights: number; fights_won: number; hospital: boolean; jailed: boolean; immune: boolean; last_seen: string
 }
 export interface PublicPlayer {
-  id: string; name: string; created_at: string; fights: number; fights_won: number; actions: number
+  id: string; name: string; created_at: string; avatar: string; bio: string; reputation: number; fights: number; fights_won: number; actions: number
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
   last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
 }
@@ -102,7 +102,7 @@ export interface CrewSummary {
 export interface CrewDetail {
   id: string; name: string; emblem: string; description: string; capo_id: string; is_capo: boolean; created_at: string
   bank: number | null; cartel: { id: string; name: string; don_id: string } | null
-  members: { id: string; name: string; fights_won: number; actions: number; is_capo: boolean; last_seen: string }[]
+  members: { id: string; name: string; avatar: string; fights_won: number; actions: number; is_capo: boolean; last_seen: string }[]
   blocks: { id: number; name: string; hood: string; island: string }[]
   applications: { id: string; name: string; at: string }[] | null
   applied: boolean

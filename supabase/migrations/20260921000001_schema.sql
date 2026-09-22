@@ -41,6 +41,7 @@ create table item_defs (
   def         integer not null default 0,
   capacity    integer not null default 0,     -- transport cargo slots
   price       integer not null,
+  rep_price   integer not null default 0,      -- rare items: bought with Reputation instead of cash
   combo_tag   text,                            -- weapon+protection with same tag = combo bonus
   sort        integer not null default 0
 );
@@ -52,6 +53,7 @@ create table action_defs (
   stamina_cost  integer not null,
   pay_min       integer not null,
   pay_max       integer not null,
+  pay_rep       integer not null default 0,    -- reputation actions pay this instead of cash
   heat_gain     integer not null default 2,
   cash_cost     integer not null default 0,
   requires_item integer references item_defs(id),
@@ -95,6 +97,9 @@ create table crews (
 create table profiles (
   id               uuid primary key references auth.users(id) on delete cascade,
   name             text not null unique check (char_length(name) between 3 and 20),
+  avatar           text not null default '🕶️' check (char_length(avatar) between 1 and 8),
+  bio              text not null default '' check (char_length(bio) <= 200),
+  reputation       integer not null default 0,
   created_at       timestamptz not null default now(),
   cash             bigint not null default 0,
   bank             bigint not null default 0,

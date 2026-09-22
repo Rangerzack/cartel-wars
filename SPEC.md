@@ -43,6 +43,17 @@ ships a 24-action ladder in that range plus 6 jail actions *(ours)*.
 Special action: **Bribe Police To Get In Jail** — 10 Stamina, $1,000 *(wiki)*.
 Players did this deliberately to use jail setups and jail actions.
 
+## Reputation (the 2011 "Reputation expansion")
+
+Five **reputation actions** pay no cash but add Reputation (⭐). Reputation
+buys six **rare items** (a gold-plated Desert Eagle, Escobar's Machete, an
+armored limousine, …) that can't be bought with cash or sold. *(wiki: "actions
+that pay reputation instead of cash, rewarded with traditional and Rare
+weapons"; the specific items and numbers are ours.)*
+
+Players have an avatar (emoji) and a short bio shown on their profile and in
+lists *(wiki: profile avatar)*.
+
 ## Fighting
 
 Attack from any player's profile (**One On One**). Requirements: attacker

@@ -32,7 +32,7 @@ export default function Layout() {
       {me && (
         <header className="topbar">
           <div className="title" onClick={() => nav('/profile')} style={{ cursor: 'pointer' }}>
-            {me.name}<small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small>
+            <span style={{ marginRight: 6 }}>{me.avatar}</span>{me.name}<small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small>
           </div>
           <div className="money tabular">{money(me.cash)}<span className="dia">💎 {num(me.diamonds)}</span></div>
           <div className="bars">
