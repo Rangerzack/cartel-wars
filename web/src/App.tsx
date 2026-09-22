@@ -15,6 +15,8 @@ import Territory from './pages/Territory'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 import Accolades from './pages/Accolades'
+import Casino from './pages/Casino'
+import PokerTable from './pages/PokerTable'
 import { Toasts } from './components/ui'
 
 function Gate() {
@@ -41,6 +43,9 @@ function Gate() {
         <Route path="/chat/:channel" element={<Chat />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/accolades" element={<Accolades />} />
+        <Route path="/casino" element={<Casino />} />
+        <Route path="/casino/table/:id" element={<PokerTable />} />
+        <Route path="/casino/:game" element={<Casino />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

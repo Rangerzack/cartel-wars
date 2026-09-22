@@ -18,7 +18,7 @@ export default function Chat() {
     { v: 'dms', l: 'Conversations' },
   ]
   const isDm = channel.startsWith('dm:')
-  const valid = channel === 'global' || channel === 'dms' || /^(crew|cartel):[0-9a-f-]{36}$/.test(channel) || /^dm:[0-9a-f-]{36}:[0-9a-f-]{36}$/.test(channel)
+  const valid = channel === 'global' || channel === 'dms' || /^(crew|cartel):[0-9a-f-]{36}$/.test(channel) || /^dm:[0-9a-f-]{36}:[0-9a-f-]{36}$/.test(channel) || /^table:[0-9]+$/.test(channel)
   useEffect(() => { if (!valid) nav('/chat', { replace: true }) }, [valid, nav])
   if (!valid) return null
   return (
@@ -31,7 +31,7 @@ export default function Chat() {
   )
 }
 
-function Channel({ channel }: { channel: string }) {
+export function Channel({ channel, compact }: { channel: string; compact?: boolean }) {
   const me = useMe()
   const { toast } = useGame()
   const [msgs, setMsgs] = useState<Message[] | null>(null)
@@ -64,7 +64,7 @@ function Channel({ channel }: { channel: string }) {
   }
 
   return (
-    <Card className="chat" title={other ? `💬 ${other}` : channel === 'global' ? 'Live Chat' : channel.startsWith('crew') ? 'Crew Chat' : 'Cartel Chat'}>
+    <Card className={`chat ${compact ? 'compact' : ''}`} title={other ? `💬 ${other}` : channel === 'global' ? 'Live Chat' : channel.startsWith('crew') ? 'Crew Chat' : channel.startsWith('table') ? 'Table Talk' : 'Cartel Chat'}>
       <div className="log" ref={logRef}>
         {!msgs && <Empty><span className="spin" /></Empty>}
         {msgs?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}

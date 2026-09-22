@@ -42,6 +42,7 @@ export default function Home() {
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}${me.crew.applications ? ` · ${me.crew.applications} application${me.crew.applications > 1 ? 's' : ''} waiting` : ''}${me.crew.invites ? ` · ${me.crew.invites} cartel invite${me.crew.invites > 1 ? 's' : ''}` : ''}` : 'Crews hold blocks and run turf wars' },
     { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', t: me.cartel ? me.cartel.name : 'Cartels', s: me.cartel ? (me.cartel.is_don ? 'You are the Don' : 'Your cartel') : 'Alliances of crews' },
     { to: '/territory', ic: '🗺', t: 'Territory', s: 'Hoods & blocks across four islands' },
+    { to: '/casino', ic: '🎰', t: 'Casino', s: 'Live poker, blackjack, craps, roulette, slots' },
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
     { to: '/fight?tab=top', ic: '🏆', t: 'Top Users', s: 'Fighters, hustlers, traders, crews' },
   ]

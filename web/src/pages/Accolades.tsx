@@ -8,7 +8,7 @@ import { Card, Empty, Seg } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { Accolades as AccoladesT } from '../lib/types'
 
-const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf'] as const
+const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf', 'gambler'] as const
 
 export default function Accolades() {
   const { toast } = useGame()

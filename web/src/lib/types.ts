@@ -147,7 +147,48 @@ export interface TopUsers {
   crews: { id: string; name: string; emblem: string; value: number }[]
 }
 
-export type AccoladeKind = 'fight_win' | 'defense' | 'action' | 'import' | 'market' | 'turf'
+export type AccoladeKind = 'fight_win' | 'defense' | 'action' | 'import' | 'market' | 'turf' | 'gambler'
 export interface Ribbon { kind: AccoladeKind; rank: number }
 export interface AccoladeBoard { [kind: string]: { id: string; name: string; value: number }[] }
 export interface Accolades { week_start: string; week_end: string; this_week: AccoladeBoard; last_week: AccoladeBoard; mine: Ribbon[] }
+
+// casino
+export interface SlotsResult { reels: string[]; mult: number; payout: number; net: number }
+export type RouletteBetType = 'straight' | 'red' | 'black' | 'odd' | 'even' | 'low' | 'high' | 'dozen' | 'column'
+export interface RouletteBet { type: RouletteBetType; value?: number; amount: number }
+export interface RouletteResult {
+  number: number; color: 'red' | 'black' | 'green'; wager: number; payout: number; net: number
+  bets: (RouletteBet & { win: number })[]
+}
+export type CrapsBetKind = 'pass' | 'dont' | 'field' | 'place6' | 'place8' | 'any7' | 'anycraps'
+export interface CrapsState { point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null }
+export interface CrapsLast { dice: [number, number]; sum: number; log: { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays'; win?: number }[] }
+export interface CrapsRoll extends CrapsLast { point: number | null; bets: CrapsState['bets']; wager: number; payout: number; net: number }
+export interface BlackjackState {
+  status: 'none' | 'playing' | 'done'; wager: number; player: string[]; player_total: number; player_soft: boolean
+  dealer: string[]; dealer_total: number; dealer_hidden: boolean; can_double: boolean
+  result: { outcome: 'blackjack' | 'win' | 'push' | 'lose' | 'bust' | 'dealer_bust'; payout: number; net: number } | null
+}
+export interface PokerTableInfo {
+  id: number; name: string; small_blind: number; big_blind: number; min_buyin: number; max_buyin: number; seats: number
+  seated: number; players: string[]; mine: boolean
+}
+export interface PokerSeat {
+  seat: number; name: string; avatar: string; stack: number; sitting_out: boolean; is_me: boolean; player_id: string
+  in_hand: boolean; folded: boolean | null; all_in: boolean | null; street_bet: number | null; hole: string[] | null
+  hand_name: string | null; won: number | null
+}
+export interface PokerHand {
+  id: number; no: number; stage: 'preflop' | 'flop' | 'turn' | 'river' | 'done'; finished: boolean; board: string[]; pot: number
+  dealer: number; to_act: number | null; current_bet: number; min_raise: number; deadline: string | null
+  result: { won: Record<string, number>; hands: Record<string, string> | null; fold_out: boolean; rake: number } | null
+  my: { hole: string[]; folded: boolean; all_in: boolean; street_bet: number; total_bet: number; to_call: number; min_raise_to: number; my_turn: boolean } | null
+}
+export interface PokerState {
+  table: Omit<PokerTableInfo, 'seated' | 'players' | 'mine'>
+  me: { seat: number; stack: number; sitting_out: boolean } | null
+  hand: PokerHand | null
+  seats: PokerSeat[]
+  server_time: string
+}
+export interface CasinoHistory { net: number; recent: { game: string; wager: number; payout: number; net: number; at: string }[] }

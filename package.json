@@ -9,6 +9,6 @@
     "db:test": "scripts/local-db.sh test",
     "db:demo": "scripts/local-db.sh demo",
     "dev:api": "node scripts/dev-server.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs && node scripts/e2e-casino.mjs"
   }
 }

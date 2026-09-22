@@ -164,12 +164,41 @@ The city has **four islands**, each with Hoods, each Hood with Blocks.
 
 ## Accolades
 
-Weekly ranked stripes *(wiki)*. Six boards, reset Monday 00:00 UTC: Fights
+Weekly ranked stripes *(wiki)*. Seven boards, reset Monday 00:00 UTC: Fights
 won, Defenses (fights you were attacked in and won), Actions, Imports (units
-hustlers brought back), Market (cash traded on the Marketplace, both sides)
-and Turf (blocks captured). Top three on each board wear a gold, silver or
+hustlers brought back), Market (cash traded on the Marketplace, both sides),
+Turf (blocks captured) and Gambler (net casino winnings) *(ours)*. Top three on each board wear a gold, silver or
 bronze stripe on their profile for the following week. Everything is derived
 from an `accolade_events` log written by the RPCs.
+
+## Casino (the Cartel Reloaded expansion)
+
+Cartel Reloaded added a casino *(wiki)*; the games and numbers below are our
+design *(ours)*. Everything runs server-side (RNG, dealing, hand evaluation,
+pots) in `20260922000001_casino.sql`; the client only calls RPCs. Bets come
+from cash on hand, so a big session is a fat pocket for anyone who attacks
+you afterwards. No gambling from jail or the hospital. Any single win of
+$10,000+ over the stake adds 2 Heat. House bets are $100–$500,000.
+
+- **Slots** — 3 reels, weighted symbols (🍒7 🍋10 🔔8 BAR6 💎4 7️⃣2 of 37).
+  Triples pay 4/6/12/20/40/100×; one cherry returns the stake, two pay 2×.
+  ≈96.5% RTP.
+- **Roulette** — European single zero. Straight 35:1, dozens/columns 2:1,
+  even-money outside bets 1:1. Up to 20 bets per spin, $500k table max.
+- **Craps** — Pass / Don't Pass (12 pushes), Field (2 pays 2:1, 12 pays 3:1),
+  Place 6 and 8 at 7:6, Any 7 at 4:1, Any Craps at 7:1. Line bets lock once
+  the point is on; everything else can be taken down between rolls.
+- **Blackjack** — six-deck shoe per hand, dealer stands on all 17s,
+  blackjack pays 3:2, double on any first two cards, no splits/insurance.
+- **No-Limit Hold'em** — live, against other players, 6-max. Tables at
+  1k/2k (×2), 5k/10k (×2), 25k/50k (×2) and 250k/500k; buy-in 40–200 big
+  blinds, top-ups allowed up to the max. 30-second action clock: out of
+  time you check if you can, otherwise fold; three misses in a row sits you
+  out (stack is safe, rebuy/sit-in to return). Rake 5% of the pot capped at
+  3 big blinds, no flop no drop. Full side-pot handling; odd chips go to
+  the first winner left of the dealer. Hands are settled in the DB and every
+  player's net goes to the `gambler` accolade. Each table has its own chat
+  channel (`table:<id>`), open to seated players.
 
 ## Economy at a glance (for tuning)
 

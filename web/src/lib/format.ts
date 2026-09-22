@@ -37,4 +37,15 @@ export const accoladeMeta: Record<string, { label: string; icon: string; unit: (
   import: { label: 'Imports', icon: '🚚', unit: n => `${num(n)} units` },
   market: { label: 'Market', icon: '💰', unit: n => money(n) },
   turf: { label: 'Turf', icon: '🏴', unit: n => `${num(n)} blocks` },
+  gambler: { label: 'Gambler', icon: '🎰', unit: n => (n < 0 ? '−' : '') + money(Math.abs(n)) },
 }
+
+/** Compact money for chips: $1.2M, $25k */
+export const chips = (n: number | null | undefined) => {
+  const v = Math.round(n ?? 0)
+  const a = Math.abs(v), sign = v < 0 ? '−' : ''
+  if (a >= 1_000_000) return `${sign}$${(a / 1_000_000).toFixed(a % 1_000_000 === 0 ? 0 : 1)}M`
+  if (a >= 10_000) return `${sign}$${(a / 1000).toFixed(a % 1000 === 0 ? 0 : 1)}k`
+  return sign + money(a)
+}
+

@@ -3,7 +3,8 @@
 A web reconstruction of SMLSD's *The Cartel* / *Cartel Wars* (iPhone, 2009–2010,
 later *Cartel Reloaded* under Roasted Brains): a multiplayer crime-economy game
 about producing and moving product, one-on-one fights with equipped gear, Heat
-and jail, Crews and Cartels, and turf wars over Hoods and Blocks.
+and jail, Crews and Cartels, turf wars over Hoods and Blocks, and a casino with
+live hold'em tables.
 
 Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
 
@@ -18,6 +19,12 @@ Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
 <img src="docs/screenshots/items.png" width="180" alt="Setups" />
 <img src="docs/screenshots/crew.png" width="180" alt="Crew" />
 <img src="docs/screenshots/territory.png" width="180" alt="Territory" />
+</p>
+<p>
+<img src="docs/screenshots/poker.png" width="180" alt="Poker" />
+<img src="docs/screenshots/blackjack.png" width="180" alt="Blackjack" />
+<img src="docs/screenshots/roulette.png" width="180" alt="Roulette" />
+<img src="docs/screenshots/craps.png" width="180" alt="Craps" />
 </p>
 
 ## Stack
@@ -36,7 +43,7 @@ Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
    npx supabase link --project-ref <your-project-ref>
    npx supabase db push
    ```
-   (or paste the three files from `supabase/migrations/` into the SQL editor, in order).
+   (or paste the files from `supabase/migrations/` into the SQL editor, in order).
 2. In the Supabase dashboard → Authentication → Providers → Email, turn **off**
    "Confirm email" unless you've set up SMTP.
 3. Configure and run the web app:
@@ -74,8 +81,8 @@ npm run db:demo
 Tests:
 
 ```sh
-npm run db:test              # SQL smoke test of every RPC (resets the local DB — re-run db:demo after)
-npm run e2e                  # Playwright walkthrough of the UI against the local stack
+npm run db:test              # SQL smoke tests of every RPC incl. the casino (resets the local DB — re-run db:demo after)
+npm run e2e                  # Playwright walkthroughs of the UI (core game, then casino with two players at a table)
 node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ```
 
@@ -88,9 +95,10 @@ node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 supabase/migrations/20260921000001_schema.sql     tables, enums, RLS lockdown
 supabase/migrations/20260921000002_functions.sql  all game rules (actions, fights, economy, crews, territory, chat)
 supabase/migrations/20260921000003_seed.sql       content: commodities, items, actions, hoodlums, hoods/blocks
+supabase/migrations/20260922000001_casino.sql     casino: slots, roulette, craps, blackjack, live hold'em tables
 web/src/lib/api.ts                      typed wrappers for every RPC
 web/src/lib/game.tsx                    session + player state (get_me) + toasts
-web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile
+web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile, Casino, PokerTable
 scripts/                                local Postgres harness, dev API server, smoke test, e2e
 ```
 
@@ -102,9 +110,8 @@ are in `20260921000003_seed.sql`. Change, re-run `npm run db:test`, then `supaba
 
 ## Not yet built
 
-Reputation actions with rare weapons (the 2011 "Reputation expansion"), the
-Casino (Cartel Reloaded), Diamond purchases, and the "Profession" stat. See
-SPEC.md for what's sourced and what's a fill-in.
+Diamond purchases and the "Profession" stat. See SPEC.md for what's sourced
+and what's a fill-in.
 
 ---
 

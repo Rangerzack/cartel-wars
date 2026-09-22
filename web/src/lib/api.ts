@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type {
   CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Island,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
+  BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
 } from './types'
 
 export class GameError extends Error {}
@@ -100,4 +101,22 @@ export const api = {
   sendMessage: (channel: string, body: string) => rpc<{ id: number }>('send_message', { channel, body }),
   conversations: () => rpc<Conversation[]>('get_conversations'),
   dmChannel: (other: string) => rpc<string>('dm_channel', { other }),
+
+  // casino
+  slotsSpin: (wager: number) => rpc<SlotsResult>('slots_spin', { wager }),
+  rouletteSpin: (bets: RouletteBet[]) => rpc<RouletteResult>('roulette_spin', { bets }),
+  crapsState: () => rpc<CrapsState>('craps_state'),
+  crapsBet: (kind: CrapsBetKind, amount: number) => rpc<CrapsState>('craps_bet', { kind, amount }),
+  crapsRoll: () => rpc<CrapsRoll>('craps_roll'),
+  crapsClear: () => rpc<CrapsState>('craps_clear'),
+  blackjackState: () => rpc<BlackjackState>('blackjack_state'),
+  blackjackDeal: (wager: number) => rpc<BlackjackState>('blackjack_deal', { wager }),
+  blackjackAction: (action: 'hit' | 'stand' | 'double') => rpc<BlackjackState>('blackjack_action', { action }),
+  pokerLobby: () => rpc<PokerTableInfo[]>('poker_lobby'),
+  pokerJoin: (tid: number, seat_no: number, buyin: number) => rpc<PokerState>('poker_join', { tid, seat_no, buyin }),
+  pokerLeave: () => rpc<{ cashed_out: number }>('poker_leave'),
+  pokerSitIn: () => rpc<PokerState>('poker_sit_in'),
+  pokerAct: (action: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) => rpc<PokerState>('poker_act', { action, amount: amount ?? null }),
+  pokerState: (tid: number) => rpc<PokerState>('poker_state', { tid }),
+  casinoHistory: (limit_n = 30) => rpc<CasinoHistory>('casino_history', { limit_n }),
 }
