@@ -1596,3 +1596,13 @@ begin
     end if;
   end loop;
 end $$;
+
+-- Pin search_path on the private helpers too (quiets the Supabase linter; they are only callable by the owner).
+do $$
+declare f record;
+begin
+  for f in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and (p.proconfig is null or not p.proconfig::text like '%search_path%') loop
+    execute format('alter function %s set search_path = public', f.sig);
+  end loop;
+end $$;

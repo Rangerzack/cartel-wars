@@ -46,9 +46,11 @@ Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
    npm install
    npm run dev
    ```
-4. Deploy `web/` anywhere static (Vercel, Netlify, Cloudflare Pages). It's a
-   single-page app, so route all paths to `index.html` (`web/vercel.json` and
-   `web/public/_redirects` are included).
+4. Deploy `web/` anywhere static. Pushing to `main` on GitHub deploys it to
+   GitHub Pages automatically (`.github/workflows/pages.yml` — edit the two
+   `VITE_SUPABASE_*` values there for your project). Vercel / Netlify /
+   Cloudflare Pages also work; it's a single-page app, so route all paths to
+   `index.html` (`web/vercel.json` and `web/public/_redirects` are included).
 
 ## Run it fully local (no Supabase account, no Docker)
 

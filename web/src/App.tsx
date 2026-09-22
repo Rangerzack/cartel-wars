@@ -50,7 +50,7 @@ function Gate() {
 export default function App() {
   return (
     <GameProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <Gate />
       </BrowserRouter>
     </GameProvider>
