@@ -72,7 +72,7 @@ npm run db:demo
 Tests:
 
 ```sh
-npm run db:test              # SQL smoke test of every RPC (scripts/smoke-test.sql)
+npm run db:test              # SQL smoke test of every RPC (resets the local DB — re-run db:demo after)
 npm run e2e                  # Playwright walkthrough of the UI against the local stack
 node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ```
