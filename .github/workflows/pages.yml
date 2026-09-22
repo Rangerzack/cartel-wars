@@ -1,7 +1,11 @@
 name: Deploy to GitHub Pages
+# Publishes two builds of the same app to one Pages site:
+#   main    → https://<user>.github.io/<repo>/          (live: casino shows slots only, no forum)
+#   staging → https://<user>.github.io/<repo>/staging/  (everything: full casino, forum)
+# Both talk to the same Supabase project; VITE_STAGE=staging is what unlocks the staging-only features.
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,26 +14,42 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+env:
+  # Publishable (anon) key — safe to expose; RLS + RPC grants protect the data.
+  VITE_SUPABASE_URL: https://bghoornhtsgzlebrbdoh.supabase.co
+  VITE_SUPABASE_ANON_KEY: sb_publishable_PaWcx58uSEkv3dTaNpk8aA_B_HNRcl-
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: web } }
-    env:
-      # Publishable (anon) key — safe to expose; RLS + RPC grants protect the data.
-      VITE_SUPABASE_URL: https://bghoornhtsgzlebrbdoh.supabase.co
-      VITE_SUPABASE_ANON_KEY: sb_publishable_PaWcx58uSEkv3dTaNpk8aA_B_HNRcl-
-      BASE_PATH: /${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v4
+        with: { ref: main, path: main }
+      - uses: actions/checkout@v4
+        with: { ref: staging, path: staging }
+        continue-on-error: true            # no staging branch yet → live only
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
-      - run: npm ci
-      - run: npm run build
-      - run: cp dist/index.html dist/404.html   # SPA fallback on Pages
+        with: { node-version: 22 }
+      - name: Build live (main)
+        working-directory: main/web
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm ci && npm run build
+      - name: Build staging
+        if: hashFiles('staging/web/package.json') != ''
+        working-directory: staging/web
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/staging/
+          VITE_STAGE: staging
+        run: npm ci && npm run build
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp -r main/web/dist/. site/
+          if [ -d staging/web/dist ]; then mkdir -p site/staging && cp -r staging/web/dist/. site/staging/; fi
       - uses: actions/configure-pages@v5
         with: { enablement: true }
       - uses: actions/upload-pages-artifact@v3
-        with: { path: web/dist }
+        with: { path: site }
   deploy:
     needs: build
     runs-on: ubuntu-latest
