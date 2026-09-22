@@ -287,7 +287,7 @@ do $$ declare r jsonb; begin
   perform expect_error('select send_message(''global'', ''   '')', 'Say something');
   perform expect_error('select dm_channel(auth.uid())', 'Bad conversation');
   -- bust roll never extends an existing sentence
-  update profiles set jail_until = now() + interval '1 minute', heat = 100, stamina = 50 where id = auth.uid();
+  update profiles set jail_until = now() + interval '1 minute', heat = 100, stamina = 50, health = 100 where id = auth.uid();
   for i in 1..20 loop perform do_action((select id from action_defs where sort = 30)); end loop;
   assert (select jail_until from profiles where id = auth.uid()) < now() + interval '2 minutes', 'sentence not extended';
   update profiles set jail_until = null, heat = 0 where id = auth.uid();
