@@ -7,6 +7,19 @@ and jail, Crews and Cartels, and turf wars over Hoods and Blocks.
 
 Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
 
+<p>
+<img src="docs/screenshots/home.png" width="180" alt="Home" />
+<img src="docs/screenshots/actions.png" width="180" alt="Actions" />
+<img src="docs/screenshots/economy.png" width="180" alt="Economy" />
+<img src="docs/screenshots/market.png" width="180" alt="Marketplace" />
+</p>
+<p>
+<img src="docs/screenshots/fight.png" width="180" alt="Fight" />
+<img src="docs/screenshots/items.png" width="180" alt="Setups" />
+<img src="docs/screenshots/crew.png" width="180" alt="Crew" />
+<img src="docs/screenshots/territory.png" width="180" alt="Territory" />
+</p>
+
 ## Stack
 
 - **Backend:** Supabase (Postgres + Auth + Realtime). All game logic is SQL in
