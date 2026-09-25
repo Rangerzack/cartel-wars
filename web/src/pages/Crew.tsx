@@ -31,7 +31,7 @@ function CrewHub() {
       {me.crew && (
         <Card>
           <div className="row link" onClick={() => nav(`/crew/${me.crew!.id}`)}>
-            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{me.crew.emblem}</span>
+            <span className="ico">{me.crew.emblem}</span>
             <div className="grow"><div className="t">{me.crew.name}</div><div className="s">Your crew · {me.crew.members} members{me.crew.is_capo ? ' · you are Capo' : me.crew.is_co_capo ? ' · you are Co-Capo' : ''}</div></div>
             <span className="chev">›</span>
           </div>
@@ -54,7 +54,7 @@ function CrewHub() {
         {list?.length === 0 && <Empty>No crews yet. Be the first.</Empty>}
         {list?.filter(c => c.id !== me.crew?.id).map(c => (
           <div key={c.id} className="row link" onClick={() => nav(`/crew/${c.id}`)}>
-            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{c.emblem}</span>
+            <span className="ico">{c.emblem}</span>
             <div className="grow"><div className="t">{c.name} {c.cartel && <span className="muted small">· {c.cartel}</span>}</div><div className="s">{c.members} members · {c.blocks} blocks{c.description ? ` · ${c.description}` : ''}</div></div>
             <span className="chev">›</span>
           </div>

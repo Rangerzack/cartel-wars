@@ -5,3 +5,6 @@ dist/
 *.log
 .supabase/
 supabase/.temp/
+
+# files the Claude app saves into this folder
+Claude outputs/

@@ -87,7 +87,7 @@ function Grow() {
       <Card title="Storage" right={<small>{num(me.storage_used)} / {num(me.storage_cap)} units</small>}>
         {catalog.commodities.map(c => (
           <div key={c.code} className="row">
-            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{commodityIcon[c.code]}</span>
+            <span className="ico">{commodityIcon[c.code]}</span>
             <div className="grow"><div className="t">{c.name}</div><div className="s">street {money(me.prices[c.code])}/unit</div></div>
             <b className="tabular">{num(me.storage[c.code] ?? 0)}</b>
           </div>
@@ -123,7 +123,7 @@ function Grow() {
       <Card title="Build">
         {catalog.commodities.filter(c => !have.has(c.code)).map(c => (
           <div key={c.code} className="row">
-            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{commodityIcon[c.code]}</span>
+            <span className="ico">{commodityIcon[c.code]}</span>
             <div className="grow">
               <div className="t">{c.name} grow house</div>
               <div className="s">{c.grow_rate} units/hr · holds {c.grow_cap} · {money(c.grow_price)}{me.grow_houses.length > 0 ? ` + 💎 ${extraDia}` : ''}</div>

@@ -31,16 +31,17 @@ export default function Layout() {
       <Toasts />
       {me && (
         <header className="topbar">
-          <div className="title" onClick={() => nav('/profile')} style={{ cursor: 'pointer' }}>
-            <span style={{ marginRight: 6 }}>{me.avatar}</span>{me.name}<small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small>
+          <div className="title" onClick={() => nav('/profile')}>
+            <span className="av">{me.avatar}</span>
+            <span className="who"><b>{me.name}</b><small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small></span>
           </div>
           <div className="money tabular">
-            {money(me.cash)}<span className="dia">💎 {num(me.diamonds)}</span>
+            <span className="cash">{money(me.cash)}</span><span className="dia">💎 {num(me.diamonds)}</span>
             <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} />
           </div>
           <div className="bars">
-            <Bar cls="stamina" label="Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
-            <Bar cls="health" label="Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
+            <Bar cls="stamina" label="⚡ Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
+            <Bar cls="health" label="❤️ Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
           </div>
         </header>
       )}
