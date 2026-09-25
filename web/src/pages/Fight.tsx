@@ -42,7 +42,7 @@ function Players() {
         {list?.length === 0 && <Empty>Nobody's around. Quiet city.</Empty>}
         {list?.map(p => (
           <div key={p.id} className="row link" onClick={() => nav(`/player/${p.id}`)}>
-            <span style={{ fontSize: 20, width: 26, textAlign: 'center' }}>{p.avatar}</span>
+            <span className="ico">{p.avatar}</span>
             <div className="grow">
               <div className="t">{p.name} {p.crew && <span className="muted small">{p.crew.emblem} {p.crew.name}</span>}</div>
               <div className="s">{p.fights_won}W · {p.fights - p.fights_won}L · seen {ago(p.last_seen, now)}</div>

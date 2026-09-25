@@ -60,7 +60,7 @@ export default function Home() {
           {(['herb', 'dust', 'pills'] as const).map(c => (
             <div key={c} className="center">
               <div style={{ fontSize: 22 }}>{commodityIcon[c]}</div>
-              <div className="tabular"><b>{num(me.storage[c] ?? 0)}</b></div>
+              <div className="tabular bignum">{num(me.storage[c] ?? 0)}</div>
               <div className="small muted">{money(me.prices[c])}/u</div>
             </div>
           ))}
@@ -82,7 +82,7 @@ export default function Home() {
       <Card>
         {links.map(l => (
           <div key={l.to} className="row link" onClick={() => nav(l.to)}>
-            <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{l.ic}</span>
+            <span className="ico">{l.ic}</span>
             <div className="grow"><div className="t">{l.t}</div><div className="s">{l.s}</div></div>
             <span className="chev">›</span>
           </div>

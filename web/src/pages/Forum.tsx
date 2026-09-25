@@ -38,7 +38,7 @@ function Boards() {
           const b = board(c.key)!
           return (
             <div key={c.key} className="row link" onClick={() => nav(`/forum/${c.key}`)}>
-              <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{b.icon}</span>
+              <span className="ico">{b.icon}</span>
               <div className="grow">
                 <div className="t">{b.name}</div>
                 <div className="s">{c.last ? <>{c.last.title} · {c.last.last_poster ?? '—'}, {ago(c.last_post_at!)}</> : b.blurb}</div>

@@ -109,7 +109,7 @@ function CartelPage({ id }: { id: string }) {
       <Card title="Crews" right={c.can_vote && <small>Capos vote for the Don · majority of {c.crews.length} crews</small>}>
         {c.crews.map(x => (
           <div key={x.id} className="row">
-            <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{x.emblem}</span>
+            <span className="ico">{x.emblem}</span>
             <div className="grow link" onClick={() => nav(`/crew/${x.id}`)}><div className="t">{x.name}{x.capo_id === c.don_id ? ' 👑' : ''}</div><div className="s">Capo {x.capo} · {x.members} members · {x.blocks} blocks{x.votes > 0 ? ` · ${x.votes} vote${x.votes > 1 ? 's' : ''} for Don` : ''}</div></div>
             {c.can_vote && x.capo_id !== c.don_id && (
               <Btn className={`sm ${x.my_vote ? 'gold' : 'ghost'}`} onClick={() => act(() => api.cartelVoteDon(x.capo_id), r => (r.elected ? `${x.capo} is the new Don` : `Vote cast — ${r.votes}/${r.needed}`))}>{x.my_vote ? '✓ Voted' : 'Vote Don'}</Btn>
@@ -123,7 +123,7 @@ function CartelPage({ id }: { id: string }) {
           {inviteable.length === 0 && <Empty>No unaffiliated crews to invite.</Empty>}
           {inviteable.map(x => (
             <div key={x.id} className="row">
-              <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{x.emblem}</span>
+              <span className="ico">{x.emblem}</span>
               <div className="grow"><div className="t">{x.name}</div><div className="s">{x.members} members · {x.blocks} blocks</div></div>
               <Btn className="sm gold" onClick={() => act(() => api.cartelInvite(x.id), () => `Invited ${x.name} — their Capo decides`)}>Invite</Btn>
             </div>
