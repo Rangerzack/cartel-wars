@@ -105,7 +105,7 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   -- hospital / police / jail
   update profiles set health = 10 where id = auth.uid();
   perform expect_error('select do_action((select id from action_defs where sort = 1))', 'hospital');
-  r := hospital_checkout(); assert (r->>'cost')::int = 400;
+  r := hospital_checkout(); assert (r->>'cost')::int = 420, 'checkout 10 pts on the sliding scale: ' || r::text;
   update profiles set heat = 60 where id = auth.uid();
   r := bribe_police(20); assert (r->>'cost')::int = 800 and (r->>'heat')::int = 40;
   r := do_action((select id from action_defs where sort = 25)); -- bribe police to get in jail
@@ -139,10 +139,12 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   me := get_me(); assert (me->>'health_max')::int = 125 and (me->>'inventory_slots')::int = 7;
 
   -- regen: back-date the tick
-  update profiles set stamina = 0, health = 50, heat = 30, last_tick = now() - interval '55 minutes' where id = auth.uid();
+  update profiles set stamina = 0, health = 50, heat = 30, last_tick = now() - interval '55 minutes',
+         health_tick = now() - interval '22 minutes' where id = auth.uid();
   me := get_me();
   assert (me->>'stamina')::int = 10, 'stamina regen 5 ticks * 2: ' || (me->>'stamina');
-  assert (me->>'health')::int = 60 and (me->>'heat')::int = 25, 'health/heat regen';
+  assert (me->>'health')::int = 70, 'health regen 4 ticks * 5: ' || (me->>'health');
+  assert (me->>'heat')::int = 25, 'heat regen';
 end $$;
 
 -- second player, crews, fights
@@ -191,30 +193,39 @@ do $$ declare r jsonb; t jsonb; b int; hid int; begin
   update profiles set cash = 5000000 where id = auth.uid();
   r := buy_hoodlums('thug', 100);
   assert (r->>'cost')::bigint between 100000 and 110000, 'thug price scales: ' || (r->>'cost');
+  perform buy_hoodlums('thug', 900);
   perform buy_hoodlums('spy', 2); perform buy_hoodlums('enforcer', 5); perform buy_hoodlums('mercenary', 10);
   t := get_territory();
-  assert jsonb_array_length(t) = 4, 'four islands';
-  b := (t->0->'hoods'->0->'blocks'->0->>'id')::int;   -- cheapest hood, resistance 200
-  hid := (t->0->'hoods'->0->>'id')::int;
-  r := attack_block(b, 10, 0);       -- 100 attack vs 200: fails
-  assert not (r->>'success')::boolean, 'weak attack fails';
-  r := attack_block(b, 30, 5);       -- 300+300 attack vs 200: wins
-  assert (r->>'success')::boolean, 'attack wins: ' || r::text;
-  assert (r->>'claim_paid')::int = 4000;
+  assert jsonb_array_length(t->'hoods') = 81, '9x9 hoods';
+  assert jsonb_array_length(t->'hoods'->40->'blocks') = 6 and (t->'hoods'->40->>'gx')::int = 5, 'center hood has 6 blocks';
+  b := (t->'hoods'->0->'blocks'->0->>'id')::int;     -- corner hood, resistance 250
+  hid := (t->'hoods'->0->>'id')::int;
+  perform expect_error(format('select attack_block(%s, 50, 10)', b), 'at least 51 thugs');
+  -- center hood (resistance 1400): 51 thugs gets a fight but loses
+  r := attack_block((t->'hoods'->40->'blocks'->0->>'id')::int, 51, 0);
+  assert not (r->>'success')::boolean and (r->>'claim_paid')::int = 0, 'weak attack fails: ' || r::text;
+  r := attack_block(b, 51, 0);       -- ~510 vs 250: an empty block is claimed on the first win
+  assert (r->>'success')::boolean and (r->>'captured')::boolean, 'attack wins: ' || r::text;
+  assert (r->>'claim_paid')::int = 16000 / 6;
+  assert (select bonus_at from blocks where id = b) > now() + interval '23 hours', 'bonus clock started';
   perform station_hoodlums(b, 'enforcer', 5);
-  r := spy_block(b); assert (r->>'resistance')::int = 500, 'garrison def counts: ' || r::text;
-  perform expect_error(format('select attack_block(%s, 1, 0)', b), 'already holds');
+  r := spy_block(b); assert (r->>'resistance')::int = 550, 'garrison def counts: ' || r::text;
+  perform expect_error(format('select attack_block(%s, 51, 0)', b), 'already holds');
   -- take the rest of the hood → hood owner
-  for i in 1..3 loop
-    r := attack_block((t->0->'hoods'->0->'blocks'->i->>'id')::int, 30, 5);
-    assert (r->>'success')::boolean;
+  for i in 1..5 loop
+    r := attack_block((t->'hoods'->0->'blocks'->i->>'id')::int, 51, 5);
+    assert (r->>'captured')::boolean, 'block ' || i || ': ' || r::text;
   end loop;
   assert (select owner_crew_id from hoods where id = hid) = (select id from crews where name = 'Los Pollos'), 'hood captured';
-  -- daily payout
-  update hoods set last_payout_at = now() - interval '25 hours' where id = hid;
+  -- block bonuses: 320k/day hood = 53,333 per block; 80% crew, 20% cartel
+  update blocks set bonus_at = now() - interval '1 minute' where hood_id = hid;
   perform get_me();
-  assert (select bank from crews where name = 'Los Pollos') = 500 + 256000, 'crew got 80%: ' || (select bank from crews where name = 'Los Pollos');
-  assert (select bank from cartels where name = 'Juárez') = 100 + 64000, 'cartel got 20%';
+  assert (select bank from crews where name = 'Los Pollos') = 500 + 6 * 42666, 'crew got 80%: ' || (select bank from crews where name = 'Los Pollos');
+  assert (select bank from cartels where name = 'Juárez') = 100 + 6 * 10667, 'cartel got 20%: ' || (select bank from cartels where name = 'Juárez');
+  assert (select count(*) from blocks where hood_id = hid and bonus_at > now() + interval '23 hours') = 6, 'bonus clocks rolled';
+  assert jsonb_array_length(get_bank_ledger('crew')) = 8, 'crew ledger: deposit, withdraw, 6 bonuses';
+  assert jsonb_array_length(get_bank_ledger('cartel')) = 7, 'cartel ledger: deposit + 6 bonuses';
+  assert jsonb_array_length(get_block(b)->'log') = 1, 'block log';
   assert jsonb_array_length(get_territory_log()) >= 5;
   assert top_users() ? 'crews';
   assert jsonb_array_length(get_accolades()->'this_week'->'action') >= 1, 'accolade board has actions';

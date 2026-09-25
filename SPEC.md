@@ -17,7 +17,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Resource | Base | Max | Regen | Notes |
 |---|---|---|---|---|
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
-| Health | 100 | 500 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | ≤19 = **Hospital**: no actions, no attacks. Pay $40/pt to check out *(wiki)*. |
+| Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
 | Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. |
 | Diamonds | starter grant | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses. Earned via achievements; no real-money purchase in this clone. |
@@ -120,14 +120,25 @@ Commodities: **Herb**, **Dust**, **Pills** (cheap→expensive, bulky→compact).
   needs Transport capacity ≥ batch size and expires in 48h. Buyers pay cash
   and need storage room. Cancelled or expired product returns to storage up to
   the cap; the rest waits on the listing until you make room.
+- **Producers and Traders** *(ours)*: once a player has earned 100 reputation
+  (lifetime — spending rep on items doesn't reset it) they pick a path.
+  Producers build, run and upgrade grow houses but can't send hustlers;
+  Traders send hustlers but can't run grow houses (theirs stop; anything
+  already grown can still be collected). Both use the Marketplace, where
+  producers sell and traders buy. The first pick is free; switching costs 💎50.
 - **Bank**: personal bank — deposit/withdraw, no fee (none found in sources).
-  Crew Bank and Cartel Bank receive hood income and accept deposits; the
-  Capo / Don can withdraw.
+  Crew Bank and Cartel Bank receive block bonuses and accept deposits; the
+  Capo or Co-Capo / the Don can withdraw. Every movement (deposits,
+  withdrawals, block bonuses, crew-fight stakes) is kept in a ledger that
+  members can read.
 
 ## Crews and Cartels
 
 - **Crew**: up to 12 members *(ours)*, leader is the **Capo**. Name, emblem
   (emoji), description. Players apply; Capo accepts/kicks. No invite codes.
+  The Capo can name one **Co-Capo**, who can accept/kick members (not the
+  Capo), withdraw from the crew bank, edit the crew and pull garrisons, and who
+  takes over if the Capo leaves. Cartel business stays with the Capo.
 - **Cartel**: an alliance of Crews. Leader is the **Don** — the founding Capo,
   replaceable by a vote: each member crew's Capo votes for a Capo, and a strict
   majority of crews elects *(wiki: "Don, voted by Capos")*. Cartels own the
@@ -136,13 +147,23 @@ Commodities: **Herb**, **Dust**, **Pills** (cheap→expensive, bulky→compact).
 
 ## Territory (the Cartel Wars expansion)
 
-The city has **four islands**, each with Hoods, each Hood with Blocks.
+The city is a **9×9 grid of Hoods** (rows A–I are districts, columns 1–9
+streets); each Hood is a **2×3 grid of 6 Blocks** (properties). Hoods toward
+the center cost more, pay more and resist harder:
 
-- A **Block** is held by a Crew. Holding a majority of a Hood's blocks makes
-  your Crew the **Hood owner**; the Hood pays daily income: 80% to the owning
-  Crew's bank, 20% to its Cartel's bank *(wiki)*. Hoods cost $16k–$50k and pay
-  $320k–$1M/day *(wiki)*; here the price is split across the hood's four
-  blocks, paid when you take an unclaimed block ($4k–$12.5k each).
+| Ring | Hoods | Hood price | Hood income/day | Block base resistance |
+|---|---|---|---|---|
+| center | 1 | $50,000 | $1,000,000 | 1,400 |
+| 1 | 8 | $42,000 | $840,000 | 900 |
+| 2 | 16 | $32,000 | $640,000 | 600 |
+| 3 | 24 | $24,000 | $480,000 | 400 |
+| edge | 32 | $16,000 | $320,000 | 250 |
+
+- **Block bonus**: every held block pays its share of the hood's income
+  (income ÷ 6) once every 24h — 80% to the holding Crew's bank, 20% to its
+  Cartel's bank *(wiki split)*. Each block shows a countdown to its next bonus.
+- Holding 4 of a hood's 6 blocks makes your Crew the **Hood owner** (shown on
+  the map).
 - **Hoodlums** *(wiki)* are bought in Services and stationed on a block or
   used to attack one. Price rises with quantity held.
 
@@ -153,13 +174,22 @@ The city has **four islands**, each with Hoods, each Hood with Blocks.
   | Mercenary | 60 | 0 | 0 | $4,000 |
   | Enforcer | 0 | 60 | 0 | $4,000 |
 
-- **Attack a block** (3 Stamina): your attacking hoodlums' total Att vs the
-  block's resistance (base resistance + stationed hoodlums' Def). You must
-  bring at least a quarter of the resistance to get a fight. Both sides lose
-  hoodlums proportional to the damage they took (rounded down); if attack >
-  resistance the block flips to your crew and the hood's daily payout clock
-  restarts. Outsiders only see whether a block is garrisoned; Spies reveal the
-  exact garrison and resistance.
+- **Attack a block** (3 Stamina, at least **51 thugs**, mercenaries optional):
+  your hoodlums' total Att vs the block's resistance (base resistance +
+  stationed hoodlums' Def). You must bring at least a quarter of the
+  resistance to get a fight. Both sides lose hoodlums proportional to the
+  damage they took (rounded down).
+  - An **empty block** is claimed with one successful attack plus its claim
+    price (hood price ÷ 6).
+  - A **held block** falls only after your Crew lands **50 successful attacks**
+    on it (counted across the whole crew). **Every successful hit restarts the
+    owner's bonus countdown** — the old trick of hitting a block when it's
+    under an hour from paying out. When it falls, its garrison is wiped, all
+    siege counts on it reset, and its bonus clock starts fresh for the new
+    owner. Crews in the same Cartel can't attack each other's blocks.
+- Every attack is logged per block (attacker, force, losses, siege count).
+  Outsiders only see whether a block is garrisoned; Spies reveal the exact
+  garrison and resistance.
 
 ## Accolades
 
@@ -221,7 +251,7 @@ With base stamina regen (+12/hour) and the seeded numbers:
 | Pills grow house L1 | $40,000 + 💎20 | 3 u/h × $600 = $1,800/hour (~22h) |
 | Hustler (herb) | $400 + 16 herb | $960 after 4h (≈$560 net per trip) |
 | Marketplace | transport | up to street price, buyer pays |
-| Hood (crew) | claim + hoodlums | $320k–$1M/day, 80% crew bank / 20% cartel bank |
+| Block (crew) | claim + 51+ thugs (50 wins if held) | $53k–$167k/day per block, 80% crew bank / 20% cartel bank |
 
 Territory is by far the biggest faucet, as in the original — it's what makes
 crews and cartels matter. If solo play feels too slow, raise `grow_rate` or

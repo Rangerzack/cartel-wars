@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Island,
+  CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -33,7 +33,9 @@ export const api = {
   accolades: () => rpc<Accolades>('get_accolades'),
 
   // services
-  hospitalCheckout: () => rpc<{ cost: number }>('hospital_checkout'),
+  hospitalCheckout: () => rpc<{ cost: number; gain: number }>('hospital_checkout'),
+  buyHealth: (points: number) => rpc<{ cost: number; gain: number; health: number }>('buy_health', { points }),
+  choosePath: (p: Path) => rpc<{ path: Path; diamonds: number }>('choose_path', { p }),
   bribePolice: (points: number) => rpc<{ cost: number; heat: number }>('bribe_police', { points }),
   bailOut: () => rpc<{ cost: number }>('bail_out'),
   refill: (kind: 'stamina' | 'health', method: string) => rpc<{ gain: number }>('refill', { kind, method }),
@@ -76,6 +78,8 @@ export const api = {
   crewLeave: () => rpc<{ ok: boolean }>('crew_leave'),
   crewBank: (amount: number) => rpc<{ bank: number }>('crew_bank', { amount }),
   crewFight: (target: string) => rpc<CrewFightResult>('crew_fight', { target }),
+  crewSetCoCapo: (pid: string | null) => rpc<{ co_capo_id: string | null }>('crew_set_co_capo', { pid }),
+  bankLedger: (scope: 'crew' | 'cartel', limit_n = 50) => rpc<LedgerEntry[]>('get_bank_ledger', { scope, limit_n }),
 
   // cartels
   cartelCreate: (nm: string) => rpc<{ id: string }>('cartel_create', { nm }),
@@ -88,14 +92,14 @@ export const api = {
   cartelVoteDon: (candidate: string) => rpc<{ elected: boolean; votes?: number; needed?: number }>('cartel_vote_don', { candidate }),
 
   // territory
-  territory: () => rpc<Island[]>('get_territory'),
+  territory: () => rpc<Territory>('get_territory'),
+  block: (block: number) => rpc<BlockDetail>('get_block', { block }),
   territoryLog: (limit_n = 30) => rpc<TerritoryLog[]>('get_territory_log', { limit_n }),
   buyHoodlums: (kind: string, n: number) => rpc<{ cost: number }>('buy_hoodlums', { kind, n }),
   stationHoodlums: (block: number, kind: string, n: number) => rpc<{ ok: boolean }>('station_hoodlums', { block, kind, n }),
   withdrawGarrison: (block: number, kind: string, n: number) => rpc<{ ok: boolean }>('withdraw_garrison', { block, kind, n }),
   spyBlock: (block: number) => rpc<{ garrison: Record<string, number>; resistance: number }>('spy_block', { block }),
-  attackBlock: (block: number, thugs: number, mercs: number) =>
-    rpc<{ success: boolean; attack: number; resistance: number; lost_thugs: number; lost_mercs: number; claim_paid: number }>('attack_block', { block, thugs, mercs }),
+  attackBlock: (block: number, thugs: number, mercs: number) => rpc<AttackBlockResult>('attack_block', { block, thugs, mercs }),
 
   // chat
   messages: (channel: string, limit_n = 50) => rpc<Message[]>('get_messages', { channel, limit_n }),

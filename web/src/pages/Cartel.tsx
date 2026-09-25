@@ -4,6 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money } from '../lib/format'
 import { Btn, Card, Empty, Stat } from '../components/ui'
+import { Ledger } from '../components/Ledger'
 import type { CartelDetail, CartelSummary, CrewSummary } from '../lib/types'
 
 export default function Cartel() {
@@ -67,11 +68,12 @@ function CartelPage({ id }: { id: string }) {
   const [c, setC] = useState<CartelDetail | null>(null)
   const [amount, setAmount] = useState(0)
   const [crews, setCrews] = useState<CrewSummary[] | null>(null)
+  const [ledgerV, setLedgerV] = useState(0)
   const load = useCallback(() => api.cartel(id).then(setC).catch(e => { toast(e.message, 'bad'); nav('/cartel') }), [id, toast, nav])
   useEffect(() => { load() }, [load])
   useEffect(() => { if (c?.is_don) api.listCrews().then(setCrews).catch(() => {}) }, [c?.is_don])
   if (!c) return <Empty><span className="spin" /></Empty>
-  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load() }
+  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load(); setLedgerV(v => v + 1) }
   const inviteable = (crews ?? []).filter(x => !x.cartel)
 
   return (
@@ -89,7 +91,7 @@ function CartelPage({ id }: { id: string }) {
               {me.crew?.is_capo && <Btn className="sm ghost red" onClick={() => { if (confirm('Pull your crew out of the cartel?')) return act(api.cartelLeave, () => 'Your crew left the cartel') }}>Leave Cartel</Btn>}
             </div>
           )}
-          <div className="small muted">Hoods pay 80% to the owning crew and 20% to its cartel's bank each day.</div>
+          <div className="small muted">Every block pays its bonus once a day: 80% to the crew holding it, 20% to its cartel's bank.</div>
         </div>
       </Card>
 
@@ -102,6 +104,7 @@ function CartelPage({ id }: { id: string }) {
           </div>
         </Card>
       )}
+      {c.member && <Ledger scope="cartel" version={ledgerV} />}
 
       <Card title="Crews" right={c.can_vote && <small>Capos vote for the Don · majority of {c.crews.length} crews</small>}>
         {c.crews.map(x => (

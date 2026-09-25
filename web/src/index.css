@@ -151,7 +151,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 
 /* Result modal ----------------------------------------------------------- */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 40; display: flex; align-items: flex-end; justify-content: center; padding: 12px; }
-.modal { width: 100%; max-width: 500px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; animation: up .2s ease-out; }
+.modal { width: 100%; max-width: 500px; max-height: 90dvh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; animation: up .2s ease-out; }
 @keyframes up { from { transform: translateY(20px); opacity: 0 } to { transform: none; opacity: 1 } }
 .modal h3 { font-size: 18px; margin-bottom: 8px; }
 
@@ -178,6 +178,30 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .block.enemy { border-color: #7a2a25; background: #1f100f; }
 .block.sel { outline: 2px solid var(--gold); }
 .block .em { font-size: 18px; }
+.blocks6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 12px; }
+.blocks6 .block { min-height: 96px; }
+
+/* City grid: 9x9 hoods, each a 2x3 mini map of its blocks */
+.hoodgrid { display: grid; grid-template-columns: 14px repeat(9, 1fr); gap: 3px; align-items: center; }
+.hoodgrid .axis { font-size: 10px; color: var(--muted); text-align: center; }
+.hcell { aspect-ratio: 1; min-width: 0; border: 1px solid var(--line); border-radius: 5px; background: #101014; padding: 3px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; color: inherit; font: inherit; }
+.hcell.r0 { background: #231c0c; border-color: #6b5520; }
+.hcell.r1 { background: #1b170e; }
+.hcell.r2 { background: #16140f; }
+.hcell.own-mine { border-color: #2e9c4f; }
+.hcell.own-enemy { border-color: #a8322b; }
+.hcell .mini { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; }
+.hcell .mini i, .legend i { border-radius: 2px; background: #2a2a32; display: block; }
+.hcell .mini i.mine, .legend i.mine { background: #2e9c4f; }
+.hcell .mini i.enemy, .legend i.enemy { background: #a8322b; }
+.hcell .mini i.siege, .legend i.siege { box-shadow: 0 0 0 1px var(--gold); }
+.hcell .lbl { font-size: 9px; line-height: 1; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; }
+.siegebar { height: 5px; background: #0a0a0c; border: 1px solid #000; border-radius: 3px; overflow: hidden; }
+.siegebar > div { height: 100%; background: linear-gradient(#fca5a5, #c92a22); }
+.siegebar > div.mine { background: linear-gradient(#fde68a, #d9a520); }
 
 /* Lists of setups -------------------------------------------------------- */
 .slots { display: flex; gap: 4px; flex-wrap: wrap; }
