@@ -26,7 +26,7 @@ export default function Home() {
     { to: '/economy', ic: '🏭', t: 'Grow Houses & Storage', s: `${me.grow_houses.length} houses · ${num(me.storage_used)}/${num(me.storage_cap)} stored${ready ? ` · ${ready} ready` : ''}` },
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', t: me.crew ? me.crew.name : 'Join a Crew', s: me.crew ? `${me.crew.members} members${me.crew.is_capo ? ' · you are Capo' : ''}${me.crew.applications ? ` · ${me.crew.applications} application${me.crew.applications > 1 ? 's' : ''} waiting` : ''}${me.crew.invites ? ` · ${me.crew.invites} cartel invite${me.crew.invites > 1 ? 's' : ''}` : ''}` : 'Crews hold blocks and run turf wars' },
     { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', t: me.cartel ? me.cartel.name : 'Cartels', s: me.cartel ? (me.cartel.is_don ? 'You are the Don' : 'Your cartel') : 'Alliances of crews' },
-    { to: '/territory', ic: '🗺', t: 'Territory', s: 'Hoods & blocks across four islands' },
+    { to: '/territory', ic: '🗺', t: 'Territory', s: '81 hoods · 6 blocks each · bonuses every 24h' },
     { to: '/casino', ic: '🎰', t: 'Casino', s: features.casinoGames.length > 1 ? 'Live poker, blackjack, craps, roulette, slots' : 'Slots are open · tables coming soon' },
     ...(features.forum ? [{ to: '/forum', ic: '🗣', t: 'Forum', s: 'Game updates, help, market, war, suggestions' }] : []),
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
@@ -39,7 +39,7 @@ export default function Home() {
         <div className="notice red">You're locked up until {timeLeft(me.jail_until, now)} from now. Only jail actions work, and fights use your jail setup. <Link to="/services">Post bail →</Link></div>
       )}
       {me.hospital && (
-        <div className="notice red">You're in the hospital. No actions or fights until you check out. <Link to="/services">Hospital →</Link></div>
+        <div className="notice red">You're in the hospital at {me.health} health — +5 in {timeLeft(me.health_next, now)}, out at 20. <Link to="/services">Buy health →</Link></div>
       )}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
 

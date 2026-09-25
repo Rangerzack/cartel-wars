@@ -67,10 +67,18 @@ begin
   update crews set cartel_id = cartel where id in (crew_a, crew_c);
   insert into cartel_invites (cartel_id, crew_id) values (cartel, crew_b);
 
-  -- territory: crew A holds most of the North Shore, crew B the West Harbor, C scattered
-  update blocks b set owner_crew_id = crew_a, taken_at = now() - interval '3 days' from hoods h where h.id = b.hood_id and h.island = 'North Shore' and b.id % 4 <> 0;
-  update blocks b set owner_crew_id = crew_b, taken_at = now() - interval '1 day' from hoods h where h.id = b.hood_id and h.island = 'West Harbor' and b.id % 4 <> 1;
-  update blocks b set owner_crew_id = crew_c, taken_at = now() - interval '5 hours' from hoods h where h.id = b.hood_id and h.island = 'Eastside' and b.id % 4 = 2;
+  -- territory: crew A holds most of the Harbor row, crew B the Hilltop row, C scattered around the center
+  update blocks b set owner_crew_id = crew_a, taken_at = now() - interval '3 days' from hoods h where h.id = b.hood_id and h.gy = 1 and h.gx <= 6 and b.slot <> 6;
+  update blocks b set owner_crew_id = crew_b, taken_at = now() - interval '1 day' from hoods h where h.id = b.hood_id and h.gy = 9 and h.gx >= 4 and b.slot <> 1;
+  update blocks b set owner_crew_id = crew_c, taken_at = now() - interval '5 hours' from hoods h where h.id = b.hood_id and h.gy between 4 and 6 and h.gx between 4 and 6 and b.slot in (2, 4);
+  update blocks set bonus_at = now() + (random() * 24 || ' hours')::interval where owner_crew_id is not null;
+  -- sieges in progress: A is hitting B's hilltop blocks, B is hitting A back
+  insert into block_siege (block_id, crew_id, wins, updated_at)
+    select id, crew_a, 5 + (random() * 40)::int, now() - (random() * 5 || ' hours')::interval from blocks b
+     where owner_crew_id = crew_b and random() < 0.4;
+  insert into block_siege (block_id, crew_id, wins, updated_at)
+    select id, crew_b, 1 + (random() * 20)::int, now() - (random() * 5 || ' hours')::interval from blocks b
+     where owner_crew_id = crew_a and random() < 0.25;
   insert into block_garrison (block_id, code, qty) select id, 'thug', 20 + (random() * 100)::int from blocks where owner_crew_id is not null;
   insert into block_garrison (block_id, code, qty) select id, 'enforcer', (random() * 10)::int from blocks where owner_crew_id is not null;
   perform _recompute_hood(id) from hoods;
@@ -97,12 +105,26 @@ begin
     select ids[1 + (random() * 23)::int], k.kind, case k.kind when 'action' then 1 when 'import' then 8 + (random() * 60)::int when 'market' then 500 + (random() * 40000)::int else 1 end,
            now() - (random() * 13 || ' days')::interval
       from generate_series(1, 600), lateral (select (array['action','action','action','import','market','turf'])[1 + (random() * 5)::int] as kind) k;
-  for i in 1..10 loop
-    insert into territory_log (block_id, attacker_id, crew_id, success, attack, resistance, created_at)
-    select x.bid, x.pid, x.cid, y.a > y.r, y.a, y.r, now() - (random() * 2 || ' days')::interval
-      from (select b.id bid, p.id pid, p.crew_id cid from blocks b, profiles p where p.crew_id is not null order by random() limit 1) x,
-           (select 200 + (random() * 3000)::int a, 200 + (random() * 2500)::int r) y;
+  for i in 1..40 loop
+    insert into territory_log (block_id, attacker_id, crew_id, defender_crew_id, success, attack, resistance, thugs, mercs,
+                               lost_thugs, garrison_lost, siege_wins, created_at)
+    select x.bid, x.pid, x.cid, x.owner, y.a > y.r, y.a, y.r, y.a / 10, 0, (y.r / 40), case when y.a > y.r then 3 else 0 end,
+           case when x.owner is not null then 1 + (random() * 40)::int end, now() - (random() * 2 || ' days')::interval
+      from (select b.id bid, b.owner_crew_id owner, p.id pid, p.crew_id cid from blocks b, profiles p
+             where p.crew_id is not null and b.owner_crew_id is distinct from p.crew_id and b.owner_crew_id is not null
+             order by random() limit 1) x,
+           (select 510 + (random() * 900)::int a, 250 + (random() * 700)::int r) y;
   end loop;
+  -- ledgers
+  insert into bank_ledger (crew_id, player_id, kind, amount, balance, note, created_at)
+    select c.id, case when k = 'bonus' then null else (select id from profiles where crew_id = c.id order by random() limit 1) end, k,
+           case k when 'withdraw' then -(random() * 200000)::int when 'bonus' then 42666 else (random() * 150000)::int end,
+           c.bank, case when k = 'bonus' then 'Harbor Row — Block A' else '' end, now() - (g * interval '37 minutes')
+      from crews c cross join generate_series(1, 12) g cross join lateral (select (array['deposit','withdraw','bonus','bonus'])[1 + (random() * 3)::int] k) kk;
+  insert into bank_ledger (cartel_id, player_id, kind, amount, balance, note, created_at)
+    select cartel, null, 'bonus', 10667, 1500000, 'Harbor Row — Block ' || chr(64 + g), now() - (g * interval '1 hour') from generate_series(1, 5) g;
+  update crews set co_capo_id = ids[2] where id = crew_a;
+  update profiles set reputation = reputation + 150 where id = ids[1];   -- bot01 has to pick a path
 
   -- chat
   insert into messages (channel, sender_id, sender_name, body, created_at)

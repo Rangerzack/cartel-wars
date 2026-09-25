@@ -14,6 +14,7 @@ export default function Services() {
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
   const [hood, setHood] = useState<{ code: string; n: number }>({ code: 'thug', n: 10 })
+  const [heal, setHeal] = useState(20)
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
@@ -22,17 +23,38 @@ export default function Services() {
   const owned = me.hoodlums[hood.code] ?? 0
   const hdef = catalog.hoodlums.find(h => h.code === hood.code)!
   const hoodCost = Math.round(hdef.base_price * hood.n * (1 + (owned + hood.n / 2) / 2000))
+  // mirrors _health_price: per-point price climbs with points bought in the last 24h
+  const healthPrice = (n: number) => Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale))
+  const missing = me.health_max - me.health
+  const healN = Math.max(1, Math.min(heal, missing))
+  const outN = Math.max(0, 20 - me.health)
 
   return (
     <div className="page">
-      {me.hospital && (
-        <Card title="🏥 Hospital">
-          <div className="bd stack">
-            <div>You're laid up at {me.health} health. Checking out gets you to 20 — enough to move, not enough to brawl.</div>
-            <Btn className="doit block" onClick={() => run(api.hospitalCheckout, { ok: r => `Checked out for ${money(r.cost)}` })}>Check Out · {money((20 - me.health) * cfg.hospital_per_point)}</Btn>
-          </div>
-        </Card>
-      )}
+      <Card title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
+        <div className="bd stack">
+          {me.hospital
+            ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} every {cfg.health_regen_minutes} minutes — next in {timeLeft(me.health_next, now)} — and walk out at 20.</div>
+            : <div className="small muted">Health comes back {cfg.health_regen_amount} every {cfg.health_regen_minutes} minutes. Buy more here — the price per point climbs the more you buy in a day.</div>}
+          {me.hospital && outN > 0 && (
+            <Btn className="doit block" disabled={me.cash < healthPrice(outN)} onClick={() => run(api.hospitalCheckout, { ok: r => `Checked out for ${money(r.cost)}` })}>Check Out (+{outN}) · {money(healthPrice(outN))}</Btn>
+          )}
+          {missing > 0 ? (
+            <>
+              <div className="spread">
+                <Qty value={healN} onChange={setHeal} min={1} max={Math.max(1, missing)} />
+                <Btn className={me.hospital ? '' : 'doit'} disabled={me.cash < healthPrice(healN)} onClick={() => run(() => api.buyHealth(healN), { ok: r => `+${r.gain} health for ${money(r.cost)}` })}>Buy +{healN} · {money(healthPrice(healN))}</Btn>
+              </div>
+              <div className="hstack">
+                <button className="btn sm ghost" onClick={() => setHeal(Math.max(1, Math.min(25, missing)))}>+25</button>
+                <button className="btn sm ghost" onClick={() => setHeal(Math.max(1, Math.min(50, missing)))}>+50</button>
+                <button className="btn sm ghost" onClick={() => setHeal(missing)}>Full · {money(healthPrice(missing))}</button>
+              </div>
+              {me.health_bought > 0 && <div className="small muted">{num(me.health_bought)} bought in the last 24h — the scale resets a day after your first buy.</div>}
+            </>
+          ) : <div className="small muted">You're at full health.</div>}
+        </div>
+      </Card>
       {me.jailed && (
         <Card title="🔒 County Jail" right={<small>{timeLeft(me.jail_until, now)} left</small>}>
           <div className="bd stack">

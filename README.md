@@ -97,7 +97,7 @@ npm run db:demo
 Tests:
 
 ```sh
-npm run db:test              # SQL smoke tests of every RPC incl. casino and forum (resets the local DB — re-run db:demo after)
+npm run db:test              # SQL smoke tests of every RPC incl. casino, forum and the Sept 24 features (resets the local DB — re-run db:demo after)
 npm run e2e                  # Playwright walkthroughs: core game, casino (two players at a table), forum
 node scripts/tour.mjs out/   # screenshots of every screen as a demo bot
 ```
@@ -114,6 +114,11 @@ supabase/migrations/20260921000003_seed.sql       content: commodities, items, a
 supabase/migrations/20260922000001_casino.sql     casino: slots, roulette, craps, blackjack, live hold'em tables
 supabase/migrations/20260923000001_forum.sql      forum: boards, threads, replies, admins
 supabase/migrations/20260924000001_remove_immunity.sql  removes new-player immunity
+supabase/migrations/20260924000002_hospital.sql          +5 health / 5 min, buy health on a sliding scale, new tunables
+supabase/migrations/20260924000003_crew_co_capo_ledger.sql  Co-Capo, crew/cartel bank ledger
+supabase/migrations/20260924000004_producer_trader.sql   Producer / Trader paths at 100 rep
+supabase/migrations/20260924000005_territory_grid.sql    9x9 hoods x 6 blocks, 50-win sieges, 51-thug minimum, block bonuses, attack logs
+supabase/migrations/20260924000006_state.sql             get_me / get_catalog for the above
 web/src/lib/api.ts                      typed wrappers for every RPC
 web/src/lib/game.tsx                    session + player state (get_me) + toasts
 web/src/pages/*                         Home, Actions, Economy, Fight, Player, Services, Items, Crew, Cartel, Territory, Chat, Profile, Casino, PokerTable, Forum
@@ -122,7 +127,7 @@ scripts/                                local Postgres harness, dev API server, 
 
 ## Tuning
 
-Game constants are in `_cfg()` at the top of `20260921000002_functions.sql`; content tables
+Game constants are in `_cfg()` (latest copy in `20260924000002_hospital.sql`); content tables
 are in `20260921000003_seed.sql`. Change, re-run `npm run db:test`, then `supabase db push`
 (new changes go in a new migration file once the project is live).
 

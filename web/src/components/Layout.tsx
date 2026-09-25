@@ -40,7 +40,7 @@ export default function Layout() {
           </div>
           <div className="bars">
             <Bar cls="stamina" label="Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
-            <Bar cls="health" label="Health" value={me.health} max={me.health_max} />
+            <Bar cls="health" label="Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
           </div>
         </header>
       )}

@@ -4,6 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { Ledger } from '../components/Ledger'
 import { useNow } from '../lib/useNow'
 import { timeLeft } from '../lib/format'
 import type { CrewDetail, CrewFightResult, CrewSummary } from '../lib/types'
@@ -31,7 +32,7 @@ function CrewHub() {
         <Card>
           <div className="row link" onClick={() => nav(`/crew/${me.crew!.id}`)}>
             <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{me.crew.emblem}</span>
-            <div className="grow"><div className="t">{me.crew.name}</div><div className="s">Your crew · {me.crew.members} members{me.crew.is_capo ? ' · you are Capo' : ''}</div></div>
+            <div className="grow"><div className="t">{me.crew.name}</div><div className="s">Your crew · {me.crew.members} members{me.crew.is_capo ? ' · you are Capo' : me.crew.is_co_capo ? ' · you are Co-Capo' : ''}</div></div>
             <span className="chev">›</span>
           </div>
         </Card>
@@ -71,12 +72,15 @@ function CrewPage({ id }: { id: string }) {
   const [amount, setAmount] = useState(0)
   const [edit, setEdit] = useState<{ emblem: string; description: string } | null>(null)
   const [fight, setFight] = useState<CrewFightResult | null>(null)
+  const [ledgerV, setLedgerV] = useState(0)
+  const [allBlocks, setAllBlocks] = useState(false)
   const now = useNow()
   const load = useCallback(() => api.crew(id).then(setC).catch(e => { toast(e.message, 'bad'); nav('/crew') }), [id, toast, nav])
   useEffect(() => { load() }, [load])
   if (!c) return <Empty><span className="spin" /></Empty>
   const mine = me.crew?.id === c.id
-  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load() }
+  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load(); setLedgerV(v => v + 1) }
+  const boss = c.is_boss
   const sameCartel = !!me.cartel && c.cartel?.id === me.cartel.id
   const cooldown = c.next_fight_at && new Date(c.next_fight_at).getTime() > now
 
@@ -111,8 +115,8 @@ function CrewPage({ id }: { id: string }) {
             <div className="hstack">
               <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}>💬 Crew Chat</Btn>
               <Btn className="sm" onClick={() => nav('/territory')}>🗺 Territory</Btn>
-              {c.is_capo && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
-              <Btn className="sm ghost red" onClick={() => { if (confirm(c.is_capo ? 'Leave? Leadership passes to your longest-standing member, or the crew disbands.' : 'Leave the crew?')) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew') }) }}>Leave</Btn>
+              {boss && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
+              <Btn className="sm ghost red" onClick={() => { if (confirm(c.is_capo ? `Leave? ${c.co_capo_id ? 'Your Co-Capo takes over.' : 'Leadership passes to your longest-standing member, or the crew disbands.'}` : 'Leave the crew?')) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew') }) }}>Leave</Btn>
             </div>
           )}
           {edit && (
@@ -128,14 +132,15 @@ function CrewPage({ id }: { id: string }) {
       </Card>
 
       {mine && (
-        <Card title="Crew Bank" right={<small>{c.is_capo ? 'Capo can withdraw' : 'deposits only'}</small>}>
+        <Card title="Crew Bank" right={<small>{boss ? 'you can withdraw' : 'Capo & Co-Capo withdraw'}</small>}>
           <div className="bd hstack">
             <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
             <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => act(() => api.crewBank(amount), r => `Crew bank: ${money(r.bank)}`)}>Deposit</Btn>
-            {c.is_capo && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => act(() => api.crewBank(-amount), r => `Crew bank: ${money(r.bank)}`)}>Withdraw</Btn>}
+            {boss && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => act(() => api.crewBank(-amount), r => `Crew bank: ${money(r.bank)}`)}>Withdraw</Btn>}
           </div>
         </Card>
       )}
+      {mine && <Ledger scope="crew" version={ledgerV} />}
 
       {c.is_capo && c.invites && c.invites.length > 0 && (
         <Card title="Cartel Invitations">
@@ -149,7 +154,7 @@ function CrewPage({ id }: { id: string }) {
         </Card>
       )}
 
-      {c.is_capo && c.applications && c.applications.length > 0 && (
+      {boss && c.applications && c.applications.length > 0 && (
         <Card title="Applications">
           {c.applications.map(a => (
             <div key={a.id} className="row">
@@ -180,17 +185,26 @@ function CrewPage({ id }: { id: string }) {
         {c.members.map(m => (
           <div key={m.id} className="row">
             <div className="grow link" onClick={() => nav(`/player/${m.id}`)}>
-              <div className="t">{m.avatar} {m.is_capo ? '👑 ' : ''}{m.name}</div>
-              <div className="s">{num(m.fights_won)} wins · {num(m.actions)} actions · seen {ago(m.last_seen)}</div>
+              <div className="t">{m.avatar} {m.is_capo ? '👑 ' : m.is_co_capo ? '🎖 ' : ''}{m.name}</div>
+              <div className="s">{m.is_capo ? 'Capo · ' : m.is_co_capo ? 'Co-Capo · ' : ''}{num(m.fights_won)} wins · {num(m.actions)} actions · seen {ago(m.last_seen)}</div>
             </div>
-            {c.is_capo && !m.is_capo && <Btn className="sm ghost" onClick={() => { if (confirm(`Kick ${m.name}?`)) return act(() => api.crewKick(m.id), () => `${m.name} is out`) }}>Kick</Btn>}
+            {c.is_capo && !m.is_capo && (m.is_co_capo
+              ? <Btn className="sm ghost" onClick={() => act(() => api.crewSetCoCapo(null), () => `${m.name} is no longer Co-Capo`)}>Demote</Btn>
+              : <Btn className="sm ghost" onClick={() => { if (confirm(`Make ${m.name} Co-Capo?${c.co_capo_id ? ' This replaces your current Co-Capo.' : ''}`)) return act(() => api.crewSetCoCapo(m.id), () => `${m.name} is Co-Capo`) }}>Co-Capo</Btn>)}
+            {boss && !m.is_capo && m.id !== me.id && <Btn className="sm ghost" onClick={() => { if (confirm(`Kick ${m.name}?`)) return act(() => api.crewKick(m.id), () => `${m.name} is out`) }}>Kick</Btn>}
           </div>
         ))}
       </Card>
 
       {c.blocks.length > 0 && (
-        <Card title="Blocks held">
-          {c.blocks.map(b => <div key={b.id} className="row"><div className="grow"><div className="t">{b.name}</div><div className="s">{b.hood} · {b.island}</div></div></div>)}
+        <Card title="Blocks held" right={<small>{mine ? 'next bonus first' : `${c.blocks.length} blocks`}</small>}>
+          {(allBlocks ? c.blocks : c.blocks.slice(0, 8)).map(b => (
+            <div key={b.id} className={`row ${mine ? 'link' : ''}`} onClick={mine ? () => nav(`/territory?hood=${b.hood_id}`) : undefined}>
+              <div className="grow"><div className="t">{b.name}</div><div className="s">{b.island}{mine && b.bonus_at ? ` · bonus in ${timeLeft(b.bonus_at, now)}` : ''}</div></div>
+              {mine && <span className="chev">›</span>}
+            </div>
+          ))}
+          {c.blocks.length > 8 && <div className="row"><button className="btn sm ghost block" onClick={() => setAllBlocks(!allBlocks)}>{allBlocks ? 'Show fewer' : `Show all ${c.blocks.length}`}</button></div>}
         </Card>
       )}
 

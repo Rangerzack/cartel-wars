@@ -2,6 +2,7 @@ export type Commodity = 'herb' | 'dust' | 'pills'
 export type SetupKind = 'offense' | 'defense' | 'jail'
 export type ItemCategory = 'weapon' | 'jail_weapon' | 'protection' | 'transport'
 export type HeatLevel = 'green' | 'yellow' | 'red'
+export type Path = 'producer' | 'trader'
 
 export interface Power { att: number; def: number; combo: boolean }
 
@@ -30,12 +31,17 @@ export interface Me {
   heat: number; heat_max: number; heat_level: HeatLevel
   jailed: boolean; jail_until: string | null
   hospital: boolean
+  health_next: string; health_bought: number
+  rep_earned: number; path: Path | null; path_required: boolean
   immune: boolean; immune_until: string
   inventory_slots: number; storage_cap: number; refills_used: number
   actions_done: number; fights_won: number; fights_lost: number; market_volume: number; imports: number
   next_tick: string
   power: Record<SetupKind, Power>
-  crew: { id: string; name: string; emblem: string; capo_id: string; is_capo: boolean; cartel_id: string | null; members: number; applications: number; invites: number } | null
+  crew: {
+    id: string; name: string; emblem: string; capo_id: string; is_capo: boolean; co_capo_id: string | null; is_co_capo: boolean
+    cartel_id: string | null; members: number; applications: number; invites: number
+  } | null
   cartel: { id: string; name: string; don_id: string; is_don: boolean } | null
   storage: Record<Commodity, number>
   storage_used: number
@@ -100,10 +106,11 @@ export interface CrewSummary {
   id: string; name: string; emblem: string; description: string; members: number; blocks: number; cartel: string | null
 }
 export interface CrewDetail {
-  id: string; name: string; emblem: string; description: string; capo_id: string; is_capo: boolean; created_at: string
+  id: string; name: string; emblem: string; description: string; capo_id: string; is_capo: boolean
+  co_capo_id: string | null; is_co_capo: boolean; is_boss: boolean; created_at: string
   bank: number | null; cartel: { id: string; name: string; don_id: string } | null
-  members: { id: string; name: string; avatar: string; fights_won: number; actions: number; is_capo: boolean; last_seen: string }[]
-  blocks: { id: number; name: string; hood: string; island: string }[]
+  members: { id: string; name: string; avatar: string; fights_won: number; actions: number; is_capo: boolean; is_co_capo: boolean; last_seen: string }[]
+  blocks: { id: number; name: string; hood: string; hood_id: number; island: string; bonus_at: string | null }[]
   applications: { id: string; name: string; at: string }[] | null
   applied: boolean
   invites: { id: string; name: string }[] | null
@@ -125,16 +132,35 @@ export interface CartelDetail {
 
 export interface CrewRef { id: string; name: string; emblem: string }
 export interface Block {
-  id: number; name: string; owner: CrewRef | null; mine: boolean; garrisoned: boolean; garrison_size: number | null
-  garrison: Record<string, number> | null; claim_price: number
+  id: number; slot: number; name: string; owner: CrewRef | null; mine: boolean; garrisoned: boolean; garrison_size: number | null
+  garrison: Record<string, number> | null; bonus_at: string | null; my_wins: number; top_wins: number
 }
 export interface Hood {
-  id: number; name: string; price: number; daily_income: number; base_resistance: number; owner: CrewRef | null; blocks: Block[]
+  id: number; name: string; district: string; gx: number; gy: number; price: number; claim_price: number
+  daily_income: number; block_bonus: number; base_resistance: number; my_blocks: number; owner: CrewRef | null; blocks: Block[]
 }
-export interface Island { island: string; hoods: Hood[] }
+export interface TerritoryRules { siege_wins: number; min_thugs: number; bonus_hours: number; stamina: number }
+export interface Territory { hoods: Hood[]; rules: TerritoryRules }
 export interface TerritoryLog {
-  id: number; block: string; hood: string; attacker: string | null; crew: string | null; success: boolean
-  attack: number; resistance: number; at: string
+  id: number; block_id: number; block: string; hood: string; hood_id: number; attacker: string | null; attacker_id: string | null
+  crew: string | null; crew_emblem: string | null; defender_crew: string | null; success: boolean; captured: boolean
+  attack: number; resistance: number; thugs: number; mercs: number; lost_thugs: number; lost_mercs: number
+  garrison_lost: number; siege_wins: number | null; at: string
+}
+export interface BlockDetail {
+  id: number; name: string; slot: number; hood_id: number; hood: string; district: string; gx: number; gy: number
+  claim_price: number; block_bonus: number; base_resistance: number; bonus_at: string | null; taken_at: string | null; mine: boolean
+  owner: CrewRef | null; garrisoned: boolean; garrison: Record<string, number> | null
+  siege: { crew_id: string; crew: string; emblem: string; wins: number; mine: boolean; at: string }[]
+  log: TerritoryLog[]
+}
+export interface AttackBlockResult {
+  success: boolean; captured: boolean; attack: number; resistance: number; lost_thugs: number; lost_mercs: number
+  garrison_lost: number; claim_paid: number; wins: number | null; wins_needed: number; bonus_reset: boolean
+}
+export interface LedgerEntry {
+  id: number; kind: 'deposit' | 'withdraw' | 'bonus' | 'fight_won' | 'fight_lost'; amount: number; balance: number
+  note: string; at: string; player: string | null; player_id: string | null
 }
 
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
