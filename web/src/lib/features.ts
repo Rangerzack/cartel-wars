@@ -3,6 +3,7 @@ export const stage: 'live' | 'staging' = import.meta.env.VITE_STAGE === 'staging
 export const features = {
   /** Which casino games are open. Live shows slots only until the rest is signed off on staging. */
   casinoGames: stage === 'staging' ? (['poker', 'blackjack', 'craps', 'roulette', 'slots'] as const) : (['slots'] as const),
-  forum: stage === 'staging',
+  /** Player forum — live everywhere. */
+  forum: true,
 }
 export const isStaging = stage === 'staging'

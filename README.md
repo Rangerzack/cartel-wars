@@ -66,8 +66,8 @@ Two branches, one Pages site, one Supabase project:
 
 | branch    | URL                                             | build flag           | what's on |
 |-----------|-------------------------------------------------|----------------------|-----------|
-| `main`    | `https://<user>.github.io/cartel-wars/`         | —                    | the live game; casino shows **slots only** |
-| `staging` | `https://<user>.github.io/cartel-wars/staging/` | `VITE_STAGE=staging` | everything: full casino (poker, blackjack, craps, roulette), forum |
+| `main`    | `https://<user>.github.io/cartel-wars/`         | —                    | the live game, forum included; casino shows **slots only** |
+| `staging` | `https://<user>.github.io/cartel-wars/staging/` | `VITE_STAGE=staging` | everything: full casino (poker, blackjack, craps, roulette) |
 
 `web/src/lib/features.ts` is the switch. Both builds share the live database
 (the free tier allows two active projects and both are taken), so a staging
