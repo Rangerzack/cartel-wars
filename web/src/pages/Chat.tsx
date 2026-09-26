@@ -7,6 +7,7 @@ import { ago } from '../lib/format'
 import { Card, Empty } from '../components/ui'
 import type { Conversation, Message } from '../lib/types'
 import { features } from '../lib/features'
+import { LinkedText, PlayerLink } from '../components/Linked'
 
 export default function Chat() {
   const me = useMe()
@@ -72,7 +73,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
         {msgs?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}
         {msgs?.map(m => (
           <div key={m.id} className={`msg ${m.sender_id === me.id ? 'me' : ''}`}>
-            <span className="who">{m.sender_name}</span>{m.body}<span className="when">{ago(m.created_at)}</span>
+            <PlayerLink id={m.sender_id} className="who">{m.sender_name}</PlayerLink><LinkedText text={m.body} /><span className="when">{ago(m.created_at)}</span>
           </div>
         ))}
       </div>

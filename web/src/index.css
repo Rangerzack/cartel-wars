@@ -477,3 +477,13 @@ textarea.input { resize: vertical; font: inherit; }
 .row.link:hover .ico { box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(227,179,65,.45), 0 2px 5px rgba(0,0,0,.55); }
 /* big storage / stat numbers read better in the display face */
 .bignum { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .3px; }
+
+/* Clickable player / crew / cartel names (chat, forum) */
+.nlink { color: inherit; text-decoration: none; cursor: pointer; border-radius: 3px; transition: color .12s, background .12s; }
+.nlink:hover { background: rgba(255,255,255,.06); }
+.nlink.strong { font-weight: 600; color: #f0e0b0; }
+.nlink.crew { color: #9fcbff; }
+.nlink.cartel { color: #d2b0ff; }
+.nlink.mention { font-weight: 600; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.nlink.mention.player { color: var(--gold-hi); }
+.msg .who.nlink:hover { text-decoration: underline; background: none; }
