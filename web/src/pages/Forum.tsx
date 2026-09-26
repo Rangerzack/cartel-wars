@@ -6,6 +6,7 @@ import { ago } from '../lib/format'
 import type { ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
 import { Card, Empty, Modal } from '../components/ui'
 import { CrewLink, LinkedText, PlayerLink } from '../components/Linked'
+import { BackBar } from '../components/BackBar'
 
 export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
   { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
@@ -33,6 +34,7 @@ function Boards() {
   useEffect(() => { api.forumCategories().then(setData).catch(e => toast(e.message, 'bad')) }, [toast])
   return (
     <div className="page">
+      <BackBar fallback="/" />
       <Card title="🗣 Forum" right={<small>{data?.is_admin ? 'you are an admin' : 'players talk here'}</small>}>
         {!data && <Empty><span className="spin" /></Empty>}
         {data?.categories.map(c => {
@@ -74,7 +76,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
   return (
     <div className="page">
       <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <Link to="/forum" className="small">‹ All boards</Link>
+        <Link to="/forum" className="back">‹ All boards</Link>
         {data?.can_post && <button className="btn sm gold" onClick={() => setCompose(true)}>New thread</button>}
       </div>
       <Card title={<>{b.icon} {b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
@@ -143,7 +145,7 @@ function ThreadView({ id }: { id: number }) {
   return (
     <div className="page">
       <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <Link to={`/forum/${t.category}`} className="small">‹ {b.icon} {b.name}</Link>
+        <Link to={`/forum/${t.category}`} className="back">‹ {b.icon} {b.name}</Link>
         {data.is_admin && (
           <div className="hstack">
             <button className="btn sm ghost" onClick={() => mod(t.pinned ? 'unpin' : 'pin')}>{t.pinned ? 'Unpin' : 'Pin'}</button>

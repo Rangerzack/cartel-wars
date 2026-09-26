@@ -18,6 +18,9 @@ interface GameState {
   run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => Promise<T | undefined>
   busy: boolean
   signOut: () => Promise<void>
+  /** True after the player opens a password-reset link; the app asks for a new password before anything else. */
+  recovery: boolean
+  endRecovery: () => void
 }
 
 const Ctx = createContext<GameState | null>(null)
@@ -29,11 +32,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
+  // A reset link lands with #...type=recovery; catch it here too in case supabase fires PASSWORD_RECOVERY before we subscribe.
+  const [recovery, setRecovery] = useState(() => /(^|[#&])type=recovery(&|$)/.test(window.location.hash))
   const toastId = useRef(0)
+  const gotAt = useRef(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (!s) setMe(null) })
+    const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
+      setSession(s)
+      if (!s) setMe(null)
+      if (e === 'PASSWORD_RECOVERY') setRecovery(true)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -43,14 +53,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), kind === 'bad' ? 4500 : 3200)
   }, [])
 
+  // An expired or already-used reset link comes back as #error_description=… — say so instead of dropping them on sign-in.
+  useEffect(() => {
+    const why = new URLSearchParams(window.location.hash.slice(1)).get('error_description')
+    if (why) { toast(why, 'bad'); history.replaceState(history.state, '', window.location.pathname + window.location.search) }
+  }, [toast])
+
   const refresh = useCallback(async () => {
     try {
       const m = await api.me()
+      gotAt.current = Date.now()
       setMe(m)
     } catch (e) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
-        try { setMe(await api.ensureProfile()) } catch (e2) { toast((e2 as Error).message, 'bad') }
+        try { const m = await api.ensureProfile(); gotAt.current = Date.now(); setMe(m) } catch (e2) { toast((e2 as Error).message, 'bad') }
       } else {
         toast((e as Error).message, 'bad')
       }
@@ -66,6 +83,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
   }, [session, refresh, toast])
+
+  // Refresh the moment a timer runs out — stamina/heat tick, health tick, jail release, hustlers home —
+  // so nothing sits on 0:00 waiting for the minute poll. Deadlines are server times; we measure from
+  // server_time plus however long ago this state arrived, so a wrong phone clock doesn't matter.
+  useEffect(() => {
+    if (!me) return
+    const server = Date.parse(me.server_time)
+    if (!Number.isFinite(server)) return
+    const ts = (v: string | null | undefined) => (v ? Date.parse(v) : NaN)
+    const due: number[] = []
+    if (me.stamina < me.stamina_max || me.heat > 0) due.push(ts(me.next_tick))
+    if (me.health < me.health_max) due.push(ts(me.health_next))
+    if (me.jailed) due.push(ts(me.jail_until))
+    for (const h of me.hustlers) if (!h.back) due.push(ts(h.returns_at))
+    const next = Math.min(...due.filter(d => Number.isFinite(d) && d > server))
+    if (!Number.isFinite(next)) return
+    const wait = next - server - (Date.now() - gotAt.current) + 800
+    if (wait > 60_000) return // the minute poll gets there first and this re-plans
+    const t = setTimeout(() => { if (document.visibilityState === 'visible') refresh() }, Math.max(1000, wait))
+    return () => clearTimeout(t)
+  }, [me, refresh])
 
   const run = useCallback(async <T,>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => {
     setBusy(true)
@@ -86,9 +124,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [refresh, toast])
 
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
+  const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery }),
+    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

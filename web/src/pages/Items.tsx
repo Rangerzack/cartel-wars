@@ -1,18 +1,22 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { categoryLabel, money, num } from '../lib/format'
 import { Btn, Card, Empty, Seg } from '../components/ui'
 import type { ItemCategory, SetupKind } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon']
 
 export default function Items() {
   const me = useMe()
-  const { catalog, run } = useGame()
-  const [tab, setTab] = useState<'setups' | 'shop'>('setups')
-  const [setup, setSetup] = useState<SetupKind>('offense')
-  const [cat, setCat] = useState<ItemCategory>('weapon')
+  const { catalog, run, toast } = useGame()
+  const [sp] = useSearchParams()
+  // deep links: /items?tab=shop&cat=weapon, /items?setup=defense (and the old /items#shop)
+  const [tab, setTab] = useState<'setups' | 'shop'>(sp.get('tab') === 'shop' || window.location.hash === '#shop' ? 'shop' : 'setups')
+  const [setup, setSetup] = useState<SetupKind>((['offense', 'defense', 'jail'] as const).find(s => s === sp.get('setup')) ?? 'offense')
+  const [cat, setCat] = useState<ItemCategory>(cats.find(c => c === sp.get('cat')) ?? 'weapon')
   if (!catalog) return <Empty><span className="spin" /></Empty>
 
   const inv = new Map(me.inventory.map(i => [i.item_id, i]))
@@ -20,9 +24,30 @@ export default function Items() {
   const used = [...equipped.values()].reduce((a, b) => a + b, 0)
   const power = me.power[setup]
   const allowed = (c: ItemCategory) => (setup === 'jail' ? c !== 'weapon' : c !== 'jail_weapon')
+  // weapons and protection count in both fight setups; jail weapons only inside
+  const homeSetups: Partial<Record<ItemCategory, SetupKind[]>> = { weapon: ['offense', 'defense'], protection: ['offense', 'defense'], jail_weapon: ['jail'] }
+  const setupName: Record<SetupKind, string> = { offense: 'Offensive', defense: 'Defensive', jail: 'Jail' }
+  /** Buy one and equip it straight away wherever it has a free slot — new players shouldn't need a second screen. */
+  async function buy(itemId: number, category: ItemCategory, name: string) {
+    const r = await run(() => api.buyItem(itemId, 1), { silent: true })
+    if (!r) return
+    const targets = homeSetups[category] ?? []
+    const into: string[] = [], full: string[] = []
+    for (const s of targets) {
+      const inSetup = me.setups[s] ?? []
+      if (inSetup.reduce((a, x) => a + x.qty, 0) >= me.inventory_slots) { full.push(setupName[s]); continue }
+      const q = inSetup.find(x => x.item_id === itemId)?.qty ?? 0
+      if (await run(() => api.equip(s, itemId, q + 1), { silent: true })) into.push(setupName[s])
+    }
+    const list = (xs: string[]) => xs.join(' and ') + (xs.length > 1 ? ' setups' : ' setup')
+    toast(into.length ? `Bought ${name} and equipped it in your ${list(into)}`
+      : full.length ? `Bought ${name} — your ${list(full)} ${full.length > 1 ? 'are' : 'is'} full, swap it in under Setups`
+      : `Bought ${name}`, 'ok')
+  }
 
   return (
     <div className="page">
+      <BackBar fallback="/" />
       <Seg value={tab} onChange={setTab} options={[{ v: 'setups', l: 'Setups' }, { v: 'shop', l: 'Buy Items' }]} />
 
       {tab === 'setups' && (
@@ -40,7 +65,12 @@ export default function Items() {
             </div>
           </Card>
           <Card title="Owned items">
-            {me.inventory.filter(i => allowed(i.category)).length === 0 && <Empty>Nothing usable in this setup. Buy something.</Empty>}
+            {me.inventory.filter(i => allowed(i.category)).length === 0 && (
+              <Empty>
+                <div>Nothing usable in this setup yet.</div>
+                <button className="btn gold sm" style={{ marginTop: 10 }} onClick={() => { setTab('shop'); setCat(setup === 'jail' ? 'jail_weapon' : setup === 'defense' ? 'protection' : 'weapon') }}>Go to the shop</button>
+              </Empty>
+            )}
             {me.inventory.filter(i => allowed(i.category)).map(i => {
               const q = equipped.get(i.item_id) ?? 0
               const canAdd = q < i.qty && used < me.inventory_slots
@@ -77,7 +107,7 @@ export default function Items() {
                   {have > 0 && i.rep_price === 0 && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(i.price / 2)}</Btn>}
                   {i.rep_price > 0
                     ? <Btn className="sm blue" disabled={me.reputation < i.rep_price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Earned ${i.name}` })}>⭐ {num(i.rep_price)}</Btn>
-                    : <Btn className="sm gold" disabled={me.cash < i.price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Bought ${i.name}` })}>{money(i.price)}</Btn>}
+                    : <Btn className="sm gold" disabled={me.cash < i.price} onClick={() => buy(i.id, i.category, i.name)}>{money(i.price)}</Btn>}
                 </div>
               )
             })}

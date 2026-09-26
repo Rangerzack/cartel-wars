@@ -7,6 +7,7 @@ import { useNow } from '../lib/useNow'
 import { Card, Empty, Seg } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { Accolades as AccoladesT } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf', 'gambler'] as const
 
@@ -21,6 +22,7 @@ export default function Accolades() {
   const board = data[week]
   return (
     <div className="page">
+      <BackBar fallback="/" />
       <Card title="Your stripes" right={<small>from last week</small>}>
         <div className="bd"><Ribbons list={data.mine} empty="No stripes yet. Finish top 3 in any category this week to wear one next week." /></div>
       </Card>

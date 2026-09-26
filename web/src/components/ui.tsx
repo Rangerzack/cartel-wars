@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { useGame } from '../lib/game'
 
-export function Card({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({ title, right, children, className = '', id }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <div className={`card ${className}`}>
+    <div className={`card ${className}`} id={id}>
       {title !== undefined && <div className="hd"><span>{title}</span>{right}</div>}
       {children}
     </div>

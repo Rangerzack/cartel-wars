@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { commodityIcon, hoodlumIcon, money, num, timeLeft } from '../lib/format'
@@ -11,6 +11,19 @@ export default function Services() {
   const { catalog, run } = useGame()
   const now = useNow()
   const nav = useNavigate()
+  const [sp] = useSearchParams()
+  const focus = sp.get('focus')
+  // /services?focus=bank|refills|hoodlums|police|hospital scrolls straight to that card
+  useEffect(() => {
+    if (!focus) return
+    const t = setTimeout(() => {
+      const el = document.getElementById(focus)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      el.classList.remove('focused'); void el.offsetWidth; el.classList.add('focused')
+    }, 150)
+    return () => clearTimeout(t)
+  }, [focus])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
   const [hood, setHood] = useState<{ code: string; n: number }>({ code: 'thug', n: 10 })
@@ -31,7 +44,7 @@ export default function Services() {
 
   return (
     <div className="page">
-      <Card title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
+      <Card id="hospital" title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
         <div className="bd stack">
           {me.hospital
             ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} every {cfg.health_regen_minutes} minutes — next in {timeLeft(me.health_next, now)} — and walk out at 20.</div>
@@ -64,7 +77,7 @@ export default function Services() {
         </Card>
       )}
 
-      <Card title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat)} per heat point</small>}>
+      <Card id="police" title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat)} per heat point</small>}>
         <div className="bd stack">
           <div className="spread">
             <div>Heat: <b className={me.heat_level}>{me.heat}</b> / {me.heat_max} <span className="muted small">({me.heat_level})</span></div>
@@ -74,7 +87,7 @@ export default function Services() {
         </div>
       </Card>
 
-      <Card title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
+      <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
           <div className="small muted">Cash on hand can be taken in fights. Banked cash can't.</div>
           <input className="input" inputMode="numeric" placeholder="Amount" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
@@ -89,7 +102,7 @@ export default function Services() {
         </div>
       </Card>
 
-      <Card title="⚡ Refills" right={<small>{me.refills_used}/3 product refills today</small>}>
+      <Card id="refills" title="⚡ Refills" right={<small>{me.refills_used}/3 product refills today</small>}>
         {(['stamina', 'health'] as const).map(kind => (
           <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
             <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(kind === 'stamina' ? me.stamina : me.health)}/{num(kind === 'stamina' ? me.stamina_max : me.health_max)}</span></div>
@@ -117,7 +130,7 @@ export default function Services() {
         <div className="row small muted">Diamonds are earned through achievements — 50, 100, 500, 1,000 and 5,000 actions; 10, 100 and 1,000 fight wins.</div>
       </Card>
 
-      <Card title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
+      <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
         <div className="bd stack">
           <div className="seg">
             {catalog.hoodlums.map(h => <button key={h.code} className={hood.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}>{hoodlumIcon[h.code]} {h.name}</button>)}

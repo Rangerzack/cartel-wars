@@ -6,6 +6,7 @@ import { ago, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { FightResult, PublicPlayer } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -31,6 +32,7 @@ export default function Player() {
 
   return (
     <div className="page">
+      <BackBar fallback="/fight" />
       <Card title={<><span style={{ fontSize: 20 }}>{p.avatar}</span> {p.name} {p.crew && <span className="muted">{p.crew.emblem} {p.crew.name}</span>}</>} right={<small>seen {ago(p.last_seen)}</small>}>
         <div className="bd stack">
           {p.bio && <div className="small" style={{ fontStyle: 'italic' }}>“{p.bio}”</div>}

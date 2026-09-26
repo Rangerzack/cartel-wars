@@ -40,21 +40,19 @@ try {
   // Actions
   await p.getByRole('link', { name: /Actions/ }).click()
   await p.getByRole('button', { name: 'Do It' }).first().click()
-  await p.locator('.modal').waitFor()
+  await p.locator('.row.action .action-result').first().waitFor() // results show in place, no pop-up
+  await p.locator('.session-tally', { hasText: '1 job' }).waitFor()
   await snap(p, 'action-result')
-  await p.getByRole('button', { name: 'Close' }).click()
 
   // Shop + equip
   await p.goto(BASE + '/items')
   await p.getByRole('button', { name: 'Buy Items' }).click()
   await p.locator('.row', { hasText: 'Brass Knuckles' }).getByRole('button', { name: /\$500/ }).click()
-  await toast(p, /Bought Brass Knuckles/)
+  await toast(p, /Bought Brass Knuckles and equipped it in your Offensive and Defensive setups/)
   await p.getByRole('button', { name: 'Protection' }).click()
   await p.locator('.row', { hasText: 'Leather Jacket' }).getByRole('button', { name: /\$1,000/ }).click()
-  await toast(p, /Bought Leather Jacket/)
+  await toast(p, /Bought Leather Jacket and equipped it in your Offensive and Defensive setups/)
   await p.getByRole('button', { name: 'Setups' }).click()
-  await p.locator('.row', { hasText: 'Brass Knuckles' }).getByRole('button', { name: '+' }).click()
-  await p.locator('.row', { hasText: 'Leather Jacket' }).getByRole('button', { name: '+' }).click()
   await p.getByText(/Attack 24 · Defense 25/).waitFor()
   await p.locator('.gold', { hasText: 'combo bonus' }).waitFor()
   await snap(p, 'setups')
@@ -153,8 +151,50 @@ try {
   await t.getByRole('button', { name: 'Close' }).click()
   await t.getByRole('button', { name: /Crew Fight · / }).waitFor()   // cooldown shown
 
+  // Back bars: step back when there's history, fall back home when the page was opened directly
+  await p.goto(BASE + '/fight')
+  await p.locator('.row', { hasText: N('Lalo') }).click()
+  await p.waitForURL(/\/player\//)
+  await p.getByRole('button', { name: '‹ Back' }).click()
+  await p.waitForURL(/\/fight$/)
+  await p.goto(BASE + '/items')
+  await p.getByRole('button', { name: '‹ Back' }).click()
+  await p.waitForURL(u => new URL(u).pathname === '/')
+
+  // Deep links: /services?focus= scrolls to and highlights the card; shop deep link opens the right tab
+  await p.goto(BASE + '/services?focus=hoodlums')
+  await p.locator('#hoodlums.focused').waitFor()
+  await p.goto(BASE + '/items?tab=shop&cat=protection')
+  await p.locator('.row', { hasText: 'Leather Jacket' }).waitFor()
+
+  // Disabled buttons say why before the tap
+  await p.goto(BASE + '/economy')
+  await p.getByRole('button', { name: 'Marketplace' }).click()
+  await p.locator('.why', { hasText: /in storage to list|need a vehicle/ }).waitFor()
+  if (!(await p.getByRole('button', { name: 'List It' }).isDisabled())) throw new Error('List It should be disabled with nothing in storage')
+
+  // Account: change password, sign out, sign back in with the new one; reset link request
+  const { rows: [acct] } = await db.query(`select u.email from auth.users u join profiles p on p.id = u.id where p.name = $1`, [N('Escobar')])
   await p.goto(BASE + '/profile')
+  await p.getByRole('button', { name: 'Change password' }).click()
+  await p.getByLabel('New password', { exact: true }).fill('newsecret9')
+  await p.getByLabel('Confirm new password').fill('newsecret9')
+  await p.getByRole('button', { name: 'Save new password' }).click()
+  await toast(p, /Password updated/)
   await snap(p, 'profile')
+  p.once('dialog', d => d.accept())
+  await p.getByRole('button', { name: 'Sign out' }).click()
+  await p.getByRole('button', { name: 'Existing Account' }).waitFor()
+  await p.getByText('Forgot your password?').click()
+  await p.getByLabel('Email').fill(acct.email)
+  await p.getByRole('button', { name: 'Send reset link' }).click()
+  await p.getByText(/a reset link is on its way/).waitFor()
+  await snap(p, 'reset-sent')
+  await p.getByText('‹ Back to sign in').click()
+  await p.getByLabel('Email').fill(acct.email)
+  await p.getByLabel('Password').fill('newsecret9')
+  await p.getByRole('button', { name: 'Sign In' }).click()
+  await p.locator('.topbar').waitFor()
   console.log('E2E PASSED')
 } catch (e) {
   console.error('E2E FAILED:', e.message)

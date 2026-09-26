@@ -6,6 +6,7 @@ import { ago, money } from '../lib/format'
 import { Btn, Card, Empty, Stat } from '../components/ui'
 import { Ledger } from '../components/Ledger'
 import type { CartelDetail, CartelSummary, CrewSummary } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 export default function Cartel() {
   const { id } = useParams()
@@ -24,6 +25,7 @@ function CartelHub() {
   useEffect(() => { if (me.cartel) nav(`/cartel/${me.cartel.id}`, { replace: true }) }, [me.cartel, nav])
   return (
     <div className="page">
+      <BackBar fallback="/" />
       {invites.length > 0 && (
         <Card title="Invitations for your crew">
           {invites.map(i => (
@@ -78,6 +80,7 @@ function CartelPage({ id }: { id: string }) {
 
   return (
     <div className="page">
+      <BackBar fallback="/cartel" />
       <Card title={<>🕴 {c.name}</>} right={<small>Don {c.don}</small>}>
         <div className="bd stack">
           <div className="grid3">

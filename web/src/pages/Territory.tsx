@@ -6,6 +6,7 @@ import { ago, hoodlumIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Modal, Qty } from '../components/ui'
 import type { AttackBlockResult, Block, BlockDetail, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 const ROWS = 'ABCDEFGHI'
 const coord = (h: { gx: number; gy: number }) => `${ROWS[h.gy - 1]}${h.gx}`
@@ -32,6 +33,7 @@ export default function Territory() {
 
   return (
     <div className="page">
+      {!hood && <BackBar fallback="/" />}
       {!me.crew && <div className="notice blue">Territory is held by crews. <a onClick={() => nav('/crew')}>Join or found a crew</a> to fight for blocks.</div>}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (
@@ -101,7 +103,7 @@ function HoodView({ hood, onBack, onBlock }: { hood: Hood; onBack: () => void; o
   const now = useNow()
   return (
     <>
-      <div className="hstack"><button className="btn sm ghost" onClick={onBack}>‹ City</button><span className="muted small">{hood.district} · {coord(hood)}</span></div>
+      <div className="backbar"><button className="back" onClick={onBack}>‹ City</button><span className="muted small">{hood.district} · {coord(hood)}</span></div>
       <Card title={<>{hood.name} {hood.owner && <span className="small muted">· held by {hood.owner.emblem} {hood.owner.name}</span>}</>} right={<small className="gold">{money(hood.block_bonus)}/block</small>}>
         <div className="blocks6">
           {hood.blocks.map(b => <BlockTile key={b.id} b={b} hood={hood} now={now} onClick={() => onBlock(b.id)} />)}
@@ -246,7 +248,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
                 Attack ≈ <b>{num(attackPower)}</b> (±10%) · {rules.stamina} stamina. {b.owner ? `Every win counts toward your crew's ${rules.siege_wins} and restarts their bonus clock.` : 'One win claims it.'}
               </div>
               {(me.hospital || me.jailed) && <div className="notice red">{me.hospital ? "You're in the hospital — heal up before you attack." : "You can't run a turf war from jail."}</div>}
-              {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <a onClick={() => nav('/services')}>Hire more →</a></div>}
+              {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <a onClick={() => nav('/services?focus=hoodlums')}>Hire more →</a></div>}
               <div className="hstack">
                 <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || me.stamina < rules.stamina} onClick={attack}>Attack</Btn>
                 <Btn className="sm" disabled={spies < 1} onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>
