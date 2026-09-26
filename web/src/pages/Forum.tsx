@@ -5,6 +5,7 @@ import { useGame } from '../lib/game'
 import { ago } from '../lib/format'
 import type { ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
 import { Card, Empty, Modal } from '../components/ui'
+import { CrewLink, LinkedText, PlayerLink } from '../components/Linked'
 
 export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
   { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
@@ -41,7 +42,7 @@ function Boards() {
               <span className="ico">{b.icon}</span>
               <div className="grow">
                 <div className="t">{b.name}</div>
-                <div className="s">{c.last ? <>{c.last.title} · {c.last.last_poster ?? '—'}, {ago(c.last_post_at!)}</> : b.blurb}</div>
+                <div className="s">{c.last ? <><LinkedText text={c.last.title} /> · {c.last.last_poster ? <LinkedText text={c.last.last_poster} /> : '—'}, {ago(c.last_post_at!)}</> : b.blurb}</div>
               </div>
               <div className="small muted tabular" style={{ textAlign: 'right' }}>{c.threads}<br />{c.threads === 1 ? 'thread' : 'threads'}</div>
             </div>
@@ -82,9 +83,9 @@ function BoardView({ cat }: { cat: ForumCategory }) {
         {data?.threads.map(t => (
           <div key={t.id} className="row link" onClick={() => nav(`/forum/t/${t.id}`)}>
             <div className="grow">
-              <div className="t">{t.pinned && <span title="Pinned">📌 </span>}{t.locked && <span title="Locked">🔒 </span>}{t.title}</div>
-              <div className="s">{t.author.avatar} {t.author.name}{t.author.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · {t.snippet}</div>
-              <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ?? t.author.name}, {ago(t.last_post_at)}</div>
+              <div className="t">{t.pinned && <span title="Pinned">📌 </span>}{t.locked && <span title="Locked">🔒 </span>}<LinkedText text={t.title} /></div>
+              <div className="s"><PlayerLink id={t.author.id}>{t.author.avatar} {t.author.name}</PlayerLink>{t.author.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · <LinkedText text={t.snippet} /></div>
+              <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ? <LinkedText text={t.last_poster} /> : <PlayerLink id={t.author.id}>{t.author.name}</PlayerLink>}, {ago(t.last_post_at)}</div>
             </div>
           </div>
         ))}
@@ -156,9 +157,9 @@ function ThreadView({ id }: { id: number }) {
       </div>
       <Card>
         <div className="bd stack post">
-          <h3 style={{ margin: 0 }}>{t.pinned && '📌 '}{t.locked && '🔒 '}{t.title}</h3>
+          <h3 style={{ margin: 0 }}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
           <PostMeta a={t.author} at={t.created_at} edited={t.edited_at} />
-          <div className="body">{t.body}</div>
+          <div className="body"><LinkedText text={t.body} /></div>
           {(t.mine || data.is_admin) && (
             <div className="hstack">
               <button className="btn sm ghost" onClick={() => setEditing({ kind: 'thread', id: t.id, body: t.body, title: t.title })}>Edit</button>
@@ -169,7 +170,7 @@ function ThreadView({ id }: { id: number }) {
         {data.posts.map(p => (
           <div key={p.id} className="bd stack post reply">
             <PostMeta a={p.author} at={p.created_at} edited={p.edited_at} />
-            {p.deleted ? <div className="small muted"><i>[deleted]</i></div> : <div className="body">{p.body}</div>}
+            {p.deleted ? <div className="small muted"><i>[deleted]</i></div> : <div className="body"><LinkedText text={p.body} /></div>}
             {!p.deleted && (p.mine || data.is_admin) && (
               <div className="hstack">
                 <button className="btn sm ghost" onClick={() => setEditing({ kind: 'post', id: p.id, body: p.body ?? '' })}>Edit</button>
@@ -210,9 +211,9 @@ function ThreadView({ id }: { id: number }) {
 function PostMeta({ a, at, edited }: { a: ForumThread['thread']['author']; at: string; edited: string | null }) {
   return (
     <div className="small muted hstack" style={{ gap: 6 }}>
-      <Link to={`/player/${a.id}`} style={{ fontWeight: 600 }}>{a.avatar} {a.name}</Link>
+      <PlayerLink id={a.id} className="strong">{a.avatar} {a.name}</PlayerLink>
       {a.is_admin && <span className="pill blue">admin</span>}
-      {a.crew && <span>{a.crew.emblem} {a.crew.name}</span>}
+      {a.crew && <CrewLink id={a.crew.id}>{a.crew.emblem} {a.crew.name}</CrewLink>}
       <span>· {ago(at)}{edited ? ' · edited' : ''}</span>
     </div>
   )
