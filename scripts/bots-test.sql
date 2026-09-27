@@ -45,4 +45,21 @@ do $$ declare t uuid := (select id from profiles where name = 'Thug 50'); r json
   assert (select cash from profiles where id = t) = _bot_cash_cap(50) + 999, 'extra cash kept';
 end $$;
 
+-- Offline healing: the once-a-minute sweep ticks anyone below full health ------------------------------
+do $$ declare p uuid := 'c1111111-1111-1111-1111-111111111111'; seen timestamptz; n int; begin
+  update profiles set health = 0, health_tick = now() - interval '3 minutes 5 seconds', last_seen = now() - interval '2 hours' where id = p;
+  assert (select in_hospital from profiles where id = p), 'knocked out';
+  seen := (select last_seen from profiles where id = p);
+  update profiles set health = 40, health_tick = now() - interval '2 minutes' where name = 'Thug 7';
+  n := _heal_sweep();
+  assert n >= 2, 'swept: ' || n;
+  assert (select health from profiles where id = p) = 30 and not (select in_hospital from profiles where id = p), 'healed and out while offline';
+  assert (select last_seen from profiles where id = p) = seen, 'sweeping does not make you look online';
+  assert (select health from profiles where name = 'Thug 7') = 60, 'thugs heal too';
+  -- players at full health, or ticked less than a minute ago, are left alone
+  update profiles set health = 50, health_tick = now() - interval '20 seconds' where name = 'Thug 8';
+  perform _heal_sweep();
+  assert (select health from profiles where name = 'Thug 8') = 50, 'not due yet';
+end $$;
+
 select 'BOTS TEST PASSED';
