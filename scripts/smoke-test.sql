@@ -105,8 +105,8 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   -- hospital / police / jail
   update profiles set health = 10, health_tick = now() where id = auth.uid();
   perform expect_error('select do_action((select id from action_defs where sort = 1))', 'hospital');
-  -- checkout buys you up to 80% of max health (70 points here) on the sliding scale
-  r := hospital_checkout(); assert (r->>'cost')::int = 3780 and (r->>'gain')::int = 70, 'checkout to 80%: ' || r::text;
+  -- checkout buys you up to 20% of max health (10 points here) on the sliding scale
+  r := hospital_checkout(); assert (r->>'cost')::int = 420 and (r->>'gain')::int = 10, 'checkout to 20%: ' || r::text;
   assert not (get_me()->>'hospital')::boolean, 'checked out';
   update profiles set heat = 60 where id = auth.uid();
   r := bribe_police(20); assert (r->>'cost')::int = 800 and (r->>'heat')::int = 40;

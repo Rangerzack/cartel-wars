@@ -8,35 +8,33 @@ insert into auth.users (id, raw_user_meta_data) values
   ('a2222222-2222-2222-2222-222222222222', '{"name":"Gomie"}'),
   ('a3333333-3333-3333-3333-333333333333', '{"name":"Gus"}');
 
--- Hospital: +10 health a minute, in at 19 or less and out at 80%, health bought on a sliding scale ----
+-- Hospital: +10 health a minute, in at 19 or less and out at 20%, health bought on a sliding scale ----
 select as_user('a1111111-1111-1111-1111-111111111111');
 do $$ declare me jsonb; r jsonb; c1 bigint; c2 bigint; begin
   me := get_me();
-  update profiles set health = 5, health_tick = now() - interval '2 minutes 30 seconds' where id = auth.uid();
+  update profiles set health = 5, health_tick = now() - interval '1 minute 30 seconds' where id = auth.uid();
   me := get_me();
-  assert (me->>'health')::int = 25, 'two 1-minute ticks of +10: ' || (me->>'health');
-  assert (me->>'hospital')::boolean, 'still hospitalized at 25';
+  assert (me->>'health')::int = 15, 'one 1-minute tick of +10: ' || (me->>'health');
+  assert (me->>'hospital')::boolean, 'still hospitalized at 15';
   assert (me->>'health_next')::timestamptz between now() and now() + interval '1 minute', 'next health tick shown';
-  assert (me->>'hospital_out_at')::int = 80, 'out at 80% of max';
+  assert (me->>'hospital_out_at')::int = 20, 'out at 20% of max';
   update profiles set cash = 1000000 where id = auth.uid();
   r := buy_health(10); c1 := (r->>'cost')::bigint;
   assert c1 = 420 and (r->>'gain')::int = 10, 'first 10 points: ' || r::text;
+  assert not (get_me()->>'hospital')::boolean, 'out at 25';
   r := buy_health(10); c2 := (r->>'cost')::bigint;
   assert c2 = 460, 'next 10 cost more: ' || r::text;
-  -- 45 health is past the knockout line, but you stay in until 80%
-  assert (get_me()->>'hospital')::boolean, 'still in at 45';
+  -- the release point is a share of max health: 20% of 150 is 30
+  update profiles set health_max = 150, health = 19 where id = auth.uid();
+  assert (get_me()->>'hospital')::boolean and (get_me()->>'hospital_out_at')::int = 30, 'knocked out at 19';
+  update profiles set health = 25 where id = auth.uid();
+  assert (get_me()->>'hospital')::boolean, 'still in at 25 of 150';
   perform expect_error('select do_action((select id from action_defs where sort = 1))', 'hospital');
-  r := buy_health(34);
-  assert (get_me()->>'hospital')::boolean, 'still in at 79';
-  r := buy_health(1);
-  assert not (get_me()->>'hospital')::boolean, 'out at 80';
-  -- once out, taking damage above the knockout line doesn't send you back
-  update profiles set health = 50 where id = auth.uid();
-  assert not (get_me()->>'hospital')::boolean, 'hurt at 50 but not hospitalized';
-  update profiles set health = 19 where id = auth.uid();
-  assert (get_me()->>'hospital')::boolean, 'knocked out at 19';
-  update profiles set health = 50 where id = auth.uid();
-  assert (get_me()->>'hospital')::boolean, 'healing back to 50 is not enough';
+  update profiles set health = 30 where id = auth.uid();
+  assert not (get_me()->>'hospital')::boolean, 'out at 30 of 150';
+  update profiles set health = 25 where id = auth.uid();
+  assert not (get_me()->>'hospital')::boolean, 'hurt to 25 but not knocked out';
+  update profiles set health_max = 100, health = 50 where id = auth.uid();
   r := buy_health(1000);
   assert (r->>'gain')::int = 50 and (get_me()->>'health')::int = 100, 'capped at max: ' || r::text;
   assert not (get_me()->>'hospital')::boolean;
