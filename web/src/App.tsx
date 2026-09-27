@@ -15,6 +15,7 @@ import Territory from './pages/Territory'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 import Accolades from './pages/Accolades'
+import Activity from './pages/Activity'
 import Casino from './pages/Casino'
 import PokerTable from './pages/PokerTable'
 import Forum from './pages/Forum'
@@ -47,6 +48,7 @@ function Gate() {
         <Route path="/chat/:channel" element={<Chat />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/accolades" element={<Accolades />} />
+        <Route path="/activity" element={<Activity />} />
         <Route path="/casino" element={<Casino />} />
         {features.casinoGames.length > 1 && <Route path="/casino/table/:id" element={<PokerTable />} />}
         <Route path="/casino/:game" element={<Casino />} />

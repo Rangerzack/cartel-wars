@@ -528,3 +528,48 @@ textarea.input { resize: vertical; font: inherit; }
 .why::before { content: '⚠ '; opacity: .8; }
 
 @media (prefers-reduced-motion: reduce) { .floater, .card.focused, .action-result { animation: none; } .floater { display: none; } }
+
+/* Week 2 UX ------------------------------------------------------------- */
+/* tab badges */
+.tabbar a .icw { position: relative; display: inline-flex; }
+.tbadge {
+  position: absolute; top: -6px; left: calc(100% - 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px;
+  font-family: var(--body); font-size: 10.5px; font-weight: 800; line-height: 17px; letter-spacing: 0; text-align: center; text-transform: none;
+  color: #fff; text-shadow: 0 -1px 0 rgba(0,0,0,.5); pointer-events: none;
+  box-shadow: 0 0 0 2px #0e0e11, 0 2px 4px rgba(0,0,0,.6); animation: pop .2s ease-out;
+}
+.tbadge.red { background: linear-gradient(#f0584e, #b8261e); }
+.tbadge.gold { background: linear-gradient(var(--gold-hi), var(--gold-lo)); color: #1b1405; text-shadow: none; }
+.tbadge.dot { min-width: 0; width: 10px; height: 10px; padding: 0; top: -2px; left: calc(100% - 4px); }
+.tbadge.inline { position: static; display: inline-block; margin-left: 6px; vertical-align: 1px; box-shadow: none; }
+
+/* activity feed */
+.row.activity { align-items: flex-start; }
+.row.activity .ico { margin-top: 1px; }
+.row.activity .t2 { font-size: 14px; line-height: 1.35; }
+.row.activity .t2 b { font-weight: 600; }
+.row.activity.fresh { background: linear-gradient(90deg, rgba(227,179,65,.08), transparent 65%); box-shadow: inset 3px 0 0 var(--gold); }
+.card.away .hd { background: linear-gradient(rgba(227,179,65,.12), transparent); }
+.row.more { padding-top: 8px; padding-bottom: 8px; }
+.row.unread .t { color: #fff; }
+.row.unread .s { color: #c9c9d3; font-weight: 600; }
+
+/* path teaser on Home */
+.card.link { cursor: pointer; }
+.path-teaser .fill { background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); --glow: rgba(227,179,65,.45); }
+
+/* fight preview */
+.odds-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid var(--line); }
+.odds { height: 8px; border-radius: 5px; overflow: hidden; background: linear-gradient(#040405, #121216); border: 1px solid #000; }
+.odds .fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.odds.green .fill { background: linear-gradient(90deg, #17803a, #5ad67f); }
+.odds.gold .fill { background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); }
+.odds.red .fill { background: linear-gradient(90deg, #9e1f19, #f36a5f); }
+.warn { font-size: 12.5px; color: #f3dc98; padding: 6px 10px; border-radius: 8px; background: rgba(227,179,65,.08); border: 1px solid rgba(227,179,65,.25); }
+.warn::before { content: '⚠ '; opacity: .8; }
+
+/* smaller segmented control (Actions sort) */
+.seg.sm button { font-size: 12px; padding: 5px 4px; }
+
+/* rookie poker table */
+.row.rookie { background: linear-gradient(90deg, rgba(227,179,65,.07), transparent 70%); }

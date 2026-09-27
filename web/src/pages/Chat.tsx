@@ -26,7 +26,9 @@ export default function Chat() {
   return (
     <div className="page" style={{ gap: 8 }}>
       <div className="seg">
-        {tabs.map(t => <button key={t.v} className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>{t.l}</button>)}
+        {tabs.map(t => <button key={t.v} className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>
+          {t.l}{t.v === 'dms' && (me.unread_dms ?? 0) > 0 && <span className="tbadge red inline">{me.unread_dms}</span>}
+        </button>)}
         {features.forum && <button onClick={() => nav('/forum')}>Forum</button>}
       </div>
       {channel === 'dms' ? <Conversations /> : <Channel key={channel} channel={channel} />}
@@ -36,7 +38,7 @@ export default function Chat() {
 
 export function Channel({ channel, compact }: { channel: string; compact?: boolean }) {
   const me = useMe()
-  const { toast } = useGame()
+  const { toast, refresh } = useGame()
   const [msgs, setMsgs] = useState<Message[] | null>(null)
   const [text, setText] = useState('')
   const [other, setOther] = useState<string | null>(null)
@@ -57,6 +59,16 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [channel, load, me.id])
   useEffect(() => { logRef.current?.scrollTo({ top: 1e9 }) }, [msgs])
+  // Reading a DM clears its unread badge: mark it read whenever a message from them shows up here.
+  const markedUpTo = useRef(0)
+  useEffect(() => {
+    if (!channel.startsWith('dm:') || !msgs) return
+    const newest = msgs.reduce((m, x) => (x.sender_id !== me.id && x.id > m ? x.id : m), 0)
+    if (newest > markedUpTo.current || markedUpTo.current === 0) {
+      markedUpTo.current = Math.max(newest, 1)
+      api.markRead(channel).then(() => refresh()).catch(() => {})
+    }
+  }, [channel, msgs, me.id, refresh])
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
@@ -95,9 +107,12 @@ function Conversations() {
       {!list && <Empty><span className="spin" /></Empty>}
       {list?.length === 0 && <Empty>No private conversations. Open a player's profile and tap Chat.</Empty>}
       {list?.map(c => (
-        <div key={c.channel} className="row link" onClick={() => nav(`/chat/${c.channel}`)}>
+        <div key={c.channel} className={`row link ${c.unread ? 'unread' : ''}`} onClick={() => nav(`/chat/${c.channel}`)}>
           <div className="grow"><div className="t">{c.other}</div><div className="s">{c.last}</div></div>
-          <span className="small muted">{ago(c.at)}</span>
+          <div className="stack" style={{ gap: 4, alignItems: 'flex-end' }}>
+            <span className="small muted">{ago(c.at)}</span>
+            {!!c.unread && <span className="tbadge red inline">{c.unread}</span>}
+          </div>
         </div>
       ))}
     </Card>

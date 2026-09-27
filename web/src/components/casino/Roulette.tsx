@@ -4,7 +4,7 @@ import { useGame, useMe } from '../../lib/game'
 import { chips, money } from '../../lib/format'
 import type { RouletteBet, RouletteBetType, RouletteResult } from '../../lib/types'
 import { Card } from '../ui'
-import { BetPicker, Net } from './shared'
+import { BetPicker, Net, useBet } from './shared'
 
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36])
 const key = (b: { type: RouletteBetType; value?: number }) => b.value === undefined ? b.type : `${b.type}:${b.value}`
@@ -22,7 +22,7 @@ const label = (b: { type: RouletteBetType; value?: number }) => {
 export default function Roulette() {
   const me = useMe()
   const { run } = useGame()
-  const [chip, setChip] = useState(500)
+  const [chip, setChip] = useBet('roulette')
   const [bets, setBets] = useState<Record<string, RouletteBet>>({})
   const [last, setLast] = useState<RouletteResult | null>(null)
   const [spinning, setSpinning] = useState(false)

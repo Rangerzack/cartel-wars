@@ -4,7 +4,7 @@ import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { BlackjackState } from '../../lib/types'
 import { Card, Empty } from '../ui'
-import { BetPicker, Cards, Net } from './shared'
+import { BetPicker, Cards, Net, useBet } from './shared'
 
 const OUTCOME: Record<string, string> = {
   blackjack: 'Blackjack! Pays 3:2', win: 'You win', push: 'Push', lose: 'Dealer wins', bust: 'Bust', dealer_bust: 'Dealer busts — you win',
@@ -13,7 +13,7 @@ const OUTCOME: Record<string, string> = {
 export default function Blackjack() {
   const me = useMe()
   const { run, toast } = useGame()
-  const [wager, setWager] = useState(1000)
+  const [wager, setWager] = useBet('blackjack')
   const [g, setG] = useState<BlackjackState | null>(null)
   useEffect(() => { api.blackjackState().then(setG).catch(e => toast(e.message, 'bad')) }, [toast])
 

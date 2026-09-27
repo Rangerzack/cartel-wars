@@ -4,7 +4,7 @@ import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { CrapsBetKind, CrapsRoll, CrapsState } from '../../lib/types'
 import { Card, Empty } from '../ui'
-import { BetPicker, Net } from './shared'
+import { BetPicker, Net, useBet } from './shared'
 
 const DIE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅']
 const SPOTS: { k: CrapsBetKind; l: string; pays: string; line?: boolean }[] = [
@@ -20,7 +20,7 @@ const SPOTS: { k: CrapsBetKind; l: string; pays: string; line?: boolean }[] = [
 export default function Craps() {
   const me = useMe()
   const { run, toast } = useGame()
-  const [chip, setChip] = useState(1000)
+  const [chip, setChip] = useBet('craps')
   const [st, setSt] = useState<CrapsState | null>(null)
   const [roll, setRoll] = useState<CrapsRoll | null>(null)
   const [rolling, setRolling] = useState(false)

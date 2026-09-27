@@ -1,4 +1,19 @@
 import { useState } from 'react'
+
+export const MIN_BET = 100
+
+/**
+ * Bet amount for one game: starts at the table minimum, then remembers the last amount you used
+ * on this device (per game) so a big bet never surprises a new player.
+ */
+export function useBet(game: string): [number, (n: number) => void] {
+  const key = `cw.bet.${game}`
+  const [v, setV] = useState(() => {
+    try { const n = Number(localStorage.getItem(key)); return n >= MIN_BET ? n : MIN_BET } catch { return MIN_BET }
+  })
+  const set = (n: number) => { setV(n); try { localStorage.setItem(key, String(n)) } catch { /* private mode */ } }
+  return [v, set]
+}
 import { chips, money } from '../../lib/format'
 
 const SUIT: Record<string, string> = { s: '♠', h: '♥', d: '♦', c: '♣' }

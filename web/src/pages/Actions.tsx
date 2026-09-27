@@ -6,6 +6,7 @@ import { money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal } from '../components/ui'
 import type { ActionDef } from '../lib/types'
 
+type Sort = 'default' | 'cash' | 'rep'
 type Result = { a: ActionDef; pay: number; rep: number; busted: boolean; heat: number; stamina: number }
 type Flash = Result & { key: number }
 
@@ -17,7 +18,11 @@ export default function Actions() {
   const [bust, setBust] = useState<Result | null>(null)
   const [flash, setFlash] = useState<Record<number, Flash>>({})
   const [session, setSession] = useState({ jobs: 0, cash: 0, rep: 0 })
-  const [onlyAvailable, setOnlyAvailable] = useState(false)
+  // per-device view preferences
+  const [onlyAvailable, setOnlyAvailableRaw] = useState(() => { try { return localStorage.getItem('cw.actions.available') === '1' } catch { return false } })
+  const setOnlyAvailable = (v: boolean) => { setOnlyAvailableRaw(v); try { localStorage.setItem('cw.actions.available', v ? '1' : '0') } catch { /* private mode */ } }
+  const [sort, setSortRaw] = useState<Sort>(() => { try { return (localStorage.getItem('cw.actions.sort') as Sort) || 'default' } catch { return 'default' } })
+  const setSort = (v: Sort) => { setSortRaw(v); try { localStorage.setItem('cw.actions.sort', v) } catch { /* private mode */ } }
   const flashKey = useRef(0)
   const timers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
   useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), [])
@@ -33,7 +38,15 @@ export default function Actions() {
     if (me.cash < a.cash_cost) return 'cash'
     return null
   }
-  const shown = onlyAvailable ? list.filter(a => !blockedBy(a)) : list
+  const perStamina = (a: ActionDef) => a.stamina_cost > 0 ? Math.round((a.pay_min + a.pay_max) / 2 / a.stamina_cost) : 0
+  const repPerStamina = (a: ActionDef) => a.stamina_cost > 0 ? a.pay_rep / a.stamina_cost : 0
+  const filtered = onlyAvailable ? list.filter(a => !blockedBy(a)) : list
+  const by = me.jailed ? 'default' : sort   // jail has its own short list
+  // best-paying jobs you can actually run first, then the ones still locked
+  const locked = (a: ActionDef) => (blockedBy(a) ? 1 : 0)
+  const shown = by === 'cash' ? [...filtered].filter(a => a.pay_rep === 0 && a.effect !== 'go_to_jail').sort((a, b) => locked(a) - locked(b) || perStamina(b) - perStamina(a))
+    : by === 'rep' ? [...filtered].filter(a => a.pay_rep > 0).sort((a, b) => locked(a) - locked(b) || repPerStamina(b) - repPerStamina(a))
+    : filtered
 
   async function go(a: ActionDef) {
     const r = await run(() => api.doAction(a.id), { silent: true })
@@ -47,13 +60,12 @@ export default function Actions() {
     timers.current[a.id] = setTimeout(() => setFlash(f => { const n = { ...f }; if (n[a.id]?.key === key) delete n[a.id]; return n }), 2600)
   }
 
-  const perStamina = (a: ActionDef) => a.stamina_cost > 0 ? Math.round((a.pay_min + a.pay_max) / 2 / a.stamina_cost) : 0
-
   return (
     <div className="page">
       <h2>{me.jailed ? 'Jail Actions' : 'Actions'}</h2>
       {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <a onClick={() => nav('/services')}>Post bail →</a></div>}
       {me.hospital && <div className="notice red">You can't work from a hospital bed. <a onClick={() => nav('/services')}>Buy health →</a></div>}
+      {me.path_required && <div className="notice gold">You've earned your stripes — time to pick Producer or Trader. <a onClick={() => nav('/')}>Choose your path →</a></div>}
       {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back 2 every 10 minutes, or <a onClick={() => nav('/services?focus=refills')}>refill it →</a></div>}
 
       <div className="spread">
@@ -62,9 +74,15 @@ export default function Actions() {
           : <div className="small muted">Tap Do It — results show right on the job.</div>}
         <label className="toggle small"><input type="checkbox" checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Can do now</label>
       </div>
+      {!me.jailed && (
+        <div className="seg sm">
+          {([['default', 'All jobs'], ['cash', 'Best $ per ⚡'], ['rep', 'Reputation']] as const).map(([v, l]) =>
+            <button key={v} className={sort === v ? 'on' : ''} onClick={() => setSort(v)}>{l}</button>)}
+        </div>
+      )}
 
       <Card>
-        {shown.length === 0 && <Empty>Nothing you can run right now — buy the gear or find a bigger crew.</Empty>}
+        {shown.length === 0 && <Empty>{onlyAvailable ? 'Nothing you can run right now — buy the gear or find a bigger crew.' : 'No jobs here.'}</Empty>}
         {shown.map(a => {
           const block = blockedBy(a)
           const cant = me.hospital || me.stamina < a.stamina_cost || !!block
