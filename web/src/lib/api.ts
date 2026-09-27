@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
+  ActivityItem, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -26,6 +26,7 @@ export const api = {
 
   // fights
   attack: (target: string) => rpc<FightResult>('attack', { target }),
+  fightPreview: (target: string) => rpc<FightPreview>('fight_preview', { target }),
   fights: (limit_n = 30) => rpc<FightLog[]>('get_fights', { limit_n }),
   player: (pid: string) => rpc<PublicPlayer>('get_player', { pid }),
   findPlayers: (q = '', limit_n = 40) => rpc<PlayerSummary[]>('find_players', { q, limit_n }),
@@ -105,6 +106,11 @@ export const api = {
   messages: (channel: string, limit_n = 50) => rpc<Message[]>('get_messages', { channel, limit_n }),
   sendMessage: (channel: string, body: string) => rpc<{ id: number }>('send_message', { channel, body }),
   conversations: () => rpc<Conversation[]>('get_conversations'),
+  markRead: (ch: string) => rpc<{ ok: boolean }>('mark_read', { ch }),
+
+  // activity feed
+  activity: (limit_n = 30) => rpc<ActivityItem[]>('get_activity', { limit_n }),
+  activitySeen: () => rpc<{ cleared: number }>('activity_mark_seen'),
   dmChannel: (other: string) => rpc<string>('dm_channel', { other }),
 
   // casino

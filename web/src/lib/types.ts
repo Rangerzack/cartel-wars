@@ -54,6 +54,9 @@ export interface Me {
   transport_capacity: number
   listings: MyListing[]
   ribbons: Ribbon[]
+  /** Tab badges. Optional so a frontend ahead of the database still works. */
+  unread_activity?: number
+  unread_dms?: number
   server_time: string
 }
 
@@ -164,7 +167,23 @@ export interface LedgerEntry {
 }
 
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
-export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string }
+export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
+
+export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked'
+export interface ActivityItem {
+  id: number; kind: ActivityKind; at: string; seen: boolean
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number }
+  actor_id: string | null; actor: string | null
+  crew_id: string | null; crew: string | null; crew_emblem: string | null
+  block_id: number | null; block: string | null; hood_id: number | null
+  siege_wins: number | null; siege_need: number | null
+}
+
+export interface FightPreview {
+  win_pct: number; dmg_min: number; dmg_max: number; my_health: number; hospital_risk: boolean
+  dry: boolean; hits_this_hour: number; stamina_cost: number; heat_gain: number; bust_pct: number
+  setup: SetupKind; their_setup: SetupKind
+}
 
 export interface TopUsers {
   fighters: { id: string; name: string; value: number }[]
@@ -198,6 +217,8 @@ export interface BlackjackState {
 export interface PokerTableInfo {
   id: number; name: string; small_blind: number; big_blind: number; min_buyin: number; max_buyin: number; seats: number
   seated: number; players: string[]; mine: boolean
+  /** Rookie tables: only accounts younger than this many days can sit. */
+  rookie_days?: number | null; eligible?: boolean
 }
 export interface PokerSeat {
   seat: number; name: string; avatar: string; stack: number; sitting_out: boolean; is_me: boolean; player_id: string

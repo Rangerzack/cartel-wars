@@ -38,17 +38,24 @@ export default function PokerLobby() {
       {mine && <div className="notice gold">You're seated at {mine.name}. <a onClick={() => nav(`/casino/table/${mine.id}`)} style={{ cursor: 'pointer' }}>Back to the table →</a></div>}
       <Card title="♠ No-Limit Hold'em" right={<small>6-max · live players · 30s clock</small>}>
         {!tables && <Empty><span className="spin" /></Empty>}
-        {tables?.map(t => (
-          <div key={t.id} className="row">
-            <div className="grow">
-              <div className="t">{t.name}</div>
-              <div className="s">Blinds {chips(t.small_blind)}/{chips(t.big_blind)} · buy-in {chips(t.min_buyin)}–{chips(t.max_buyin)}{t.players.length ? ` · ${t.players.join(', ')}` : ''}</div>
+        {tables?.map(t => {
+          const rookie = !!t.rookie_days
+          const barred = rookie && t.eligible === false
+          return (
+            <div key={t.id} className={`row ${rookie && !barred ? 'rookie' : ''}`}>
+              <div className="grow">
+                <div className="t">{t.name}{rookie && <span className="pill gold" style={{ marginLeft: 6 }}>Rookies</span>}</div>
+                <div className="s">
+                  Blinds {chips(t.small_blind)}/{chips(t.big_blind)} · buy-in {chips(t.min_buyin)}–{chips(t.max_buyin)}{t.players.length ? ` · ${t.players.join(', ')}` : ''}
+                  {rookie && <><br />{barred ? `For players in their first ${t.rookie_days} days.` : `Just for players in their first ${t.rookie_days} days — learn the game without the sharks.`}</>}
+                </div>
+              </div>
+              <span className={`small tabular ${t.seated ? '' : 'muted'}`}>{t.seated}/{t.seats}</span>
+              {t.mine ? <button className="btn sm gold" onClick={() => nav(`/casino/table/${t.id}`)}>Sit</button>
+                : <button className="btn sm" disabled={!!mine || barred || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>{t.seated ? 'Join' : 'Open'}</button>}
             </div>
-            <span className={`small tabular ${t.seated ? '' : 'muted'}`}>{t.seated}/{t.seats}</span>
-            {t.mine ? <button className="btn sm gold" onClick={() => nav(`/casino/table/${t.id}`)}>Sit</button>
-              : <button className="btn sm" disabled={!!mine || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>{t.seated ? 'Join' : 'Open'}</button>}
-          </div>
-        ))}
+          )
+        })}
       </Card>
       <div className="small muted">Rake 5% of the pot, capped at 3 big blinds, no flop no drop. Fold or check happens for you when the clock runs out; three misses in a row sits you out. Buy-ins come from cash on hand — the bank doesn't take chips.</div>
       {join && (

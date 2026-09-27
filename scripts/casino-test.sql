@@ -175,8 +175,9 @@ do $$ declare A text := '33333333-3333-3333-3333-333333333333'; B text := '44444
 
   perform as_user(A);
   r := poker_lobby();
-  assert jsonb_array_length(r) = 7, 'seven tables';
-  assert r->0->>'big_blind' = '2000' and r->6->>'big_blind' = '500000';
+  assert jsonb_array_length(r) = 8, 'seven tables plus the Rookie Room';
+  assert r->0->>'big_blind' = '200' and (r->0->>'rookie_days')::int = 7 and (r->0->>'eligible')::boolean, 'rookie room first: ' || (r->0)::text;
+  assert r->1->>'big_blind' = '2000' and r->7->>'big_blind' = '500000';
   perform expect_error('select poker_join(1, 0, 1000)', 'Buy in for');
   perform expect_error('select poker_join(1, 9, 100000)', 'Bad seat');
   perform expect_error('select poker_join(99, 0, 100000)', 'No such table');
@@ -186,7 +187,7 @@ do $$ declare A text := '33333333-3333-3333-3333-333333333333'; B text := '44444
   assert st->'hand' is null or st->'hand' = 'null'::jsonb, 'no hand alone: ' || st::text;
   assert (st->'me'->>'stack')::bigint = 100000;
   perform expect_error('select poker_join(2, 0, 100000)', 'already seated');
-  assert (poker_lobby()->0->>'mine')::boolean;
+  assert (poker_lobby()->1->>'mine')::boolean;
 
   perform as_user(B);
   perform expect_error('select poker_join(1, 0, 100000)', 'seat is taken');

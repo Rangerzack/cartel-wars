@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
-import type { FightResult, PublicPlayer } from '../lib/types'
+import type { FightPreview, FightResult, PublicPlayer } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 
 export default function Player() {
@@ -20,6 +20,10 @@ export default function Player() {
 
   const load = useCallback(() => api.player(id).then(setP).catch(e => toast(e.message, 'bad')), [id, toast])
   useEffect(() => { load() }, [load])
+  // odds before you swing; quietly absent if the preview isn't available
+  const [pv, setPv] = useState<FightPreview | null>(null)
+  const loadPreview = useCallback(() => { if (id && id !== me.id) api.fightPreview(id).then(setPv).catch(() => setPv(null)) }, [id, me.id])
+  useEffect(() => { loadPreview() }, [loadPreview])
 
   if (!p) return <Empty><span className="spin" /></Empty>
   const isMe = p.id === me.id
@@ -27,7 +31,7 @@ export default function Player() {
 
   async function fight() {
     const r = await run(() => api.attack(p!.id), { silent: true })
-    if (r) { setResult(r); load() }
+    if (r) { setResult(r); load(); loadPreview() }
   }
 
   return (
@@ -49,6 +53,8 @@ export default function Player() {
             <Stat k="Actions" v={num(p.actions)} />
             <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
           </div>
+          {!isMe && pv && !p.hospital && !me.hospital && <Odds pv={pv} name={p.name} />}
+          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back 2 every 10 minutes.</div>}
           {!isMe && (
             <div className="hstack">
               <Btn className="doit red" disabled={cantFight} onClick={fight}>⚔️ Attack</Btn>
@@ -90,6 +96,29 @@ export default function Player() {
           </div>
         </Modal>
       )}
+    </div>
+  )
+}
+
+function oddsLabel(pct: number): [string, string] {
+  if (pct >= 80) return ['Strong favorite', 'green']
+  if (pct >= 60) return ['Favored', 'green']
+  if (pct >= 40) return ['Coin flip', 'gold']
+  if (pct >= 20) return ['Underdog', 'red']
+  return ['Long shot', 'red']
+}
+
+/** Fight preview: odds from a few hundred simulated fights, what it costs, and anything that makes it a bad idea. */
+function Odds({ pv, name }: { pv: FightPreview; name: string }) {
+  const [label, cls] = oddsLabel(pv.win_pct)
+  return (
+    <div className="odds-box">
+      <div className="spread"><span className="small muted">Your odds vs {name}</span><b className={cls}>{label} · {pv.win_pct >= 100 ? '>99' : pv.win_pct <= 0 ? '<1' : `~${pv.win_pct}`}%</b></div>
+      <div className={`odds ${cls}`}><div className="fill" style={{ width: Math.max(3, pv.win_pct) + '%' }} /></div>
+      <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs ⚡{pv.stamina_cost} · 🔥+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
+      {pv.dry && <div className="warn">You've hit them {pv.hits_this_hour}× this hour — you can still fight, but no cash changes hands.</div>}
+      {pv.hospital_risk && <div className="warn">At {pv.my_health} health, a bad fight could put you in the hospital.</div>}
+      {pv.bust_pct > 0 && <div className="warn">Your heat is in the red — about {pv.bust_pct}% chance a patrol picks you up after.</div>}
     </div>
   )
 }

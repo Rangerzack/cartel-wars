@@ -4,7 +4,7 @@ import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { SlotsResult } from '../../lib/types'
 import { Card } from '../ui'
-import { BetPicker, Net } from './shared'
+import { BetPicker, Net, useBet } from './shared'
 
 const SYM: Record<string, string> = { cherry: '🍒', lemon: '🍋', bell: '🔔', bar: '🅱️', diamond: '💎', seven: '7️⃣' }
 const ALL = Object.keys(SYM)
@@ -12,7 +12,7 @@ const ALL = Object.keys(SYM)
 export default function Slots() {
   const me = useMe()
   const { run } = useGame()
-  const [wager, setWager] = useState(1000)
+  const [wager, setWager] = useBet('slots')
   const [reels, setReels] = useState<string[]>(['seven', 'seven', 'seven'])
   const [spinning, setSpinning] = useState(false)
   const [last, setLast] = useState<SlotsResult | null>(null)

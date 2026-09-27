@@ -20,7 +20,8 @@ export default function Territory() {
   const [sp, setSp] = useSearchParams()
   const [data, setData] = useState<TerritoryData | null>(null)
   const [log, setLog] = useState<TerritoryLog[] | null>(null)
-  const [blockId, setBlockId] = useState<number | null>(null)
+  // ?hood=12 opens a hood; &block=70 also opens that block (links from the activity feed)
+  const [blockId, setBlockId] = useState<number | null>(() => Number(sp.get('block')) || null)
   const hoodId = Number(sp.get('hood')) || null
 
   const load = useCallback(() => Promise.all([api.territory(), api.territoryLog(15)]).then(([t, l]) => { setData(t); setLog(l) }).catch(e => toast(e.message, 'bad')), [toast])

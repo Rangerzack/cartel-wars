@@ -42,6 +42,10 @@ try {
 
   // slots
   await a.goto(BASE + '/casino/slots')
+  // bets start at the $100 minimum, and each game remembers the last bet you picked
+  await a.getByRole('button', { name: 'Spin for $100' }).waitFor()
+  await a.locator('.chipsrow .chip.c1000').click()
+  await a.reload()
   await a.getByRole('button', { name: /Spin for \$1,000/ }).click()
   await a.locator('.reels').locator('.reel.spinning').first().waitFor()
   await a.getByText(/you win|No luck/).waitFor({ timeout: 8000 })
@@ -49,7 +53,7 @@ try {
 
   // blackjack
   await a.goto(BASE + '/casino/blackjack')
-  await a.getByRole('button', { name: /Deal for \$1,000/ }).click()
+  await a.getByRole('button', { name: /Deal for \$100$/ }).click()
   for (let i = 0; i < 6; i++) {
     await a.locator('.bjtable .outcome, button:has-text("Hit")').first().waitFor()
     if (await a.locator('.bjtable .outcome').count()) break
@@ -64,7 +68,7 @@ try {
   // craps
   await a.goto(BASE + '/casino/craps')
   await a.getByRole('button', { name: /Pass Line/ }).click()
-  await a.getByRole('button', { name: /Roll · \$1,000 in play/ }).click()
+  await a.getByRole('button', { name: /Roll · \$100 in play/ }).click()
   await a.locator('.puck').filter({ hasText: /ON|OFF/ }).waitFor()
   await a.getByText(/settled|bets stay up/).waitFor({ timeout: 8000 })
   await snap(a, 'craps')
@@ -73,8 +77,8 @@ try {
   await a.goto(BASE + '/casino/roulette')
   await a.locator('.outside .o.redsq').click()
   await a.locator('.roulette .n', { hasText: /^17/ }).click()
-  await a.getByText(/Red \$500/).waitFor()
-  await a.getByRole('button', { name: /Spin · \$1,000 on the felt/ }).click()
+  await a.getByText(/Red \$100/).waitFor()
+  await a.getByRole('button', { name: /Spin · \$200 on the felt/ }).click()
   await a.getByText(/paid|house takes it/).waitFor({ timeout: 8000 })
   await snap(a, 'roulette')
   await a.locator('.row', { hasText: 'Roulette' }).first().waitFor()   // ledger updated

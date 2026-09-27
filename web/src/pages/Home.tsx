@@ -2,24 +2,36 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ago } from '../lib/format'
-import type { FightLog } from '../lib/types'
-import { useMe } from '../lib/game'
+import type { ActivityItem, FightLog } from '../lib/types'
+import { useGame, useMe } from '../lib/game'
 import { commodityIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Card, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { GettingStarted } from '../components/GettingStarted'
 import { features } from '../lib/features'
+import { ActivityRow } from '../components/Activity'
+import { HomePath } from '../components/Path'
 
 export default function Home() {
   const me = useMe()
   const now = useNow()
   const nav = useNavigate()
   const off = me.power.offense, def = me.power.defense
+  const { refresh } = useGame()
   const ready = me.grow_houses.filter(g => g.produced > 0).length
+  const full = me.grow_houses.filter(g => g.running && g.produced >= g.cap).length
   const back = me.hustlers.filter(h => h.back).length
   const [fights, setFights] = useState<FightLog[]>([])
   useEffect(() => { api.fights(3).then(setFights).catch(() => {}) }, [me.fights_won, me.fights_lost])
+  // "While you were away": unseen activity, until the player clears it or opens the Activity page
+  const unread = me.unread_activity ?? 0
+  const [fetched, setAway] = useState<ActivityItem[]>([])
+  useEffect(() => {
+    if (unread) api.activity(20).then(l => setAway(l.filter(a => !a.seen))).catch(() => setAway([]))
+  }, [unread])
+  const away = unread ? fetched : []
+  const clearAway = () => { setAway([]); api.activitySeen().then(() => refresh()).catch(() => {}) }
 
   const links: { to: string; ic: string; t: string; s: string }[] = [
     { to: '/items', ic: '🎒', t: 'Inventory & Setups', s: `${me.inventory_slots} slots · att ${off.att} / def ${def.def}` },
@@ -29,6 +41,7 @@ export default function Home() {
     { to: '/territory', ic: '🗺', t: 'Territory', s: '81 hoods · 6 blocks each · bonuses every 24h' },
     { to: '/casino', ic: '🎰', t: 'Casino', s: features.casinoGames.length > 1 ? 'Live poker, blackjack, craps, roulette, slots' : 'Slots are open · tables coming soon' },
     ...(features.forum ? [{ to: '/forum', ic: '🗣', t: 'Forum', s: 'Game updates, help, market, war, suggestions' }] : []),
+    { to: '/activity', ic: '📰', t: 'Activity', s: unread ? `${unread} new` : 'Attacks on you, sales, sieges, crew news' },
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
     { to: '/fight?tab=top', ic: '🏆', t: 'Top Users', s: 'Fighters, hustlers, traders, crews' },
   ]
@@ -42,6 +55,18 @@ export default function Home() {
         <div className="notice red">You're in the hospital at {me.health} health — +5 in {timeLeft(me.health_next, now)}, out at 20. <Link to="/services">Buy health →</Link></div>
       )}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
+      {full > 0 && <div className="notice gold">{full} grow house{full > 1 ? 's are' : ' is'} full — collect to keep production going. <Link to="/economy">Collect →</Link></div>}
+
+      {away.length > 0 && (
+        <Card title="While you were away" className="away" right={<button className="btn sm ghost" onClick={clearAway}>Clear</button>}>
+          {away.slice(0, 6).map(a => <ActivityRow key={a.id} a={a} fresh />)}
+          <div className="row link more" onClick={() => nav('/activity')}>
+            <div className="grow small muted">{away.length > 6 ? `${away.length - 6} more · ` : ''}See all activity</div><span className="chev">›</span>
+          </div>
+        </Card>
+      )}
+
+      <HomePath />
 
       {me.ribbons.length > 0 && <Ribbons list={me.ribbons} />}
       <GettingStarted me={me} />
