@@ -5,15 +5,18 @@ import { useGame, useMe } from '../lib/game'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
+import { AccountCard } from '../components/Account'
+import { BackBar } from '../components/BackBar'
 
 export default function Profile() {
   const me = useMe()
-  const { signOut, run } = useGame()
+  const { run } = useGame()
   const nav = useNavigate()
   const p = me.power
   const [edit, setEdit] = useState<{ avatar: string; bio: string } | null>(null)
   return (
     <div className="page">
+      <BackBar fallback="/" />
       <Card title={<><span style={{ fontSize: 20 }}>{me.avatar}</span> {me.name}</>} right={<small>since {ago(me.created_at)}</small>}>
         <div className="bd stack">
           {me.bio && !edit && <div className="small" style={{ fontStyle: 'italic' }}>“{me.bio}”</div>}
@@ -54,7 +57,7 @@ export default function Profile() {
         <div className="row link" onClick={() => nav(me.crew ? `/crew/${me.crew.id}` : '/crew')}><div className="grow t">{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'No crew'}</div><span className="chev">›</span></div>
         <div className="row link" onClick={() => nav(me.cartel ? `/cartel/${me.cartel.id}` : '/cartel')}><div className="grow t">{me.cartel ? `🕴 ${me.cartel.name}` : 'No cartel'}</div><span className="chev">›</span></div>
       </Card>
-      <Btn className="ghost block" onClick={async () => { await signOut(); nav('/') }}>Sign Out</Btn>
+      <AccountCard onSignedOut={() => nav('/')} />
       <p className="muted small center">Cartel Wars is an unofficial fan reconstruction of SMLSD's <i>The Cartel</i> / <i>Cartel Wars</i> (2009–2010). Not affiliated with SMLSD, Webtouch or Roasted Brains.</p>
     </div>
   )

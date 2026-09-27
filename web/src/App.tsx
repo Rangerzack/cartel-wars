@@ -20,10 +20,12 @@ import PokerTable from './pages/PokerTable'
 import Forum from './pages/Forum'
 import { features } from './lib/features'
 import { Toasts } from './components/ui'
+import { SetNewPassword } from './components/Account'
 
 function Gate() {
-  const { session, authReady, me } = useGame()
+  const { session, authReady, me, recovery } = useGame()
   if (!authReady) return <div className="empty">Loading…</div>
+  if (recovery && session) return <SetNewPassword />
   if (!session) return <Auth />
   if (!me) return <div className="app"><Toasts /><div className="empty"><span className="spin" /> Entering the city…</div></div>
   return (

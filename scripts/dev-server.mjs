@@ -97,8 +97,14 @@ http.createServer(async (req, res) => {
       return json(res, 200, session(rows[0]))
     }
     if (url.pathname === '/auth/v1/logout') return json(res, 204)
+    // password reset: no mail server locally, so just accept the request
+    if (url.pathname === '/auth/v1/recover' && req.method === 'POST') return json(res, 200, {})
     if (url.pathname === '/auth/v1/user') {
       const c = verify(token); if (!c) return json(res, 401, { msg: 'invalid token' })
+      if (req.method === 'PUT') {
+        const b = await readBody(req)
+        if (b.password) await pool.query(`update auth.users set password = $2 where id = $1`, [c.sub, b.password])
+      }
       const { rows } = await pool.query(`select * from auth.users where id = $1`, [c.sub])
       return json(res, 200, userObj(rows[0]))
     }

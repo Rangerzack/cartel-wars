@@ -127,6 +127,8 @@ function Grow() {
             <div className="grow">
               <div className="t">{c.name} grow house</div>
               <div className="s">{c.grow_rate} units/hr · holds {c.grow_cap} · {money(c.grow_price)}{me.grow_houses.length > 0 ? ` + 💎 ${extraDia}` : ''}</div>
+              {!blocked && me.cash < c.grow_price && <div className="why">Need {money(c.grow_price - me.cash)} more cash</div>}
+              {!blocked && me.cash >= c.grow_price && me.grow_houses.length > 0 && me.diamonds < extraDia && <div className="why">Need 💎 {extraDia - me.diamonds} more diamonds</div>}
             </div>
             <Btn className="sm" disabled={!!blocked || me.cash < c.grow_price} onClick={() => run(() => api.growBuild(c.code), { ok: () => `${c.name} grow house is up and running` })}>Build</Btn>
           </div>
@@ -164,6 +166,8 @@ function Hustlers() {
           <div className="small">
             Takes <b>{num(units)} {c.name}</b> from storage (you have {num(me.storage[com] ?? 0)}), costs <b>{money(price * n)}</b>, returns about <b className="gold">{money(units * me.prices[com])}</b> at today's street price.
           </div>
+          {!blocked && (me.storage[com] ?? 0) < units && <div className="why">You need {num(units)} {c.name} in storage — you have {num(me.storage[com] ?? 0)}. Grow it or buy it on the Marketplace.</div>}
+          {!blocked && (me.storage[com] ?? 0) >= units && me.cash < price * n && <div className="why">Hiring costs {money(price * n)} — you have {money(me.cash)}.</div>}
           <Btn className="doit block" disabled={!!blocked || (me.storage[com] ?? 0) < units || me.cash < price * n} onClick={() => run(() => api.hireHustlers(com, n), { ok: r => `${n} hustler${n > 1 ? 's' : ''} out the door with ${num(r.units)} units` })}>Send Them Out</Btn>
         </div>
       </Card>
@@ -198,6 +202,17 @@ function MarketTab() {
   const street = me.prices[sell.com]
   const sellPrice = sell.price ?? street
   const minL = catalog.config.listing_min, maxL = catalog.config.listing_max
+  const inStorage = me.storage[sell.com] ?? 0
+  const sellName = catalog.commodities.find(x => x.code === sell.com)?.name ?? sell.com
+  // say why before they tap, not after
+  const sellWhyNot =
+    inStorage < minL ? `You need at least ${num(minL)} ${sellName} in storage to list (you have ${num(inStorage)}).`
+    : sell.n < minL || sell.n > maxL ? `List between ${num(minL)} and ${num(maxL)} units.`
+    : sell.n > inStorage ? `You only have ${num(inStorage)} ${sellName}.`
+    : me.transport_capacity < sell.n ? (me.transport_capacity === 0 ? 'You need a vehicle to haul product — buy one in the Transport shop.' : `Your best vehicle carries ${num(me.transport_capacity)} — list fewer units or buy a bigger ride.`)
+    : sellPrice < 1 ? 'Set a price.'
+    : sellPrice > street ? `The Marketplace won't take listings above street price (${money(street)}).`
+    : null
   return (
     <>
       <Card title="Sell" right={<small>truck capacity {num(me.transport_capacity)}</small>}>
@@ -208,7 +223,8 @@ function MarketTab() {
             <label className="f">Price / unit (street {money(street)})<input className="input" inputMode="numeric" value={sellPrice} onChange={e => setSell({ ...sell, price: Number(e.target.value) || 0 })} /></label>
           </div>
           <div className="small muted">In storage: {num(me.storage[sell.com] ?? 0)}. Listings need a vehicle that can carry the batch and expire in 48h. Total: <b className="gold">{money(sell.n * sellPrice)}</b></div>
-          <Btn className="doit block" onClick={async () => { const r = await run(() => api.listProduct(sell.com, sell.n, sellPrice), { ok: () => 'Listed on the marketplace' }); if (r) load() }}>List It</Btn>
+          {sellWhyNot && <div className="why">{sellWhyNot}</div>}
+          <Btn className="doit block" disabled={!!sellWhyNot} onClick={async () => { const r = await run(() => api.listProduct(sell.com, sell.n, sellPrice), { ok: () => 'Listed on the marketplace' }); if (r) load() }}>List It</Btn>
         </div>
       </Card>
 

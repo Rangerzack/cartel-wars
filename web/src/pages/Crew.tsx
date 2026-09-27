@@ -8,6 +8,7 @@ import { Ledger } from '../components/Ledger'
 import { useNow } from '../lib/useNow'
 import { timeLeft } from '../lib/format'
 import type { CrewDetail, CrewFightResult, CrewSummary } from '../lib/types'
+import { BackBar } from '../components/BackBar'
 
 export default function Crew() {
   const { id } = useParams()
@@ -28,6 +29,7 @@ function CrewHub() {
 
   return (
     <div className="page">
+      <BackBar fallback="/" />
       {me.crew && (
         <Card>
           <div className="row link" onClick={() => nav(`/crew/${me.crew!.id}`)}>
@@ -86,6 +88,7 @@ function CrewPage({ id }: { id: string }) {
 
   return (
     <div className="page">
+      <BackBar fallback="/crew" />
       <Card title={<><span style={{ fontSize: 20 }}>{c.emblem}</span> {c.name}</>} right={c.cartel && <Btn className="sm ghost" onClick={() => nav(`/cartel/${c.cartel!.id}`)}>🕴 {c.cartel.name}</Btn>}>
         <div className="bd stack">
           {c.description && <div>{c.description}</div>}

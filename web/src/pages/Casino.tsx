@@ -12,6 +12,7 @@ import Craps from '../components/casino/Craps'
 import Roulette from '../components/casino/Roulette'
 import Slots from '../components/casino/Slots'
 import { features } from '../lib/features'
+import { BackBar } from '../components/BackBar'
 
 const ALL_GAMES = [
   { v: 'poker', l: '♠ Poker' }, { v: 'blackjack', l: '🃏 Blackjack' }, { v: 'craps', l: '🎲 Craps' }, { v: 'roulette', l: '🎡 Roulette' }, { v: 'slots', l: '🎰 Slots' },
@@ -28,6 +29,7 @@ export default function Casino() {
   const locked = me.jailed || me.hospital
   return (
     <div className="page">
+      <BackBar fallback="/" />
       {GAMES.length > 1 ? (
         <div className="seg casino-tabs">
           {GAMES.map(t => <button key={t.v} className={g === t.v ? 'on' : ''} onClick={() => nav(`/casino/${t.v}`)}>{t.l}</button>)}
