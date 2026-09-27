@@ -18,7 +18,8 @@ export default function Home() {
   const now = useNow()
   const nav = useNavigate()
   const off = me.power.offense, def = me.power.defense
-  const { refresh } = useGame()
+  const { refresh, catalog } = useGame()
+  const healAmt = catalog?.config.health_regen_amount ?? 10
   const ready = me.grow_houses.filter(g => g.produced > 0).length
   const full = me.grow_houses.filter(g => g.running && g.produced >= g.cap).length
   const back = me.hustlers.filter(h => h.back).length
@@ -52,7 +53,7 @@ export default function Home() {
         <div className="notice red">You're locked up until {timeLeft(me.jail_until, now)} from now. Only jail actions work, and fights use your jail setup. <Link to="/services">Post bail →</Link></div>
       )}
       {me.hospital && (
-        <div className="notice red">You're in the hospital at {me.health} health — +5 in {timeLeft(me.health_next, now)}, out at 20. <Link to="/services">Buy health →</Link></div>
+        <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services">Buy health →</Link></div>
       )}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
       {full > 0 && <div className="notice gold">{full} grow house{full > 1 ? 's are' : ' is'} full — collect to keep production going. <Link to="/economy">Collect →</Link></div>}

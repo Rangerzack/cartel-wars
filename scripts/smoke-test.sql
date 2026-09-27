@@ -103,9 +103,11 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   me := get_me(); assert (me->>'bank')::int = 500;
 
   -- hospital / police / jail
-  update profiles set health = 10 where id = auth.uid();
+  update profiles set health = 10, health_tick = now() where id = auth.uid();
   perform expect_error('select do_action((select id from action_defs where sort = 1))', 'hospital');
-  r := hospital_checkout(); assert (r->>'cost')::int = 420, 'checkout 10 pts on the sliding scale: ' || r::text;
+  -- checkout buys you up to 80% of max health (70 points here) on the sliding scale
+  r := hospital_checkout(); assert (r->>'cost')::int = 3780 and (r->>'gain')::int = 70, 'checkout to 80%: ' || r::text;
+  assert not (get_me()->>'hospital')::boolean, 'checked out';
   update profiles set heat = 60 where id = auth.uid();
   r := bribe_police(20); assert (r->>'cost')::int = 800 and (r->>'heat')::int = 40;
   r := do_action((select id from action_defs where sort = 25)); -- bribe police to get in jail
@@ -139,12 +141,15 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   me := get_me(); assert (me->>'health_max')::int = 125 and (me->>'inventory_slots')::int = 7;
 
   -- regen: back-date the tick
+  -- stamina +2 a minute and health +10 a minute (10x boost); heat still cools 1 per 10 minutes
   update profiles set stamina = 0, health = 50, heat = 30, last_tick = now() - interval '55 minutes',
-         health_tick = now() - interval '22 minutes' where id = auth.uid();
+         stamina_tick = now() - interval '5 minutes 30 seconds',
+         health_tick = now() - interval '2 minutes 12 seconds' where id = auth.uid();
   me := get_me();
   assert (me->>'stamina')::int = 10, 'stamina regen 5 ticks * 2: ' || (me->>'stamina');
-  assert (me->>'health')::int = 70, 'health regen 4 ticks * 5: ' || (me->>'health');
-  assert (me->>'heat')::int = 25, 'heat regen';
+  assert (me->>'health')::int = 70, 'health regen 2 ticks * 10: ' || (me->>'health');
+  assert (me->>'heat')::int = 25, 'heat regen 5 ticks * 1: ' || (me->>'heat');
+  assert (me->>'next_tick')::timestamptz between now() and now() + interval '1 minute', 'next stamina tick within a minute';
 end $$;
 
 -- second player, crews, fights

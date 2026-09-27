@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { money, num } from '../lib/format'
+import { every, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal } from '../components/ui'
 import type { ActionDef } from '../lib/types'
 
@@ -66,7 +66,7 @@ export default function Actions() {
       {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <a onClick={() => nav('/services')}>Post bail →</a></div>}
       {me.hospital && <div className="notice red">You can't work from a hospital bed. <a onClick={() => nav('/services')}>Buy health →</a></div>}
       {me.path_required && <div className="notice gold">You've earned your stripes — time to pick Producer or Trader. <a onClick={() => nav('/')}>Choose your path →</a></div>}
-      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back 2 every 10 minutes, or <a onClick={() => nav('/services?focus=refills')}>refill it →</a></div>}
+      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <a onClick={() => nav('/services?focus=refills')}>refill it →</a></div>}
 
       <div className="spread">
         {session.jobs > 0
