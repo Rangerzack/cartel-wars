@@ -93,7 +93,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!Number.isFinite(server)) return
     const ts = (v: string | null | undefined) => (v ? Date.parse(v) : NaN)
     const due: number[] = []
-    if (me.stamina < me.stamina_max || me.heat > 0) due.push(ts(me.next_tick))
+    if (me.stamina < me.stamina_max) due.push(ts(me.next_tick))
+    if (me.heat > 0) due.push(ts(me.heat_next ?? me.next_tick))
     if (me.health < me.health_max) due.push(ts(me.health_next))
     if (me.jailed) due.push(ts(me.jail_until))
     for (const h of me.hustlers) if (!h.back) due.push(ts(h.returns_at))

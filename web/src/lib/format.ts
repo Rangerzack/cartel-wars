@@ -49,3 +49,6 @@ export const chips = (n: number | null | undefined) => {
   return sign + money(a)
 }
 
+
+/** "every minute" / "every 10 minutes" */
+export const every = (mins: number | null | undefined) => (!mins || mins === 1 ? 'every minute' : `every ${mins} minutes`)

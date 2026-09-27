@@ -32,6 +32,10 @@ export interface Me {
   jailed: boolean; jail_until: string | null
   hospital: boolean
   health_next: string; health_bought: number
+  /** Health at which you walk out of the hospital (a % of max). */
+  hospital_out_at?: number
+  /** Next heat cool-down tick (next_tick is the stamina clock). */
+  heat_next?: string
   rep_earned: number; path: Path | null; path_required: boolean
   immune: boolean; immune_until: string
   inventory_slots: number; storage_cap: number; refills_used: number

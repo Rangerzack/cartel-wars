@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { ago, money, num } from '../lib/format'
+import { ago, every, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { FightPreview, FightResult, PublicPlayer } from '../lib/types'
@@ -11,7 +11,7 @@ import { BackBar } from '../components/BackBar'
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run, toast, catalog } = useGame()
   const nav = useNavigate()
   const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
@@ -54,7 +54,7 @@ export default function Player() {
             <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
           </div>
           {!isMe && pv && !p.hospital && !me.hospital && <Odds pv={pv} name={p.name} />}
-          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back 2 every 10 minutes.</div>}
+          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}.</div>}
           {!isMe && (
             <div className="hstack">
               <Btn className="doit red" disabled={cantFight} onClick={fight}>⚔️ Attack</Btn>

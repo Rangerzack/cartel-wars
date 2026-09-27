@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, hoodlumIcon, money, num, timeLeft } from '../lib/format'
+import { commodityIcon, hoodlumIcon, money, num, timeLeft, every } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 
@@ -40,15 +40,16 @@ export default function Services() {
   const healthPrice = (n: number) => Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale))
   const missing = me.health_max - me.health
   const healN = Math.max(1, Math.min(heal, missing))
-  const outN = Math.max(0, 20 - me.health)
+  const outAt = me.hospital_out_at ?? 20
+  const outN = Math.max(0, outAt - me.health)
 
   return (
     <div className="page">
       <Card id="hospital" title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
         <div className="bd stack">
           {me.hospital
-            ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} every {cfg.health_regen_minutes} minutes — next in {timeLeft(me.health_next, now)} — and walk out at 20.</div>
-            : <div className="small muted">Health comes back {cfg.health_regen_amount} every {cfg.health_regen_minutes} minutes. Buy more here — the price per point climbs the more you buy in a day.</div>}
+            ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} {every(cfg.health_regen_minutes)} — next in {timeLeft(me.health_next, now)} — and walk out at {outAt} ({cfg.hospital_release_pct ?? 80}% of your max).</div>
+            : <div className="small muted">Health comes back {cfg.health_regen_amount} {every(cfg.health_regen_minutes)}. Get knocked under 20 and you're in the hospital until you're back to {cfg.hospital_release_pct ?? 80}%. Buy more here — the price per point climbs the more you buy in a day.</div>}
           {me.hospital && outN > 0 && (
             <Btn className="doit block" disabled={me.cash < healthPrice(outN)} onClick={() => run(api.hospitalCheckout, { ok: r => `Checked out for ${money(r.cost)}` })}>Check Out (+{outN}) · {money(healthPrice(outN))}</Btn>
           )}
