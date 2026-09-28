@@ -209,14 +209,32 @@ export interface RouletteResult {
   number: number; color: 'red' | 'black' | 'green'; wager: number; payout: number; net: number
   bets: (RouletteBet & { win: number })[]
 }
-export type CrapsBetKind = 'pass' | 'dont' | 'field' | 'place6' | 'place8' | 'any7' | 'anycraps'
-export interface CrapsState { point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null }
-export interface CrapsLast { dice: [number, number]; sum: number; log: { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays'; win?: number }[] }
-export interface CrapsRoll extends CrapsLast { point: number | null; bets: CrapsState['bets']; wager: number; payout: number; net: number }
+export type CrapsBetKind = 'pass' | 'dont' | 'pass_odds' | 'dont_odds' | 'field'
+  | 'place4' | 'place5' | 'place6' | 'place8' | 'place9' | 'place10'
+  | 'hard4' | 'hard6' | 'hard8' | 'hard10' | 'any7' | 'anycraps'
+export type CrapsEvent = 'natural' | 'craps' | 'point' | 'hit' | 'seven_out' | 'roll'
+export interface CrapsLogLine { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays' | 'off'; win?: number; stays?: boolean }
+export interface CrapsHistoryRoll { dice: [number, number]; sum: number; event: CrapsEvent }
+export interface CrapsLast { dice: [number, number]; sum: number; log: CrapsLogLine[]; event?: CrapsEvent }
+export interface CrapsState {
+  point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null
+  history?: CrapsHistoryRoll[]
+  /** Most odds you can have behind each line bet right now. */
+  odds_max?: { pass_odds: number; dont_odds: number }
+}
+export interface CrapsRoll extends CrapsState {
+  dice: [number, number]; sum: number; event?: CrapsEvent; log: CrapsLogLine[]; wager: number; payout: number; net: number
+}
+export type BlackjackOutcome = 'blackjack' | 'win' | 'push' | 'lose' | 'bust' | 'dealer_bust'
+export interface BlackjackHand {
+  cards: string[]; total: number; soft: boolean; bet: number; doubled: boolean; split: boolean; done: boolean; active: boolean
+  result: { outcome: BlackjackOutcome; payout: number; net: number } | null
+}
 export interface BlackjackState {
   status: 'none' | 'playing' | 'done'; wager: number; player: string[]; player_total: number; player_soft: boolean
-  dealer: string[]; dealer_total: number; dealer_hidden: boolean; can_double: boolean
-  result: { outcome: 'blackjack' | 'win' | 'push' | 'lose' | 'bust' | 'dealer_bust'; payout: number; net: number } | null
+  dealer: string[]; dealer_total: number; dealer_hidden: boolean; can_double: boolean; can_split?: boolean
+  hands?: BlackjackHand[]; active?: number
+  result: { outcome: BlackjackOutcome | 'split'; payout: number; net: number; hands?: { outcome: BlackjackOutcome; payout: number; net: number }[] } | null
 }
 export interface PokerTableInfo {
   id: number; name: string; small_blind: number; big_blind: number; min_buyin: number; max_buyin: number; seats: number

@@ -51,27 +51,58 @@ try {
   await a.getByText(/you win|No luck/).waitFor({ timeout: 8000 })
   await snap(a, 'slots')
 
-  // blackjack
+  // blackjack: play a hand by the house rule of thumb (hit under 17), then check the table resets for the next deal
   await a.goto(BASE + '/casino/blackjack')
-  await a.getByRole('button', { name: /Deal for \$100$/ }).click()
-  for (let i = 0; i < 6; i++) {
-    await a.locator('.bjtable .outcome, button:has-text("Hit")').first().waitFor()
-    if (await a.locator('.bjtable .outcome').count()) break
-    const total = Number((await a.locator('.bjtable .hand').nth(1).locator('.small').innerText()).match(/· (\d+)/)[1])
-    if (total < 17) await a.getByRole('button', { name: 'Hit' }).click(); else await a.getByRole('button', { name: 'Stand' }).click()
+  await a.getByRole('button', { name: /^Deal · \$100$/ }).click()
+  for (let i = 0; i < 8; i++) {
+    await a.locator('.bj-summary, .bj-actions button:has-text("Hit")').first().waitFor()
+    if (await a.locator('.bj-summary').count()) break
+    const txt = await a.locator('.bj-hand.active .bj-total').innerText()
+    const total = Number(txt.split('/').pop().trim())
+    if (total < 17) await a.getByRole('button', { name: /^Hit/ }).click(); else await a.getByRole('button', { name: /^Stand/ }).click()
     await sleep(300)
   }
-  await a.locator('.bjtable .outcome').waitFor()
+  await a.locator('.bj-summary').waitFor()
+  await a.locator('.bj-hand .bj-tag').first().waitFor()
   await snap(a, 'blackjack')
-  await a.getByRole('button', { name: /Deal for/ }).waitFor()   // hand over → can deal again
+  await a.getByRole('button', { name: /^Deal again · \$100$/ }).waitFor()   // hand over → can deal again
 
-  // craps
+  // craps: pass line, roll, and the table shows the result
   await a.goto(BASE + '/casino/craps')
-  await a.getByRole('button', { name: /Pass Line/ }).click()
-  await a.getByRole('button', { name: /Roll · \$100 in play/ }).click()
-  await a.locator('.puck').filter({ hasText: /ON|OFF/ }).waitFor()
-  await a.getByText(/settled|bets stay up/).waitFor({ timeout: 8000 })
+  await a.getByRole('button', { name: /^Pass line/ }).click()
+  await a.locator('.cr-pass .chipstack').waitFor()
+  await a.getByRole('button', { name: /^Roll/ }).click()
+  await a.locator('.cr-history .cr-h').first().waitFor({ timeout: 8000 })
+  await a.locator('.cr-puck').first().filter({ hasText: /ON|OFF/ }).waitFor()
   await snap(a, 'craps')
+
+  // blackjack split + double after split, with a loaded shoe (8-8 vs dealer K-7)
+  const aceId = (await db.query('select id from profiles where name = $1', [N('Ace')])).rows[0].id
+  await db.query(`insert into blackjack_games (player_id, shoe, player, dealer, wager, status, hands, active)
+    values ($1, array[32, 4, 33, 40, 41, 42, 43, 44], array[24, 25], array[44, 20], 1000, 'playing',
+      jsonb_build_array(jsonb_build_object('cards', jsonb_build_array(24, 25), 'bet', 1000, 'doubled', false, 'split', false, 'aces', false, 'done', false)), 0)
+    on conflict (player_id) do update set shoe = excluded.shoe, player = excluded.player, dealer = excluded.dealer, wager = 1000,
+      status = 'playing', result = null, hands = excluded.hands, active = 0`, [aceId])
+  await a.goto(BASE + '/casino/blackjack')
+  await a.getByLabel('Strategy hint').check()
+  await a.getByText(/The book says: Split/).waitFor()
+  await a.getByRole('button', { name: /^Split/ }).click()
+  await a.locator('.bj-hand').nth(1).waitFor()
+  await a.getByRole('button', { name: /^Stand/ }).click()
+  await a.getByRole('button', { name: /^Double/ }).click()
+  await a.locator('.bj-summary', { hasText: '2 hands settled' }).waitFor()
+  await snap(a, 'blackjack-split')
+
+  // craps odds behind the pass line once a point is on
+  await db.query(`insert into craps_games (player_id, point, bets) values ($1, 6, '{"pass": 1000}')
+    on conflict (player_id) do update set point = 6, bets = excluded.bets`, [aceId])
+  await a.goto(BASE + '/casino/craps')
+  await a.locator('.chipsrow .chip.c1000').click()
+  await a.locator('.cr-odds').click()
+  await a.locator('.cr-odds .chipstack').waitFor()
+  await a.getByRole('button', { name: /Place 8/ }).click()
+  await a.locator('.cr-num .chipstack').waitFor()
+  await snap(a, 'craps-odds')
 
   // roulette
   await a.goto(BASE + '/casino/roulette')

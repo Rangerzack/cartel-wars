@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type React from 'react'
 
 export const MIN_BET = 100
 
@@ -19,14 +20,53 @@ import { chips, money } from '../../lib/format'
 const SUIT: Record<string, string> = { s: '♠', h: '♥', d: '♦', c: '♣' }
 
 /** "Ah" → a playing card. Pass null for a face-down card. */
-export function PlayingCard({ c, size = 'md', dim }: { c: string | null | undefined; size?: 'sm' | 'md' | 'lg'; dim?: boolean }) {
-  if (c === undefined) return <span className={`pcard slot ${size}`} />
-  if (!c) return <span className={`pcard back ${size}`} />
+export function PlayingCard({ c, size = 'md', dim, className = '', style }: { c: string | null | undefined; size?: 'sm' | 'md' | 'lg' | 'xl'; dim?: boolean; className?: string; style?: React.CSSProperties }) {
+  if (c === undefined) return <span className={`pcard slot ${size} ${className}`} style={style} />
+  if (!c) return <span className={`pcard back ${size} ${className}`} style={style} />
   const r = c[0] === 'T' ? '10' : c[0], s = c[1]
   const red = s === 'h' || s === 'd'
+  if (size === 'xl') {
+    // table-sized card: corner indexes and a big center pip
+    return (
+      <span className={`pcard xl ${red ? 'red' : ''} ${dim ? 'dim' : ''} ${className}`} style={style} aria-label={`${r} of ${SUIT_NAME[s]}`}>
+        <span className="corner tl">{r}<i>{SUIT[s]}</i></span>
+        <span className="pip">{SUIT[s]}</span>
+        <span className="corner br">{r}<i>{SUIT[s]}</i></span>
+      </span>
+    )
+  }
   return (
-    <span className={`pcard ${size} ${red ? 'red' : ''} ${dim ? 'dim' : ''}`}>
+    <span className={`pcard ${size} ${red ? 'red' : ''} ${dim ? 'dim' : ''} ${className}`} style={style}>
       <span className="r">{r}</span><span className="s">{SUIT[s]}</span>
+    </span>
+  )
+}
+
+const SUIT_NAME: Record<string, string> = { s: 'spades', h: 'hearts', d: 'diamonds', c: 'clubs' }
+
+const DENOMS = [100000, 25000, 5000, 1000, 500, 100]
+/** A little stack of casino chips showing an amount (up to 5 chips drawn), with the amount under it. */
+export function ChipStack({ amount, label = true }: { amount: number; label?: boolean }) {
+  const chipsList: number[] = []
+  let left = amount
+  for (const d of DENOMS) while (left >= d && chipsList.length < 5) { chipsList.push(d); left -= d }
+  if (!chipsList.length && amount > 0) chipsList.push(100)
+  return (
+    <span className="chipstack" aria-label={money(amount)}>
+      <span className="stack">{chipsList.reverse().map((d, i) => <span key={i} className={`tchip c${d}`} style={{ bottom: i * 3 }} />)}</span>
+      {label && <b>{chips(amount)}</b>}
+    </span>
+  )
+}
+
+const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] }
+/** A die drawn with pips (the unicode die faces render tiny and different on every phone). */
+export function Die({ n, rolling, size = 44 }: { n: number; rolling?: boolean; size?: number }) {
+  const on = new Set(PIPS[n] ?? [])
+  return (
+    <span className={`die ${rolling ? 'rolling' : ''}`} aria-label={`die showing ${n}`}
+      style={{ width: size, height: size, padding: Math.round(size * 0.13), gap: Math.max(1, Math.round(size * 0.05)), borderRadius: Math.round(size * 0.18) }}>
+      {Array.from({ length: 9 }, (_, i) => <i key={i} className={on.has(i) ? 'on' : ''} />)}
     </span>
   )
 }
