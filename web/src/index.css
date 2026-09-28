@@ -716,3 +716,17 @@ textarea.input { resize: vertical; font: inherit; }
 .cr-line .cr-spot .cr-chip { right: 6px; top: 50%; bottom: auto; transform: translateY(-50%) scale(.85); transform-origin: center right; }
 .cr-line .cr-odds { width: 118px; padding: 4px 38px 4px 6px; }
 .cr-line .cr-odds .cr-pay { font-size: 9.5px; line-height: 1.25; }
+
+/* Craps: come box, don't come, come points */
+.cr-line.come .cr-come { flex: 1; min-height: 50px; border-color: #f4efe2; }
+.cr-line.come .cr-come .cr-l { font-size: 20px; letter-spacing: 4px; color: #fde68a; }
+.cr-line.come .cr-dcome { width: 110px; flex: none; background: rgba(0,0,0,.18); }
+.cr-line.come .cr-dcome .cr-l { font-size: 13px; }
+.cr-comepts { display: flex; flex-direction: column; gap: 4px; border: 1px dashed rgba(246,215,122,.55); border-radius: 8px; padding: 6px; background: rgba(0,0,0,.14); }
+.cr-cp { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px;
+  border: 1px solid rgba(255,255,255,.5); border-radius: 8px; padding: 4px 46px 4px 8px; }
+.cr-cp .cr-l { font-size: 14px; }
+.cr-cp.dont { background: rgba(0,0,0,.18); }
+.cr-cp .cr-chip { right: 6px; top: 50%; bottom: auto; transform: translateY(-50%) scale(.85); transform-origin: center right; }
+.cr-cbadge { position: absolute; top: 3px; left: 3px; font-size: 9px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 6px;
+  background: #fde68a; color: #1b1405; line-height: 14px; }

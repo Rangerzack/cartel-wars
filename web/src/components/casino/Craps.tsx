@@ -11,11 +11,19 @@ const NUM_LABEL: Record<number, string> = { 4: '4', 5: '5', 6: 'SIX', 8: '8', 9:
 const PLACE_PAYS: Record<number, string> = { 4: '9:5', 5: '7:5', 6: '7:6', 8: '7:6', 9: '7:5', 10: '9:5' }
 const ODDS_PAYS: Record<number, string> = { 4: '2:1', 5: '3:2', 6: '6:5', 8: '6:5', 9: '3:2', 10: '2:1' }
 const LAY_PAYS: Record<number, string> = { 4: '1:2', 5: '2:3', 6: '5:6', 8: '5:6', 9: '2:3', 10: '1:2' }
-const NAME: Record<CrapsBetKind, string> = {
-  pass: 'Pass Line', dont: "Don't Pass", pass_odds: 'Pass odds', dont_odds: 'Lay odds', field: 'Field',
-  place4: 'Place 4', place5: 'Place 5', place6: 'Place 6', place8: 'Place 8', place9: 'Place 9', place10: 'Place 10',
-  hard4: 'Hard 4', hard6: 'Hard 6', hard8: 'Hard 8', hard10: 'Hard 10', any7: 'Any 7', anycraps: 'Any Craps',
+const NAME: Record<string, string> = {
+  pass: 'Pass Line', dont: "Don't Pass", pass_odds: 'Pass odds', dont_odds: 'Lay odds', field: 'Field', come: 'Come', dcome: "Don't Come",
+  any7: 'Any 7', anycraps: 'Any Craps',
 }
+/** Human name for any bet key, including the ones that move onto numbers. */
+function betName(k: string): string {
+  if (NAME[k]) return NAME[k]
+  const m = k.match(/^(place|hard|come|dcome)(\d+)(_odds)?$/)
+  if (!m) return k
+  const what = { place: 'Place', hard: 'Hard', come: 'Come', dcome: "Don't Come" }[m[1]]
+  return `${what} ${m[2]}${m[3] ? (m[1] === 'dcome' ? ' lay odds' : ' odds') : ''}`
+}
+const isOdds = (k: CrapsBetKind) => k.endsWith('_odds')
 
 /** What the stickman says. */
 function call(r: { dice: [number, number]; sum: number; event?: CrapsEvent }, point: number | null): string {
@@ -33,7 +41,7 @@ function call(r: { dice: [number, number]; sum: number; event?: CrapsEvent }, po
   }
 }
 
-type FlashLine = { n: number; cls: string }
+type FlashLine = { n: number; cls: string; text?: string }
 type Flash = Partial<Record<CrapsBetKind, FlashLine>>
 
 /** One betting area on the felt: tap to put the current chip on it. */
@@ -46,7 +54,7 @@ function BetSpot({ k, className = '', children, disabled, label, amount, flash, 
       aria-label={`${label}${amount ? `, ${money(amount)} on it` : ''}`}>
       {children}
       {amount > 0 && <span className="cr-chip"><ChipStack amount={amount} /></span>}
-      {flash && <span className={`cr-float ${flash.cls}`}>{flash.cls === 'push' ? 'push' : flash.n >= 0 ? `+${money(flash.n)}` : `−${money(-flash.n)}`}</span>}
+      {flash && <span className={`cr-float ${flash.cls}`}>{flash.text ?? (flash.cls === 'push' ? 'push' : flash.n >= 0 ? `+${money(flash.n)}` : `−${money(-flash.n)}`)}</span>}
     </button>
   )
 }
@@ -70,14 +78,23 @@ export default function Craps() {
   const bets = st?.bets ?? {}
   const onFelt = Object.values(bets).reduce((a, b) => a + (b ?? 0), 0)
   const point = st?.point ?? null
-  const oddsLeft = (k: 'pass_odds' | 'dont_odds') => Math.max(0, (st?.odds_max?.[k] ?? 0) - (bets[k] ?? 0))
+  /** Most odds allowed behind this bet right now. */
+  const oddsMax = (k: CrapsBetKind): number => {
+    const om = st?.odds_max
+    if (k === 'pass_odds' || k === 'dont_odds') return om?.[k] ?? 0
+    const m = k.match(/^(d?come)(\d+)_odds$/)
+    return m ? (m[1] === 'come' ? om?.come?.[m[2]] : om?.dcome?.[m[2]]) ?? 0 : 0
+  }
+  const oddsLeft = (k: CrapsBetKind) => Math.max(0, oddsMax(k) - (bets[k] ?? 0))
+  const comePoints = NUMBERS.filter(n => (bets[`come${n}`] ?? 0) > 0)
+  const dcomePoints = NUMBERS.filter(n => (bets[`dcome${n}`] ?? 0) > 0)
 
   async function bet(k: CrapsBetKind) {
     if (rolling) return
     let amt = chip
-    if (k === 'pass_odds' || k === 'dont_odds') {
+    if (isOdds(k)) {
       const left = oddsLeft(k)
-      if (left < 100) { toast(left > 0 ? 'Odds are full' : k === 'pass_odds' ? 'Odds need a Pass Line bet and a point' : "Lay odds need a Don't Pass bet and a point", 'info'); return }
+      if (left < 100) { toast(left > 0 ? 'Odds are full' : 'Odds need a bet to sit behind', 'info'); return }
       amt = Math.min(chip, left)
     }
     const s = await run(() => api.crapsBet(k, amt), { silent: true })
@@ -98,6 +115,7 @@ export default function Craps() {
         if (l.result === 'win') f[l.bet] = { n: (l.win ?? 0) - (l.stays ? 0 : l.amount), cls: 'win' }
         else if (l.result === 'lose') f[l.bet] = { n: -l.amount, cls: 'lose' }
         else if (l.result === 'push') f[l.bet] = { n: 0, cls: 'push' }
+        else if (l.result === 'moves') f[l.bet] = { n: 0, cls: 'push', text: `→ ${l.to}` }
       }
       setFlash(f)
       if (flashTimer.current) window.clearTimeout(flashTimer.current)
@@ -141,6 +159,8 @@ export default function Craps() {
                 {NUMBERS.map(n => (
                   <BetSpot key={n} k={`place${n}` as CrapsBetKind} {...sp(`place${n}` as CrapsBetKind)} className={`cr-num ${point === n ? 'point' : ''}`} label={`Place ${n}, pays ${PLACE_PAYS[n]}`}>
                     {point === n && <span className="cr-puck mini on">ON</span>}
+                    {((bets[`come${n}`] ?? 0) > 0 || (bets[`dcome${n}`] ?? 0) > 0) &&
+                      <span className="cr-cbadge">{(bets[`come${n}`] ?? 0) > 0 ? 'C' : ''}{(bets[`dcome${n}`] ?? 0) > 0 ? 'DC' : ''}</span>}
                     <span className="cr-n">{NUM_LABEL[n]}</span>
                     <span className="cr-pay">{PLACE_PAYS[n]}</span>
                   </BetSpot>
@@ -162,6 +182,41 @@ export default function Craps() {
                   <BetSpot k="anycraps" {...sp('anycraps')} className="cr-prop" label="Any craps, pays 7:1"><span className="cr-l">Any Craps</span><span className="cr-pay">7:1</span></BetSpot>
                 </div>
               </div>
+
+              <div className="cr-line come">
+                <BetSpot k="come" {...sp('come')} className="cr-come" disabled={point === null} label="Come, plays like a new pass line bet">
+                  <span className="cr-l">COME</span>
+                  <span className="cr-pay">{point === null ? 'opens once the point is on' : '7 or 11 wins · 2, 3, 12 lose · else moves to the number'}</span>
+                </BetSpot>
+                <BetSpot k="dcome" {...sp('dcome')} className="cr-dcome" disabled={point === null} label="Don't come, bar 12">
+                  <span className="cr-l">DON'T COME</span><span className="cr-pay">Bar 12</span>
+                </BetSpot>
+              </div>
+
+              {(comePoints.length > 0 || dcomePoints.length > 0) && (
+                <div className="cr-comepts">
+                  <div className="cr-props-title">Your come bets</div>
+                  {comePoints.map(n => (
+                    <div key={`c${n}`} className="cr-line">
+                      <div className="cr-cp"><span className="cr-l">COME {n}</span><span className="cr-pay">wins on {n} · loses on 7</span>
+                        <span className="cr-chip"><ChipStack amount={bets[`come${n}`] ?? 0} /></span></div>
+                      <BetSpot k={`come${n}_odds`} {...sp(`come${n}_odds`)} className="cr-odds" label={`Odds on come ${n}, pays ${ODDS_PAYS[n]}, ${money(oddsLeft(`come${n}_odds`))} left`}>
+                        <span className="cr-l">ODDS</span><span className="cr-pay">pays {ODDS_PAYS[n]}<br />max {money(oddsMax(`come${n}_odds`))}</span>
+                      </BetSpot>
+                    </div>
+                  ))}
+                  {dcomePoints.map(n => (
+                    <div key={`d${n}`} className="cr-line">
+                      <div className="cr-cp dont"><span className="cr-l">DON'T COME {n}</span><span className="cr-pay">wins on 7 · loses on {n}</span>
+                        <span className="cr-chip"><ChipStack amount={bets[`dcome${n}`] ?? 0} /></span></div>
+                      <BetSpot k={`dcome${n}_odds`} {...sp(`dcome${n}_odds`)} className="cr-odds" label={`Lay odds on don't come ${n}, pays ${LAY_PAYS[n]}, ${money(oddsLeft(`dcome${n}_odds`))} left`}>
+                        <span className="cr-l">LAY</span><span className="cr-pay">pays {LAY_PAYS[n]}<br />max {money(oddsMax(`dcome${n}_odds`))}</span>
+                      </BetSpot>
+                    </div>
+                  ))}
+                  {point === null && comePoints.some(n => (bets[`come${n}_odds`] ?? 0) > 0) && <div className="cr-pay center">Come odds are off on the come-out roll.</div>}
+                </div>
+              )}
 
               <BetSpot k="field" {...sp('field')} className="cr-field" label="Field, one roll. 2 pays double, 12 pays triple">
                 <span className="cr-l">FIELD</span>
@@ -195,6 +250,7 @@ export default function Craps() {
         )}
 
         {point !== null && (bets.pass ?? 0) > 0 && !(bets.pass_odds) && <div className="cr-tip">💡 Take odds behind your Pass Line — it's the only bet in the house with no edge.</div>}
+        {comePoints.some(n => !(bets[`come${n}_odds`])) && (!(bets.pass ?? 0) || (bets.pass_odds ?? 0) > 0) && <div className="cr-tip">💡 Back your come bets with odds too — same true-odds payout, no edge.</div>}
         {point === null && ((bets.place4 ?? 0) + (bets.place5 ?? 0) + (bets.place6 ?? 0) + (bets.place8 ?? 0) + (bets.place9 ?? 0) + (bets.place10 ?? 0) + (bets.hard4 ?? 0) + (bets.hard6 ?? 0) + (bets.hard8 ?? 0) + (bets.hard10 ?? 0)) > 0 &&
           <div className="small muted center">Place bets and hardways are off on the come-out roll.</div>}
 
@@ -203,14 +259,14 @@ export default function Craps() {
           <button className="btn gold grow cr-roll" disabled={rolling || onFelt === 0} onClick={doRoll}>
             {rolling ? <span className="spin" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
           </button>
-          <button className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} title="Take down everything except Pass / Don't Pass once the point is on">Take down</button>
+          <button className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} title="Take down everything except Pass / Don't Pass (once the point is on) and come bets">Take down</button>
         </div>
 
         {settled.length > 0 && !rolling && (
           <div className="cr-log">
             {settled.map((l, i) => (
               <div key={i} className="spread small">
-                <span>{NAME[l.bet]} {money(l.amount)}</span>
+                <span>{betName(l.bet)} {money(l.amount)}</span>
                 <span className={l.result === 'win' ? 'green' : l.result === 'lose' ? 'red' : 'muted'}>
                   {l.result === 'win' ? `wins ${money((l.win ?? 0) - (l.stays ? 0 : l.amount))}${l.stays ? ', stays up' : ''}` : l.result === 'push' ? 'push' : 'lost'}
                 </span>
@@ -226,7 +282,8 @@ export default function Craps() {
           <summary>How the table plays</summary>
           <p>Pass wins on 7 or 11 on the come-out and loses on 2, 3 or 12; any other number becomes the point, and Pass wins if the point comes again before a 7. Don't Pass is the opposite (12 is a push).</p>
           <p>Odds behind the line pay true odds (4/10 2:1, 5/9 3:2, 6/8 6:5) up to 3-4-5x your line bet; lay odds behind Don't Pass up to 6x. Place bets pay 9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8. Hardways pay 7:1 (4, 10) and 9:1 (6, 8) and lose on the easy way or a 7. Place bets and hardways are off on the come-out, and stay up after they win. Field, Any 7 and Any Craps are one-roll bets.</p>
-          <p>Pass and Don't Pass lock once the point is on; everything else can be taken down between rolls.</p>
+          <p>Come and Don't Come work like Pass and Don't Pass, but you make them after the point is on: the next roll is their come-out, and any point number moves the bet onto that number. Back a come bet with odds (3-4-5x, true odds) — they're off on the come-out roll, so a 7 there takes the flat bet but hands the odds back. Lay up to 6x behind a Don't Come.</p>
+          <p>Pass and Don't Pass lock once the point is on, and come bets stay until they win or lose; everything else, odds included, can be taken down between rolls.</p>
         </details>
       </div>
     </Card>

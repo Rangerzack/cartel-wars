@@ -209,18 +209,19 @@ export interface RouletteResult {
   number: number; color: 'red' | 'black' | 'green'; wager: number; payout: number; net: number
   bets: (RouletteBet & { win: number })[]
 }
-export type CrapsBetKind = 'pass' | 'dont' | 'pass_odds' | 'dont_odds' | 'field'
-  | 'place4' | 'place5' | 'place6' | 'place8' | 'place9' | 'place10'
+export type CrapsNumber = 4 | 5 | 6 | 8 | 9 | 10
+export type CrapsBetKind = 'pass' | 'dont' | 'pass_odds' | 'dont_odds' | 'field' | 'come' | 'dcome'
+  | `place${CrapsNumber}` | `come${CrapsNumber}` | `come${CrapsNumber}_odds` | `dcome${CrapsNumber}` | `dcome${CrapsNumber}_odds`
   | 'hard4' | 'hard6' | 'hard8' | 'hard10' | 'any7' | 'anycraps'
 export type CrapsEvent = 'natural' | 'craps' | 'point' | 'hit' | 'seven_out' | 'roll'
-export interface CrapsLogLine { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays' | 'off'; win?: number; stays?: boolean }
+export interface CrapsLogLine { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays' | 'off' | 'moves'; win?: number; stays?: boolean; to?: number }
 export interface CrapsHistoryRoll { dice: [number, number]; sum: number; event: CrapsEvent }
 export interface CrapsLast { dice: [number, number]; sum: number; log: CrapsLogLine[]; event?: CrapsEvent }
 export interface CrapsState {
   point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null
   history?: CrapsHistoryRoll[]
   /** Most odds you can have behind each line bet right now. */
-  odds_max?: { pass_odds: number; dont_odds: number }
+  odds_max?: { pass_odds: number; dont_odds: number; come?: Record<string, number>; dcome?: Record<string, number> }
 }
 export interface CrapsRoll extends CrapsState {
   dice: [number, number]; sum: number; event?: CrapsEvent; log: CrapsLogLine[]; wager: number; payout: number; net: number

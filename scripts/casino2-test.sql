@@ -131,4 +131,64 @@ begin
   perform expect_error('select blackjack_action(''hit'')', 'No hand');
 end $$;
 
+-- Come / Don't Come with odds ---------------------------------------------------------------------------
+do $$ declare me uuid := auth.uid(); r jsonb; c0 bigint;
+begin
+  update profiles set cash = 10000000 where id = me;
+  delete from craps_games where player_id = me;
+  perform expect_error('select craps_bet(''come'', 1000)', 'once a point is set');
+  perform craps_bet('pass', 1000);
+  r := _craps_roll(me, 4, 2);                        -- point 6
+  perform craps_bet('come', 1000);
+  r := _craps_roll(me, 5, 4);                        -- 9: the come bet moves to the 9
+  assert (r->'bets'->>'come9')::bigint = 1000 and (r->'bets'->>'come') is null, 'come moves to 9: ' || r::text;
+  assert exists (select 1 from jsonb_array_elements(r->'log') l where l->>'result' = 'moves' and (l->>'to')::int = 9);
+  assert (r->'odds_max'->'come'->>'9')::bigint = 4000, '4x on a come 9: ' || r::text;
+  perform expect_error('select craps_bet(''come9_odds'', 4100)', 'Odds max');
+  perform expect_error('select craps_bet(''come5_odds'', 100)', 'No Come bet on the 5');
+  perform expect_error('select craps_bet(''come9'', 100)', 'Unknown bet');
+  perform craps_bet('come9_odds', 4000);
+  -- odds come down, the come point doesn't
+  r := craps_clear();
+  assert (r->'bets'->>'come9')::bigint = 1000 and (r->'bets'->>'come9_odds') is null and (r->'bets'->>'pass')::bigint = 1000, 'clear keeps contract bets: ' || r::text;
+  perform craps_bet('come9_odds', 4000);
+  perform craps_bet('come', 500);                    -- a second come bet in the box
+  c0 := (select cash from profiles where id = me);
+  r := _craps_roll(me, 6, 3);                        -- 9 again: come 9 wins 1:1 + odds 3:2; the new come bet moves to 9
+  assert (r->>'payout')::bigint = 2000 + 4000 + 6000, 'come 9 + odds: ' || r::text;
+  assert (r->'bets'->>'come9')::bigint = 500 and (r->'bets'->>'come9_odds') is null, 'new come bet on the 9: ' || r::text;
+  assert (select cash from profiles where id = me) = c0 + 12000;
+
+  -- don't come with lay odds, working on a seven-out
+  perform craps_bet('dcome', 1000);
+  r := _craps_roll(me, 2, 2);                        -- 4: don't come moves behind the 4
+  assert (r->'bets'->>'dcome4')::bigint = 1000 and (r->'odds_max'->'dcome'->>'4')::bigint = 6000;
+  perform craps_bet('dcome4_odds', 6000);
+  c0 := (select cash from profiles where id = me);
+  r := _craps_roll(me, 4, 3);                        -- seven out: pass and come 9 lose; don't come + lay win
+  assert r->>'event' = 'seven_out';
+  assert (r->>'payout')::bigint = 2000 + 6000 + 3000, 'don''t come + lay 1:2: ' || r::text;
+  assert (r->>'wager')::bigint = 1000 + 500 + 1000 + 6000, 'pass + come 9 + don''t come + lay settled: ' || r::text;
+  assert (r->'bets') = '{}'::jsonb and (select cash from profiles where id = me) = c0 + 11000;
+
+  -- come odds are off on the come-out: a 7 there takes the flat bet and hands the odds back
+  perform craps_bet('pass', 1000);
+  r := _craps_roll(me, 4, 4);                        -- point 8
+  perform craps_bet('come', 1000);
+  r := _craps_roll(me, 3, 3);                        -- come to the 6
+  perform craps_bet('come6_odds', 5000);
+  r := _craps_roll(me, 5, 3);                        -- 8: pass wins, back to the come-out; come 6 stays
+  assert r->>'event' = 'hit' and (r->'bets'->>'come6')::bigint = 1000 and (r->'bets'->>'come6_odds')::bigint = 5000;
+  c0 := (select cash from profiles where id = me);
+  r := _craps_roll(me, 4, 3);                        -- come-out 7
+  assert (r->>'payout')::bigint = 5000 and (r->>'wager')::bigint = 6000, 'odds returned, flat lost: ' || r::text;
+  assert (select cash from profiles where id = me) = c0 + 5000 and (r->'bets') = '{}'::jsonb;
+  -- don't come box: 12 pushes, 2/3 win
+  perform craps_bet('pass', 1000);
+  r := _craps_roll(me, 5, 5);                        -- point 10
+  perform craps_bet('dcome', 1000);
+  r := _craps_roll(me, 6, 6);
+  assert (r->>'payout')::bigint = 1000 and (r->'bets'->>'dcome') is null, 'don''t come 12 pushes: ' || r::text;
+end $$;
+
 select 'CASINO 2 TEST PASSED';

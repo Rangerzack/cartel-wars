@@ -102,7 +102,14 @@ try {
   await a.locator('.cr-odds .chipstack').waitFor()
   await a.getByRole('button', { name: /Place 8/ }).click()
   await a.locator('.cr-num .chipstack').waitFor()
+  // a come bet goes in the Come box and stays through Take down (odds and place bets come down)
+  await a.getByRole('button', { name: /^Come,/ }).click()
+  await a.locator('.cr-come .chipstack').waitFor()
   await snap(a, 'craps-odds')
+  await a.getByRole('button', { name: 'Take down' }).click()
+  await a.locator('.cr-num .chipstack').waitFor({ state: 'detached' })
+  await a.locator('.cr-odds .chipstack').waitFor({ state: 'detached' })
+  await a.locator('.cr-come .chipstack').waitFor()
 
   // roulette
   await a.goto(BASE + '/casino/roulette')
