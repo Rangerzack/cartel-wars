@@ -60,7 +60,8 @@ function Players() {
 
 /** The 200 NPC thugs, ranked by what a hit is worth to you right now: your odds × their stash × the 7.5% average take. */
 function Thugs() {
-  const { toast } = useGame()
+  const { toast, catalog } = useGame()
+  const cfg = catalog?.config ?? {}
   const nav = useNavigate()
   const [list, setList] = useState<ThugRow[] | null>(null)
   const [all, setAll] = useState(false)
@@ -75,7 +76,7 @@ function Thugs() {
     <>
       <div className="small muted">
         {beatable.length
-          ? <>With your offensive setup you're favored up to about <b>Thug {top}</b>. A win takes 5–10% of the stash; stashes refill over an hour, and three hits on one thug in an hour dries it up for you.</>
+          ? <>With your offensive setup you're favored up to about <b>Thug {top}</b>. A win takes 5–10% of the stash. Stashes refill over an hour, every thug also gets the {money(cfg.daily_cash ?? 50000)} daily cash at 00:00 UTC, and three hits on one thug in an hour dries it up for you.</>
           : <>Nobody here is an easy win yet — gear up under Items first.</>}
       </div>
       <div className="seg sm">

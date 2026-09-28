@@ -19,7 +19,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
 | Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
-| Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every player account gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. |
+| Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
 | Diamonds | starter grant | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses. Earned via achievements; no real-money purchase in this clone. |
 
 Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.

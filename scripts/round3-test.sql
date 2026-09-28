@@ -41,7 +41,7 @@ do $$ declare u uuid := auth.uid(); begin
 end $$;
 
 -- Daily cash --------------------------------------------------------------------------------------------
-do $$ declare u uuid := 'e1111111-1111-1111-1111-111111111111'; c bigint; a activity; t uuid := (select id from profiles where name = 'Thug 5'); tc bigint; n int; begin
+do $$ declare u uuid := 'e1111111-1111-1111-1111-111111111111'; c bigint; a activity; t uuid := (select id from profiles where name = 'Thug 5'); tc bigint; n int; row jsonb; begin
   assert (select daily_day from profiles where id = u) = _game_day(), 'new accounts start paid up for today';
   assert (get_catalog()->'config'->>'daily_cash')::int = 50000;
   delete from activity where player_id = u;
@@ -71,10 +71,22 @@ do $$ declare u uuid := 'e1111111-1111-1111-1111-111111111111'; c bigint; a acti
   perform _tick(u);
   assert (select count(*) from activity where player_id = u and kind = 'daily_cash') = 2, 'fresh line after seen';
 
-  -- thugs aren't paid (their stash refills on its own)
+  -- thugs get it too, on top of a full stash, with no feed line; the hourly refill doesn't eat it
+  delete from activity where player_id = t;
   update profiles set cash = _bot_cash_cap(5), daily_day = _game_day() - 3 where id = t;
+  row := (select e from jsonb_array_elements(find_thugs()) e where e->>'name' = 'Thug 5');
+  assert (row->>'stash')::bigint = _bot_cash_cap(5) + 150000, 'thug list counts unswept daily cash: ' || row::text;
   perform _tick(t);
-  assert (select cash from profiles where id = t) = _bot_cash_cap(5), 'thug not paid';
+  assert (select cash from profiles where id = t) = _bot_cash_cap(5) + 150000, 'thug paid three days';
+  assert (select daily_day from profiles where id = t) = _game_day();
+  assert not exists (select 1 from activity where player_id = t), 'no feed line for thugs';
+  update profiles set stamina_tick = now() - interval '2 hours' where id = t;
+  perform _tick(t);
+  assert (select cash from profiles where id = t) = _bot_cash_cap(5) + 150000, 'refill leaves the extra alone';
+  -- once hunters drain it below the cap, the refill only brings it back to the cap
+  update profiles set cash = 1000, stamina_tick = now() - interval '2 hours' where id = t;
+  perform _tick(t);
+  assert (select cash from profiles where id = t) = _bot_cash_cap(5), 'refill tops up to the cap only';
 
   -- the rollover sweep pays everyone behind, offline or not, without touching last_seen
   update profiles set daily_day = _game_day() - 1, last_seen = now() - interval '30 days'
@@ -84,7 +96,7 @@ do $$ declare u uuid := 'e1111111-1111-1111-1111-111111111111'; c bigint; a acti
   assert n >= 2, 'swept ' || n;
   assert (select cash from profiles where id = 'e2222222-2222-2222-2222-222222222222') = c + 50000, 'offline player paid';
   assert (select last_seen from profiles where id = 'e2222222-2222-2222-2222-222222222222') < now() - interval '29 days', 'still looks offline';
-  assert not exists (select 1 from profiles where not is_bot and daily_day < _game_day()), 'everyone paid up';
+  assert not exists (select 1 from profiles where daily_day < _game_day()), 'everyone paid up, thugs included';
   assert _daily_sweep() = 0, 'second run pays nobody';
 end $$;
 
