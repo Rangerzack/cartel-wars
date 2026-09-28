@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { categoryLabel, money, num } from '../lib/format'
@@ -13,6 +13,7 @@ export default function Items() {
   const me = useMe()
   const { catalog, run, toast } = useGame()
   const [sp] = useSearchParams()
+  const nav = useNavigate()
   // deep links: /items?tab=shop&cat=weapon, /items?setup=defense (and the old /items#shop)
   const [tab, setTab] = useState<'setups' | 'shop'>(sp.get('tab') === 'shop' || window.location.hash === '#shop' ? 'shop' : 'setups')
   const [setup, setSetup] = useState<SetupKind>((['offense', 'defense', 'jail'] as const).find(s => s === sp.get('setup')) ?? 'offense')
@@ -60,7 +61,7 @@ export default function Items() {
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}
                 {setup === 'jail' && 'Used for all fights while you are in jail — regular weapons are confiscated, jail weapons only work here. '}
-                Barehands baseline is 20/20. Only your single best vehicle counts. A weapon and protection with the same style give a combo bonus.
+                Both numbers matter: your attack goes against their defense, and their attack against your defense. Barehands baseline is 20/20. Only your single best vehicle counts. A weapon and protection with the same style give a combo bonus.
               </div>
             </div>
           </Card>
@@ -77,7 +78,7 @@ export default function Items() {
               return (
                 <div key={i.item_id} className="row">
                   <div className="grow">
-                    <div className="t">{i.name} <span className="muted small">×{i.qty}</span></div>
+                    <div className="t">{catalog.items.find(d => d.id === i.item_id)?.drop_only && <span className="find-tag">🎁 </span>}{i.name} <span className="muted small">×{i.qty}</span></div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${i.capacity} ` : ''}{i.combo_tag ? `· ${i.combo_tag}` : ''}</div>
                   </div>
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
@@ -98,21 +99,24 @@ export default function Items() {
           <Card>
             {catalog.items.filter(i => i.category === cat).map(i => {
               const have = inv.get(i.id)?.qty ?? 0
+              const drop = !!i.drop_only
               return (
-                <div key={i.id} className="row">
+                <div key={i.id} className={`row ${drop ? 'drop-only' : ''}`}>
                   <div className="grow">
-                    <div className="t">{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
+                    <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}{i.combo_tag ? `· ${i.combo_tag}` : ''}</div>
                   </div>
-                  {have > 0 && i.rep_price === 0 && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(i.price / 2)}</Btn>}
-                  {i.rep_price > 0
+                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(i.price / 2)}</Btn>}
+                  {drop
+                    ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on jobs</Btn>
+                    : i.rep_price > 0
                     ? <Btn className="sm blue" disabled={me.reputation < i.rep_price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Earned ${i.name}` })}>⭐ {num(i.rep_price)}</Btn>
                     : <Btn className="sm gold" disabled={me.cash < i.price} onClick={() => buy(i.id, i.category, i.name)}>{money(i.price)}</Btn>}
                 </div>
               )
             })}
           </Card>
-          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price and only works for unequipped units. ★ Rare items are bought with Reputation (you have ⭐ {num(me.reputation)}) from reputation actions, and can't be sold.</div>
+          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price and only works for unequipped units. ★ Rare items are bought with Reputation (you have ⭐ {num(me.reputation)}) from reputation actions, and can't be sold. 🎁 Rare finds are the best of each kind; they only turn up on jobs and can't be bought or sold.</div>
         </>
       )}
     </div>

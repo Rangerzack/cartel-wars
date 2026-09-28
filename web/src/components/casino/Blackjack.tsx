@@ -1,59 +1,198 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
-import type { BlackjackState } from '../../lib/types'
+import type { BlackjackHand, BlackjackOutcome, BlackjackState } from '../../lib/types'
 import { Card, Empty } from '../ui'
-import { BetPicker, Cards, Net, useBet } from './shared'
+import { BetPicker, ChipStack, Net, PlayingCard, useBet } from './shared'
+import { basicStrategy, type BjMove } from './strategy'
 
-const OUTCOME: Record<string, string> = {
-  blackjack: 'Blackjack! Pays 3:2', win: 'You win', push: 'Push', lose: 'Dealer wins', bust: 'Bust', dealer_bust: 'Dealer busts — you win',
+const TAG: Record<BlackjackOutcome, { t: string; cls: string }> = {
+  blackjack: { t: 'Blackjack', cls: 'gold' }, win: { t: 'Win', cls: 'green' }, dealer_bust: { t: 'Win', cls: 'green' },
+  push: { t: 'Push', cls: 'muted' }, lose: { t: 'Lose', cls: 'red' }, bust: { t: 'Bust', cls: 'red' },
 }
+const DEAL_GAP = 0.14      // seconds between cards on the opening deal
+const DEALER_GAP = 0.45    // seconds between the dealer's draws
+
+/** The one hand before splits existed, or every hand after. */
+function handsOf(g: BlackjackState): BlackjackHand[] {
+  if (g.hands?.length) return g.hands
+  return [{ cards: g.player, total: g.player_total, soft: g.player_soft, bet: g.wager, doubled: false, split: false,
+            done: g.status === 'done', active: g.status === 'playing', result: g.result && g.result.outcome !== 'split' ? { outcome: g.result.outcome, payout: g.result.payout, net: g.result.net } : null }]
+}
+
+function readHint(): boolean { try { return localStorage.getItem('cw.bj.hint') === '1' } catch { return false } }
 
 export default function Blackjack() {
   const me = useMe()
   const { run, toast } = useGame()
   const [wager, setWager] = useBet('blackjack')
   const [g, setG] = useState<BlackjackState | null>(null)
+  const [round, setRound] = useState(0)
+  const [fresh, setFresh] = useState(false)          // opening-deal animation in progress
+  const [hint, setHintRaw] = useState(readHint)
+  const [session, setSession] = useState({ hands: 0, net: 0 })
+  const [busy, setBusy] = useState(false)
+  const counted = useRef(-1)
+  const setHint = (v: boolean) => { setHintRaw(v); try { localStorage.setItem('cw.bj.hint', v ? '1' : '0') } catch { /* private mode */ } }
+
   useEffect(() => { api.blackjackState().then(setG).catch(e => toast(e.message, 'bad')) }, [toast])
 
+  const tally = useCallback((r: BlackjackState, rnd: number) => {
+    if (r.status === 'done' && r.result && counted.current !== rnd) {
+      counted.current = rnd
+      setSession(s => ({ hands: s.hands + 1, net: s.net + r.result!.net }))
+    }
+  }, [])
+
   const playing = g?.status === 'playing'
-  async function deal() { const r = await run(() => api.blackjackDeal(wager), { silent: true }); if (r) setG(r) }
-  async function act(a: 'hit' | 'stand' | 'double') { const r = await run(() => api.blackjackAction(a), { silent: true }); if (r) setG(r) }
+  const hands = g && g.status !== 'none' ? handsOf(g) : []
+  const cur = hands.find(h => h.active) ?? hands[0]
+  const extra = cur?.bet ?? 0
+  const canDouble = !!g?.can_double && me.cash >= extra
+  const canSplit = !!g?.can_split && me.cash >= extra
+  const book: BjMove | null = playing && hint && cur && g?.dealer?.[0] ? basicStrategy(cur.cards, g.dealer[0], !!g.can_double, !!g.can_split) : null
+
+  const deal = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    const r = await run(() => api.blackjackDeal(wager), { silent: true })
+    if (r) {
+      const rnd = round + 1
+      setRound(rnd); setFresh(true); setG(r); tally(r, rnd)
+      window.setTimeout(() => setFresh(false), 900)
+    }
+    setBusy(false)
+  }, [busy, run, wager, round, tally])
+
+  const act = useCallback(async (a: BjMove) => {
+    if (busy) return
+    setBusy(true)
+    const r = await run(() => api.blackjackAction(a), { silent: true })
+    if (r) { setG(r); tally(r, round) }
+    setBusy(false)
+  }, [busy, run, round, tally])
+
+  // keyboard: H hit · S stand · D double · P split · Enter/Space deal
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      const k = e.key.toLowerCase()
+      if (playing) {
+        if (k === 'h') act('hit')
+        else if (k === 's') act('stand')
+        else if (k === 'd' && canDouble) act('double')
+        else if (k === 'p' && canSplit) act('split')
+      } else if ((k === 'enter' || k === ' ') && me.cash >= wager && g) { e.preventDefault(); deal() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [playing, canDouble, canSplit, act, deal, me.cash, wager, g])
+
+  const done = g?.status === 'done'
+  const dealerCards = g?.dealer_hidden ? [g.dealer[0], null] : g?.dealer ?? []
+  const settleDelay = done ? Math.max(0, (dealerCards.length - 2)) * DEALER_GAP + 0.35 : 0
 
   return (
-    <Card title="🃏 Blackjack" right={<small>6 decks · dealer stands on 17 · BJ pays 3:2</small>}>
+    <Card title="🃏 Blackjack" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
       <div className="bd stack">
-        {!g ? <Empty><span className="spin" /></Empty> : g.status === 'none' ? (
-          <div className="bjtable"><Empty>Place a bet and deal.</Empty></div>
-        ) : (
-          <div className={`bjtable ${g.status === 'done' ? (g.result && g.result.net > 0 ? 'won' : g.result && g.result.net < 0 ? 'lost' : '') : ''}`}>
-            <div className="hand">
-              <div className="small muted">Dealer {g.dealer_hidden ? '' : `· ${g.dealer_total}`}</div>
-              <Cards list={g.dealer_hidden ? [g.dealer[0], null] : g.dealer} size="lg" />
+        {!g ? <Empty><span className="spin" /></Empty> : (
+          <div className={`bj-felt ${done && g.result ? (g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : 'push') : ''}`}>
+            <div className="bj-arc">Blackjack pays 3 to 2</div>
+
+            <div className="bj-dealer">
+              {g.status === 'none' ? <div className="bj-shoe">Dealer</div> : (
+                <>
+                  <div className="bj-cards">
+                    {dealerCards.map((c, i) => {
+                      const flip = i === 1 && !g.dealer_hidden
+                      const delay = fresh ? (i === 0 ? 1 : 3) * DEAL_GAP : i >= 2 ? (i - 1) * DEALER_GAP : flip ? 0 : 0
+                      return <PlayingCard key={`${round}-d${i}-${c ?? 'x'}`} c={c} size="xl" className={flip && !fresh ? 'flipin' : 'dealin'} style={{ animationDelay: `${delay}s` }} />
+                    })}
+                  </div>
+                  <span className="bj-total dealer">{g.dealer_hidden ? g.dealer_total : g.dealer_total > 21 ? `Bust ${g.dealer_total}` : g.dealer_total}</span>
+                </>
+              )}
             </div>
-            <div className="hand">
-              <div className="small muted">You · {g.player_total}{g.player_soft && g.player_total < 21 ? ' (soft)' : ''} · {money(g.wager)}</div>
-              <Cards list={g.player} size="lg" />
+
+            <div className="bj-rules">Dealer stands on all 17s · Double any two · Split to 4 hands</div>
+
+            <div className={`bj-hands n${Math.max(1, hands.length)}`}>
+              {g.status === 'none' && (
+                <div className="bj-hand">
+                  <div className="bj-spot">{wager > 0 && <ChipStack amount={wager} />}</div>
+                  <div className="small muted center">Pick a bet and deal</div>
+                </div>
+              )}
+              {hands.map((h, hi) => (
+                <div key={`${round}-h${hi}-${h.cards[0]}`} className={`bj-hand ${h.active ? 'active' : ''} ${h.result ? 'settled ' + TAG[h.result.outcome].cls : ''}`}>
+                  <div className="bj-cards fan">
+                    {h.cards.map((c, ci) => (
+                      <PlayingCard key={`${round}-${hi}-${ci}-${c}`} c={c} size="xl" className="dealin"
+                        style={{ animationDelay: `${fresh && hands.length === 1 && ci < 2 ? (ci === 0 ? 0 : 2) * DEAL_GAP : 0}s` }} />
+                    ))}
+                  </div>
+                  <span className={`bj-total ${h.total > 21 ? 'bust' : h.total === 21 ? 'twentyone' : ''}`}>
+                    {h.total > 21 ? `Bust ${h.total}` : h.soft && h.total < 21 && !h.done ? `${h.total - 10} / ${h.total}` : h.total}
+                  </span>
+                  <div className="bj-bet"><ChipStack amount={h.bet} />{h.doubled && <span className="pill gold">Doubled</span>}</div>
+                  {h.result && (
+                    <div className={`bj-tag ${TAG[h.result.outcome].cls}`} style={{ animationDelay: `${settleDelay}s` }}>
+                      {TAG[h.result.outcome].t}{h.result.net !== 0 && <> · <Net n={h.result.net} /></>}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            {g.status === 'done' && g.result && (
-              <div className="center outcome">{OUTCOME[g.result.outcome]} · <Net n={g.result.net} /></div>
-            )}
           </div>
         )}
-        {playing ? (
-          <div className="hstack">
-            <button className="btn grow" onClick={() => act('hit')}>Hit</button>
-            <button className="btn doit grow" onClick={() => act('stand')}>Stand</button>
-            <button className="btn gold grow" disabled={!g?.can_double || me.cash < (g?.wager ?? 0)} onClick={() => act('double')}>Double</button>
+
+        {done && g?.result && (
+          <div className={`bj-summary ${g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : ''}`} style={{ animationDelay: `${settleDelay}s` }}>
+            {summary(g)} <Net n={g.result.net} />
           </div>
+        )}
+
+        {playing ? (
+          <>
+            {book && <div className="bj-hintline">📖 The book says: <b>{book === 'split' ? 'Split' : book[0].toUpperCase() + book.slice(1)}</b></div>}
+            <div className="bj-actions">
+              <button className={`btn ${book === 'hit' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('hit')}>Hit<small>H</small></button>
+              <button className={`btn doit ${book === 'stand' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('stand')}>Stand<small>S</small></button>
+              <button className={`btn gold ${book === 'double' ? 'hinted' : ''}`} disabled={busy || !canDouble} onClick={() => act('double')}>Double<small>+{money(extra)}</small></button>
+              <button className={`btn blue ${book === 'split' ? 'hinted' : ''}`} disabled={busy || !canSplit} onClick={() => act('split')}>Split<small>+{money(extra)}</small></button>
+            </div>
+            {g?.can_double && !canDouble && <div className="why">Doubling needs {money(extra)} on hand.</div>}
+            {g?.can_split && !canSplit && <div className="why">Splitting needs {money(extra)} on hand.</div>}
+          </>
         ) : (
           <>
             <BetPicker value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
-            <button className="btn gold block" disabled={me.cash < wager} onClick={deal}>Deal for {money(wager)}</button>
+            <button className="btn gold block bj-deal" disabled={busy || me.cash < wager || !g} onClick={deal}>
+              {me.cash < wager ? `Need ${money(wager)} on hand` : done ? `Deal again · ${money(wager)}` : `Deal · ${money(wager)}`}
+            </button>
           </>
         )}
+
+        <div className="spread small muted">
+          <span>{session.hands ? <>This session: {session.hands} hand{session.hands > 1 ? 's' : ''} · <Net n={session.net} /></> : 'Keys: H hit · S stand · D double · P split · Enter deal'}</span>
+          <label className="toggle"><input type="checkbox" checked={hint} onChange={e => setHint(e.target.checked)} /> Strategy hint</label>
+        </div>
       </div>
     </Card>
   )
+}
+
+function summary(g: BlackjackState): string {
+  const r = g.result!
+  if (r.outcome === 'split') return `${r.hands?.length ?? 2} hands settled —`
+  switch (r.outcome) {
+    case 'blackjack': return 'Blackjack! Paid 3 to 2 —'
+    case 'dealer_bust': return `Dealer busts with ${g.dealer_total} —`
+    case 'win': return `${g.player_total} beats ${g.dealer_total} —`
+    case 'push': return `Push at ${g.player_total} —`
+    case 'bust': return `Bust with ${g.player_total} —`
+    case 'lose': return g.dealer.length === 2 && g.dealer_total === 21 ? 'Dealer has blackjack —' : `Dealer's ${g.dealer_total} beats ${g.player_total} —`
+  }
 }

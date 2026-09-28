@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  ActivityItem, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
+  ActionResult, ActivityItem, RecentFind, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -22,7 +22,9 @@ export const api = {
   updateProfile: (avatar: string | null, bio: string | null) => rpc<{ ok: boolean }>('update_profile', { avatar, bio }),
 
   // actions
-  doAction: (action_id: number) => rpc<{ pay: number; rep: number; busted: boolean; heat: number; stamina: number; cash: number }>('do_action', { action_id }),
+  doAction: (action_id: number) => rpc<ActionResult>('do_action', { action_id }),
+  recentFinds: (limit_n = 8) => rpc<RecentFind[]>('recent_finds', { limit_n }),
+  findThugs: () => rpc<ThugRow[]>('find_thugs'),
 
   // fights
   attack: (target: string) => rpc<FightResult>('attack', { target }),
@@ -122,7 +124,7 @@ export const api = {
   crapsClear: () => rpc<CrapsState>('craps_clear'),
   blackjackState: () => rpc<BlackjackState>('blackjack_state'),
   blackjackDeal: (wager: number) => rpc<BlackjackState>('blackjack_deal', { wager }),
-  blackjackAction: (action: 'hit' | 'stand' | 'double') => rpc<BlackjackState>('blackjack_action', { action }),
+  blackjackAction: (action: 'hit' | 'stand' | 'double' | 'split') => rpc<BlackjackState>('blackjack_action', { action }),
   pokerLobby: () => rpc<PokerTableInfo[]>('poker_lobby'),
   pokerJoin: (tid: number, seat_no: number, buyin: number) => rpc<PokerState>('poker_join', { tid, seat_no, buyin }),
   pokerLeave: () => rpc<{ cashed_out: number }>('poker_leave'),

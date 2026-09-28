@@ -68,11 +68,18 @@ export interface ActionDef {
   id: number; name: string; description: string; stamina_cost: number; pay_min: number; pay_max: number
   pay_rep: number; heat_gain: number; cash_cost: number; requires_item: number | null; min_crew: number; is_jail: boolean
   effect: string | null; sort: number
+  /** The rare find this job can turn up (chance = stamina_cost / config.drop_stamina). */
+  drop_item?: number | null
 }
 export interface ItemDef {
   id: number; name: string; category: ItemCategory; att: number; def: number; capacity: number
   price: number; rep_price: number; combo_tag: string | null; sort: number
+  /** Found only on actions; can't be bought or sold. */
+  drop_only?: boolean
 }
+export interface RareFind { id: number; name: string; category: ItemCategory; att: number; def: number; owned: number }
+export interface RecentFind { player_id: string; player: string; item: string; item_id: number; action: string | null; at: string }
+export interface ActionResult { pay: number; rep: number; busted: boolean; heat: number; stamina: number; cash: number; found?: RareFind | null }
 export interface CommodityDef {
   code: Commodity; name: string; base_price: number; hustler_units: number; refill_stamina: number
   refill_health: number; grow_rate: number; grow_cap: number; grow_price: number; sort: number
@@ -96,9 +103,18 @@ export interface PublicPlayer {
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
   last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
 }
+/** A +1 edge in a fight and who holds it, from the attacker's side. */
+export interface FightEdge { k: 'defender' | 'cash' | 'heat'; side: 'you' | 'them' }
 export interface FightResult {
   won: boolean; damage_dealt: number; damage_taken: number; cash: number; their_health: number; my_health: number
   hospitalized_them: boolean; hospitalized_me: boolean; busted: boolean; my_att: number; their_def: number; dry: boolean
+  // head-to-head scoring (optional so the page still works against an older database)
+  my_def?: number; their_att?: number; my_score?: number; their_score?: number; my_roll?: number; their_roll?: number
+  edges?: FightEdge[]
+}
+export interface ThugRow {
+  id: string; name: string; avatar: string; level: number; stash: number; health: number; health_max: number
+  hospital: boolean; win_pct: number; hits: number; dry: boolean
 }
 export interface FightLog {
   id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
@@ -173,10 +189,10 @@ export interface LedgerEntry {
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
-export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked'
+export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null
@@ -187,6 +203,10 @@ export interface FightPreview {
   win_pct: number; dmg_min: number; dmg_max: number; my_health: number; hospital_risk: boolean
   dry: boolean; hits_this_hour: number; stamina_cost: number; heat_gain: number; bust_pct: number
   setup: SetupKind; their_setup: SetupKind
+  // head-to-head scoring (optional so the page still works against an older database)
+  win_exact?: number; edges?: FightEdge[]; edge_you?: number; edge_them?: number
+  base_you?: number; base_them?: number; combo_you?: boolean; combo_them?: boolean
+  my_att?: number; my_def?: number; their_att?: number; their_def?: number
 }
 
 export interface TopUsers {
@@ -209,14 +229,33 @@ export interface RouletteResult {
   number: number; color: 'red' | 'black' | 'green'; wager: number; payout: number; net: number
   bets: (RouletteBet & { win: number })[]
 }
-export type CrapsBetKind = 'pass' | 'dont' | 'field' | 'place6' | 'place8' | 'any7' | 'anycraps'
-export interface CrapsState { point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null }
-export interface CrapsLast { dice: [number, number]; sum: number; log: { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays'; win?: number }[] }
-export interface CrapsRoll extends CrapsLast { point: number | null; bets: CrapsState['bets']; wager: number; payout: number; net: number }
+export type CrapsNumber = 4 | 5 | 6 | 8 | 9 | 10
+export type CrapsBetKind = 'pass' | 'dont' | 'pass_odds' | 'dont_odds' | 'field' | 'come' | 'dcome'
+  | `place${CrapsNumber}` | `come${CrapsNumber}` | `come${CrapsNumber}_odds` | `dcome${CrapsNumber}` | `dcome${CrapsNumber}_odds`
+  | 'hard4' | 'hard6' | 'hard8' | 'hard10' | 'any7' | 'anycraps'
+export type CrapsEvent = 'natural' | 'craps' | 'point' | 'hit' | 'seven_out' | 'roll'
+export interface CrapsLogLine { bet: CrapsBetKind; amount: number; result: 'win' | 'lose' | 'push' | 'stays' | 'off' | 'moves'; win?: number; stays?: boolean; to?: number }
+export interface CrapsHistoryRoll { dice: [number, number]; sum: number; event: CrapsEvent }
+export interface CrapsLast { dice: [number, number]; sum: number; log: CrapsLogLine[]; event?: CrapsEvent }
+export interface CrapsState {
+  point: number | null; bets: Partial<Record<CrapsBetKind, number>>; last: CrapsLast | null
+  history?: CrapsHistoryRoll[]
+  /** Most odds you can have behind each line bet right now. */
+  odds_max?: { pass_odds: number; dont_odds: number; come?: Record<string, number>; dcome?: Record<string, number> }
+}
+export interface CrapsRoll extends CrapsState {
+  dice: [number, number]; sum: number; event?: CrapsEvent; log: CrapsLogLine[]; wager: number; payout: number; net: number
+}
+export type BlackjackOutcome = 'blackjack' | 'win' | 'push' | 'lose' | 'bust' | 'dealer_bust'
+export interface BlackjackHand {
+  cards: string[]; total: number; soft: boolean; bet: number; doubled: boolean; split: boolean; done: boolean; active: boolean
+  result: { outcome: BlackjackOutcome; payout: number; net: number } | null
+}
 export interface BlackjackState {
   status: 'none' | 'playing' | 'done'; wager: number; player: string[]; player_total: number; player_soft: boolean
-  dealer: string[]; dealer_total: number; dealer_hidden: boolean; can_double: boolean
-  result: { outcome: 'blackjack' | 'win' | 'push' | 'lose' | 'bust' | 'dealer_bust'; payout: number; net: number } | null
+  dealer: string[]; dealer_total: number; dealer_hidden: boolean; can_double: boolean; can_split?: boolean
+  hands?: BlackjackHand[]; active?: number
+  result: { outcome: BlackjackOutcome | 'split'; payout: number; net: number; hands?: { outcome: BlackjackOutcome; payout: number; net: number }[] } | null
 }
 export interface PokerTableInfo {
   id: number; name: string; small_blind: number; big_blind: number; min_buyin: number; max_buyin: number; seats: number

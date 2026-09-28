@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, hoodlumIcon, money, num, timeLeft, every } from '../lib/format'
+import { commodityIcon, hoodlumIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 
@@ -85,12 +85,13 @@ export default function Services() {
             <Qty value={bribe} onChange={setBribe} min={1} max={Math.max(1, me.heat)} />
           </div>
           <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeN * cfg.bribe_per_heat} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeN * cfg.bribe_per_heat)}</Btn>
+          <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({cfg.heat_red}+) risks a bust on every job and attack, so you only need to bribe it back under {cfg.heat_red}.</div>
         </div>
       </Card>
 
       <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
-          <div className="small muted">Cash on hand can be taken in fights. Banked cash can't.</div>
+          <div className="small muted">Cash on hand can be taken in fights. Banked cash can't. Carrying more cash than the other side is worth +1 in a fight, though. {cfg.daily_cash ? <>Everyone gets {money(cfg.daily_cash)} on hand at 00:00 UTC — next in {timeLeft(nextRollover(now), now)}.</> : null}</div>
           <input className="input" inputMode="numeric" placeholder="Amount" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
           <div className="grid2">
             <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={() => run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })}>Deposit</Btn>
@@ -103,7 +104,7 @@ export default function Services() {
         </div>
       </Card>
 
-      <Card id="refills" title="⚡ Refills" right={<small>{me.refills_used}/3 product refills today</small>}>
+      <Card id="refills" title="⚡ Refills" right={<small>{Math.min(3, me.refills_used)}/3 full product refills today</small>}>
         {(['stamina', 'health'] as const).map(kind => (
           <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
             <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(kind === 'stamina' ? me.stamina : me.health)}/{num(kind === 'stamina' ? me.stamina_max : me.health_max)}</span></div>
@@ -114,7 +115,7 @@ export default function Services() {
             })}
           </div>
         ))}
-        <div className="row small muted">After three product refills in a day, the next ones only restore half.</div>
+        <div className="row small muted">After three product refills in a day, the next ones only restore half. All three come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}.</div>
       </Card>
 
       <Card title="💎 Upgrades" right={<small>{num(me.diamonds)} diamonds</small>}>

@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { ago, every, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
-import type { FightPreview, FightResult, PublicPlayer } from '../lib/types'
+import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 
 export default function Player() {
@@ -89,7 +89,19 @@ export default function Player() {
               <Stat k="Damage taken" v={result.damage_taken} cls="red" />
             </div>
             <p style={{ margin: 0 }} className={result.won ? 'gold' : 'red'}>{result.dry ? `${p.name} has been shaken down enough this hour — no cash changed hands.` : result.won ? `You took ${money(result.cash)} off ${p.name}.` : `${p.name} took ${money(result.cash)} off you.`}</p>
-            <div className="small muted">Your attack {result.my_att} vs their defense {result.their_def}. Their health is now {result.their_health}; yours {result.my_health}.</div>
+            {result.my_score != null && result.their_score != null && (
+              <div className={`scoreline ${result.won ? 'won' : 'lost'}`}>
+                <span>You <b className="tabular">{result.my_score.toFixed(1)}</b></span>
+                <span className="muted small">vs</span>
+                <span><b className="tabular">{result.their_score.toFixed(1)}</b> {p.name}</span>
+              </div>
+            )}
+            {result.edges && <Edges edges={result.edges} />}
+            <div className="small muted">
+              Your attack {result.my_att} vs their defense {result.their_def}{result.their_att != null && <> · their attack {result.their_att} vs your defense {result.my_def}</>}.
+              {' '}{result.won ? 'You won, so your hit landed in full and theirs only glanced.' : result.my_score != null ? 'They won the exchange, so their hit landed in full and yours only glanced.' : ''}
+              {' '}Their health is now {result.their_health}; yours {result.my_health}.
+            </div>
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
             {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
@@ -115,10 +127,36 @@ function Odds({ pv, name }: { pv: FightPreview; name: string }) {
     <div className="odds-box">
       <div className="spread"><span className="small muted">Your odds vs {name}</span><b className={cls}>{label} · {pv.win_pct >= 100 ? '>99' : pv.win_pct <= 0 ? '<1' : `~${pv.win_pct}`}%</b></div>
       <div className={`odds ${cls}`}><div className="fill" style={{ width: Math.max(3, pv.win_pct) + '%' }} /></div>
+      {pv.edges && <Edges edges={pv.edges} />}
+      {pv.base_you != null && pv.base_them != null && (
+        <div className="small muted tabular">Gear alone: your hit {pv.base_you.toFixed(1)} vs theirs {pv.base_them.toFixed(1)}. Each side adds a 0–6 roll plus its edges{pv.combo_you || pv.combo_them ? ', and a weapon combo adds 0–10' : ''}. Higher total wins; a tie goes to the defender.</div>
+      )}
       <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs ⚡{pv.stamina_cost} · 🔥+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
       {pv.dry && <div className="warn">You've hit them {pv.hits_this_hour}× this hour — you can still fight, but no cash changes hands.</div>}
       {pv.hospital_risk && <div className="warn">At {pv.my_health} health, a bad fight could put you in the hospital.</div>}
       {pv.bust_pct > 0 && <div className="warn">Your heat is in the red — about {pv.bust_pct}% chance a patrol picks you up after.</div>}
     </div>
   )
+}
+
+const EDGE: Record<FightEdge['k'], { icon: string; label: string }> = {
+  defender: { icon: '🛡️', label: 'Defending' },
+  cash: { icon: '💵', label: 'More cash on hand' },
+  heat: { icon: '🔥', label: 'More heat' },
+}
+
+/** The +1 edges each side holds: the defender always gets one; more cash on hand and more heat get one each. */
+export function Edges({ edges }: { edges: FightEdge[] }) {
+  const side = (who: FightEdge['side']) => edges.filter(e => e.side === who)
+  const col = (who: FightEdge['side'], title: string) => {
+    const list = side(who)
+    return (
+      <div className="edge-col">
+        <div className="k">{title} <b className="tabular">+{list.length}</b></div>
+        {list.length ? list.map(e => <span key={e.k} className={`pill ${who === 'you' ? 'green' : 'red'}`}>{EDGE[e.k].icon} {EDGE[e.k].label}</span>)
+          : <span className="small muted">no edges</span>}
+      </div>
+    )
+  }
+  return <div className="edges">{col('you', 'Your edges')}{col('them', 'Their edges')}</div>
 }

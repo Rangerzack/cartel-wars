@@ -60,7 +60,7 @@ function History() {
       {h.recent.length === 0 && <Empty>No bets yet.</Empty>}
       {h.recent.map((r, i) => (
         <div key={i} className="row">
-          <div className="grow"><div className="t">{GAME_LABEL[r.game] ?? r.game}</div><div className="s">{money(r.wager)} wagered · {ago(r.at)}</div></div>
+          <div className="grow"><div className="t">{GAME_LABEL[r.game] ?? r.game}</div><div className="s">{r.wager > 0 ? `${money(r.wager)} wagered` : 'bet stayed up'} · {ago(r.at)}</div></div>
           <Net n={r.net} />
         </div>
       ))}
