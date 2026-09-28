@@ -86,7 +86,8 @@ roughly 10% win chance in an even fight). The winner's hit lands in full; the
 loser's lands at 35% *(ours)*. NPC thugs fight at half their gear at Thug 1,
 rising to full at Thug 200, so new players can farm the first forty or so. The
 Player page shows exact odds (every roll enumerated) and both sides' edges; the
-Fight page's **Thugs** tab ranks all 200 by what a hit is worth to you.
+Fight page's **Thugs** tab ranks all 200 by what a hit is worth to you. Thugs don't
+appear on Top Users, the weekly boards or ribbons.
 The winner takes 5–10% of the loser's cash on hand *(ours)*;
 after three hits on the same target within an hour the cash dries up (fights
 still happen, no money moves) *(ours, anti-farming)*. Anyone dropping to ≤19 Health lands in

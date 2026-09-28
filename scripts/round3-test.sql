@@ -244,4 +244,24 @@ do $$ declare u uuid := 'e3333333-3333-3333-3333-333333333333'; a action_defs; r
   assert (select (e->>'drop_only')::boolean from jsonb_array_elements(get_catalog()->'items') e where e->>'name' = 'MRAP'), 'catalog marks finds';
 end $$;
 
+-- Thugs stay off the leaderboards ------------------------------------------------------------------------
+do $$ declare t uuid := (select id from profiles where name = 'Thug 3'); b jsonb; me uuid := 'e2222222-2222-2222-2222-222222222222'; begin
+  -- a thug with the most wins and a big defense week still doesn't rank
+  update profiles set fights_won = 1000000, actions_done = 1000000, market_volume = 1000000000 where id = t;
+  insert into accolade_events (player_id, kind, amount) values (t, 'defense', 1000000), (t, 'defense', 5);
+  b := top_users();
+  assert not exists (select 1 from jsonb_array_elements(b->'fighters') e where e->>'name' like 'Thug %'), 'no thugs in Top Fighters: ' || (b->'fighters')::text;
+  assert not exists (select 1 from jsonb_array_elements(b->'hustlers') e where e->>'name' like 'Thug %');
+  assert not exists (select 1 from jsonb_array_elements(b->'traders') e where e->>'name' like 'Thug %');
+  b := get_accolades()->'this_week'->'defense';
+  assert b is null or not exists (select 1 from jsonb_array_elements(b) e where e->>'name' like 'Thug %'), 'no thugs on the weekly boards: ' || coalesce(b::text, 'none');
+  -- last week: the thug out-defended a player, but the player still takes gold and the thug gets no ribbon
+  insert into accolade_events (player_id, kind, amount, created_at) values
+    (t, 'defense', 999, now() - interval '7 days'), (me, 'defense', 1, now() - interval '7 days');
+  assert _ribbons(t) = '[]'::jsonb, 'thugs wear no ribbons';
+  assert exists (select 1 from jsonb_array_elements(_ribbons(me)) r where r->>'kind' = 'defense' and (r->>'rank')::int = 1), 'player ranks first among players: ' || _ribbons(me)::text;
+  delete from accolade_events where player_id = t;
+  update profiles set fights_won = 0, actions_done = 0, market_volume = 0 where id = t;
+end $$;
+
 select 'ROUND 3 TEST PASSED';
