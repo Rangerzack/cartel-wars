@@ -52,3 +52,16 @@ export const chips = (n: number | null | undefined) => {
 
 /** "every minute" / "every 10 minutes" */
 export const every = (mins: number | null | undefined) => (!mins || mins === 1 ? 'every minute' : `every ${mins} minutes`)
+
+/** The game day rolls over at 00:00 UTC (refills come back, daily cash lands). */
+export function nextRollover(now = Date.now()): string {
+  const d = new Date(now)
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toISOString()
+}
+
+/** "1 in 500" for a job's rare-find chance (stamina_cost / drop_stamina). */
+export const dropOdds = (stamina: number, dropStamina: number | undefined) =>
+  `1 in ${num(Math.round((dropStamina || 6000) / Math.max(1, stamina)))}`
+
+/** Icons for the four rare finds, by kind. */
+export const findIcon: Record<string, string> = { weapon: '🚀', protection: '🦺', transport: '🚙', jail_weapon: '🔫' }

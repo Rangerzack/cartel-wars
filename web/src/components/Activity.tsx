@@ -6,6 +6,7 @@ import { CrewLink, PlayerLink } from './Linked'
 
 const icon: Record<ActivityItem['kind'], string> = {
   attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', applied: '📨', joined: '🤝', kicked: '🚪',
+  daily_cash: '💰',
 }
 
 /** Where tapping an activity line takes you. */
@@ -15,6 +16,8 @@ export function activityLink(a: ActivityItem): string | null {
     case 'crew_fight': case 'joined': case 'kicked': case 'applied': return a.crew_id ? `/crew/${a.crew_id}` : '/crew'
     case 'siege': case 'block_lost': case 'block_taken': return a.hood_id ? `/territory?hood=${a.hood_id}${a.block_id ? `&block=${a.block_id}` : ''}` : '/territory'
     case 'sold': return '/economy?tab=market'
+    case 'daily_cash': return '/services?focus=bank'
+    default: return null
   }
 }
 
@@ -22,7 +25,7 @@ export function activityLink(a: ActivityItem): string | null {
 function amount(a: ActivityItem): number | null {
   const d = a.data
   if (a.kind === 'attacked') { const net = (d.cash_won ?? 0) - (d.cash_lost ?? 0); return net === 0 ? null : net }
-  if (a.kind === 'sold') return d.cash ?? null
+  if (a.kind === 'sold' || a.kind === 'daily_cash') return d.cash ?? null
   return null
 }
 
@@ -50,6 +53,10 @@ function Sentence({ a }: { a: ActivityItem }) {
     case 'applied': body = <>{who} applied to join your crew</>; break
     case 'joined': body = <>{who} let you into {crew}</>; break
     case 'kicked': body = <>{who} removed you from {crew}</>; break
+    case 'daily_cash': body = (d.days ?? 1) > 1
+      ? <>Daily cash for {d.days} days landed on hand — bank it before someone takes it</>
+      : <>Daily cash landed on hand — bank it before someone takes it</>; break
+    default: body = null
   }
   return <>{body}</>
 }

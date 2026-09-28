@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { every, money, num } from '../lib/format'
+import { ago, dropOdds, every, findIcon, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal } from '../components/ui'
-import type { ActionDef } from '../lib/types'
+import type { ActionDef, RareFind, RecentFind } from '../lib/types'
 
 type Sort = 'default' | 'cash' | 'rep'
 type Result = { a: ActionDef; pay: number; rep: number; busted: boolean; heat: number; stamina: number }
@@ -17,7 +17,10 @@ export default function Actions() {
   // Only jail / busts get the pop-up — they change what you can do next. Everything else shows in place.
   const [bust, setBust] = useState<Result | null>(null)
   const [flash, setFlash] = useState<Record<number, Flash>>({})
-  const [session, setSession] = useState({ jobs: 0, cash: 0, rep: 0 })
+  const [session, setSession] = useState({ jobs: 0, cash: 0, rep: 0, finds: 0 })
+  const [found, setFound] = useState<{ item: RareFind; res: Result } | null>(null)
+  const [finds, setFinds] = useState<RecentFind[] | null>(null)
+  useEffect(() => { api.recentFinds(6).then(setFinds).catch(() => setFinds([])) }, [])
   // per-device view preferences
   const [onlyAvailable, setOnlyAvailableRaw] = useState(() => { try { return localStorage.getItem('cw.actions.available') === '1' } catch { return false } })
   const setOnlyAvailable = (v: boolean) => { setOnlyAvailableRaw(v); try { localStorage.setItem('cw.actions.available', v ? '1' : '0') } catch { /* private mode */ } }
@@ -52,7 +55,8 @@ export default function Actions() {
     const r = await run(() => api.doAction(a.id), { silent: true })
     if (!r) return
     const res: Result = { a, pay: r.pay, rep: r.rep, busted: r.busted, heat: r.heat, stamina: r.stamina }
-    setSession(s => ({ jobs: s.jobs + 1, cash: s.cash + (r.pay || 0), rep: s.rep + (r.rep || 0) }))
+    setSession(s => ({ jobs: s.jobs + 1, cash: s.cash + (r.pay || 0), rep: s.rep + (r.rep || 0), finds: s.finds + (r.found ? 1 : 0) }))
+    if (r.found) { setFound({ item: r.found, res }); api.recentFinds(6).then(setFinds).catch(() => {}); return }
     if (r.busted || a.effect === 'go_to_jail') { setBust(res); return }
     const key = ++flashKey.current
     setFlash(f => ({ ...f, [a.id]: { ...res, key } }))
@@ -70,7 +74,7 @@ export default function Actions() {
 
       <div className="spread">
         {session.jobs > 0
-          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'} · <b className="gold">+{money(session.cash)}</b>{session.rep > 0 && <> · <b className="dia">⭐ +{num(session.rep)}</b></>}</div>
+          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'} · <b className="gold">+{money(session.cash)}</b>{session.rep > 0 && <> · <b className="dia">⭐ +{num(session.rep)}</b></>}{session.finds > 0 && <> · <b className="find-tag">🎁 {session.finds}</b></>}</div>
           : <div className="small muted">Tap Do It — results show right on the job.</div>}
         <label className="toggle small"><input type="checkbox" checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Can do now</label>
       </div>
@@ -102,6 +106,7 @@ export default function Actions() {
                   {a.min_crew > 0 && <> · <span className={block === 'crew' ? 'red' : 'green'}>crew of {a.min_crew}</span></>}
                   {perStamina(a) > 0 && a.pay_rep === 0 && <span className="muted"> · ~{money(perStamina(a))}/⚡</span>}
                 </div>
+                {a.drop_item && <div className="find-tag">🎁 Rare find: <b>{itemName(a.drop_item)}</b> · {dropOdds(a.stamina_cost, catalog.config.drop_stamina)}</div>}
                 {f && (
                   <div key={f.key} className="action-result tabular">
                     {f.rep > 0 ? <b className="dia">⭐ +{f.rep} rep</b> : <b className="gold">+{money(f.pay)}</b>}
@@ -117,6 +122,29 @@ export default function Actions() {
           )
         })}
       </Card>
+      <Card title="🎁 Rare finds" right={<small>bigger jobs, better odds</small>}>
+        <div className="bd stack">
+          <div className="small muted">Every job can turn up one of four items you can't buy — each the best of its kind: {catalog.items.filter(i => i.drop_only).map(i => `${i.name} (${[i.att ? `att ${i.att}` : '', i.def ? `def ${i.def}` : ''].filter(Boolean).join(' / ')})`).join(', ')}. Bigger jobs have better odds: a 12-stamina job is 1 in 500.</div>
+          {finds && finds.length === 0 && <div className="small muted">Nobody's found one yet.</div>}
+          {finds && finds.length > 0 && (
+            <div className="finds-ticker">
+              {finds.map((f, i) => <div key={i} className="small"><a onClick={() => nav(`/player/${f.player_id}`)}>{f.player}</a> found a <b className="find-tag">{f.item}</b>{f.action ? <> on {f.action}</> : null} <span className="muted">· {ago(f.at)}</span></div>)}
+            </div>
+          )}
+        </div>
+      </Card>
+      {found && (
+        <Modal title="Rare find!" onClose={() => { const b = found.res; setFound(null); if (b.busted) setBust(b) }}>
+          <div className="find-modal">
+            <div className="big">{findIcon[found.item.category]}</div>
+            <div className="name">{found.item.name}</div>
+            <div className="small muted tabular">{found.item.att ? `att ${found.item.att}` : ''}{found.item.att && found.item.def ? ' · ' : ''}{found.item.def ? `def ${found.item.def}` : ''} · you own {num(found.item.owned)}</div>
+            <div className="small">Turned up on {found.res.a.name}. The best {found.item.category === 'jail_weapon' ? 'jail weapon' : found.item.category === 'transport' ? 'vehicle' : found.item.category} in the game — it can't be bought or sold.</div>
+            {found.res.busted && <div className="notice red">…and a patrol caught you on the way out. You're in jail.</div>}
+            <Btn className="gold block" onClick={() => { setFound(null); nav(`/items?setup=${found.item.category === 'jail_weapon' ? 'jail' : 'offense'}`) }}>Equip it</Btn>
+          </div>
+        </Modal>
+      )}
       {bust && (
         <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted!'} onClose={() => setBust(null)}>
           {bust.a.effect === 'go_to_jail' ? (

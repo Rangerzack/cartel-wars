@@ -18,13 +18,16 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 |---|---|---|---|---|
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
-| Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). |
-| Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. |
+| Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
+| Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every player account gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. |
 | Diamonds | starter grant | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses. Earned via achievements; no real-money purchase in this clone. |
 
 Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.
 Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
-halve in effect after 3 in a rolling 24h.
+halve in effect after 3 in a game day; all three come back at the 00:00 UTC rollover.
+
+The **game day** rolls over at 00:00 UTC, the same clock as the weekly boards: refills
+come back and daily cash lands.
 
 Players can send cash and Diamonds to each other from a profile *(wiki:
 "Send Money / Diamonds" buttons)*.
@@ -43,6 +46,13 @@ ships a 24-action ladder in that range plus 6 jail actions *(ours)*.
 Special action: **Bribe Police To Get In Jail** — 10 Stamina, $1,000 *(wiki)*.
 Players did this deliberately to use jail setups and jail actions.
 
+**Rare finds** *(Zack, from the original: "specialized weapons … only through
+actions, very rare drop rate")*: four items you can't buy or sell, each the best of
+its kind — TOW Missile (weapon, att 185), EOD Bomb Suit (protection, def 115),
+MRAP (vehicle, 15/40) and Zip Gun (jail weapon, att 60). Every job names the one it
+can turn up; the chance is `stamina_cost / 6000`, so a 12-stamina job is 1 in 500
+and spamming the 1-stamina job isn't a shortcut *(ours)*.
+
 ## Reputation (the 2011 "Reputation expansion")
 
 Five **reputation actions** pay no cash but add Reputation (⭐). Reputation
@@ -60,16 +70,24 @@ Attack from any player's profile (**One On One**). Requirements: attacker
 Stamina ≥2 (not consumed), both players' Health >19, target not in Hospital.
 No new-player immunity: new accounts can be attacked right away *(ours)*.
 
-Damage dealt to defender (max 80 *(wiki)*):
+Fights are **head-to-head**: both sides score the same way, and the higher score
+wins (max 80 *(wiki)*; a tie goes to the defender):
 
-- **Base 0–60**: from attacker's equipped Attack vs defender's equipped
-  Defense. Barehands baseline is 20/20. `base = 60 * att / (att + def)`.
-- **Situational 0–10**: random, nudged by comparative health, heat and stamina.
-- **Bonus −10…+10**: weapon-combo bonus (a weapon + matching protection in the
-  same setup).
+- **Base 0–60**: your Attack against their Defense. Barehands baseline is 20/20.
+  `base = 60 * att / (att + their def)`. The defender's base uses their defensive
+  setup's Attack against your offensive setup's Defense.
+- **Situational 0–10**: a 0–6 roll plus **+1 edges** *(Zack, from the original)*:
+  the defender always gets +1; whoever has more cash on hand gets +1; whoever has
+  more heat gets +1. Ties give nobody the edge.
+- **Combo 0–10**: a weapon + matching protection in the same setup adds a 0–10 roll.
 
-The attacker takes a smaller counter-hit (`0.35 × mirror formula` *(ours)*).
-The winner (higher damage) takes 5–10% of the loser's cash on hand *(ours)*;
+Gear decides lopsided fights and the edges decide close ones (each +1 is worth
+roughly 10% win chance in an even fight). The winner's hit lands in full; the
+loser's lands at 35% *(ours)*. NPC thugs fight at half their gear at Thug 1,
+rising to full at Thug 200, so new players can farm the first forty or so. The
+Player page shows exact odds (every roll enumerated) and both sides' edges; the
+Fight page's **Thugs** tab ranks all 200 by what a hit is worth to you.
+The winner takes 5–10% of the loser's cash on hand *(ours)*;
 after three hits on the same target within an hour the cash dries up (fights
 still happen, no money moves) *(ours, anti-farming)*. Anyone dropping to ≤19 Health lands in
 Hospital. Attacking adds Heat.

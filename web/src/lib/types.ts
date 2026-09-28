@@ -68,11 +68,18 @@ export interface ActionDef {
   id: number; name: string; description: string; stamina_cost: number; pay_min: number; pay_max: number
   pay_rep: number; heat_gain: number; cash_cost: number; requires_item: number | null; min_crew: number; is_jail: boolean
   effect: string | null; sort: number
+  /** The rare find this job can turn up (chance = stamina_cost / config.drop_stamina). */
+  drop_item?: number | null
 }
 export interface ItemDef {
   id: number; name: string; category: ItemCategory; att: number; def: number; capacity: number
   price: number; rep_price: number; combo_tag: string | null; sort: number
+  /** Found only on actions; can't be bought or sold. */
+  drop_only?: boolean
 }
+export interface RareFind { id: number; name: string; category: ItemCategory; att: number; def: number; owned: number }
+export interface RecentFind { player_id: string; player: string; item: string; item_id: number; action: string | null; at: string }
+export interface ActionResult { pay: number; rep: number; busted: boolean; heat: number; stamina: number; cash: number; found?: RareFind | null }
 export interface CommodityDef {
   code: Commodity; name: string; base_price: number; hustler_units: number; refill_stamina: number
   refill_health: number; grow_rate: number; grow_cap: number; grow_price: number; sort: number
@@ -96,9 +103,18 @@ export interface PublicPlayer {
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
   last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
 }
+/** A +1 edge in a fight and who holds it, from the attacker's side. */
+export interface FightEdge { k: 'defender' | 'cash' | 'heat'; side: 'you' | 'them' }
 export interface FightResult {
   won: boolean; damage_dealt: number; damage_taken: number; cash: number; their_health: number; my_health: number
   hospitalized_them: boolean; hospitalized_me: boolean; busted: boolean; my_att: number; their_def: number; dry: boolean
+  // head-to-head scoring (optional so the page still works against an older database)
+  my_def?: number; their_att?: number; my_score?: number; their_score?: number; my_roll?: number; their_roll?: number
+  edges?: FightEdge[]
+}
+export interface ThugRow {
+  id: string; name: string; avatar: string; level: number; stash: number; health: number; health_max: number
+  hospital: boolean; win_pct: number; hits: number; dry: boolean
 }
 export interface FightLog {
   id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
@@ -173,10 +189,10 @@ export interface LedgerEntry {
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
-export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked'
+export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null
@@ -187,6 +203,10 @@ export interface FightPreview {
   win_pct: number; dmg_min: number; dmg_max: number; my_health: number; hospital_risk: boolean
   dry: boolean; hits_this_hour: number; stamina_cost: number; heat_gain: number; bust_pct: number
   setup: SetupKind; their_setup: SetupKind
+  // head-to-head scoring (optional so the page still works against an older database)
+  win_exact?: number; edges?: FightEdge[]; edge_you?: number; edge_them?: number
+  base_you?: number; base_them?: number; combo_you?: boolean; combo_them?: boolean
+  my_att?: number; my_def?: number; their_att?: number; their_def?: number
 }
 
 export interface TopUsers {
