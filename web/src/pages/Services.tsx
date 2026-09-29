@@ -5,6 +5,9 @@ import { api } from '../lib/api'
 import { commodityIcon, hoodlumIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Qty } from '../components/ui'
+import { PerkTag } from '../components/Perk'
+import { perk } from '../lib/perks'
+import type { BusinessCode } from '../lib/types'
 
 export default function Services() {
   const me = useMe()
@@ -32,12 +35,17 @@ export default function Services() {
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
   const jailMins = me.jail_until ? Math.max(0, Math.ceil((new Date(me.jail_until).getTime() - now) / 60000)) : 0
-  const bail = cfg.bail_base + jailMins * cfg.bail_per_minute
+  // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
+  const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
+  const bail = Math.ceil((cfg.bail_base + jailMins * cfg.bail_per_minute) * (1 - law))
   const owned = me.hoodlums[hood.code] ?? 0
   const hdef = catalog.hoodlums.find(h => h.code === hood.code)!
-  const hoodCost = Math.round(hdef.base_price * hood.n * (1 + (owned + hood.n / 2) / 2000))
+  const hoodPerk: BusinessCode | null = hood.code === 'thug' ? 'gym' : hood.code === 'mercenary' || hood.code === 'enforcer' ? 'shooting_range' : null
+  const hoodCost = Math.ceil(Math.round(hdef.base_price * hood.n * (1 + (owned + hood.n / 2) / 2000)) * (1 - (hoodPerk ? perk(me, hoodPerk) : 0)))
   // mirrors _health_price: per-point price climbs with points bought in the last 24h
-  const healthPrice = (n: number) => Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale))
+  const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
+  const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
+  const refillUnits = (units: number) => Math.ceil(units * (1 - pharmacy))
   const missing = me.health_max - me.health
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
@@ -47,6 +55,7 @@ export default function Services() {
     <div className="page">
       <Card id="hospital" title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
         <div className="bd stack">
+          <PerkTag code="clinic" />
           {me.hospital
             ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} {every(cfg.health_regen_minutes)} — next in {timeLeft(me.health_next, now)} — and walk out at {outAt} ({cfg.hospital_release_pct ?? 80}% of your max).</div>
             : <div className="small muted">Health comes back {cfg.health_regen_amount} {every(cfg.health_regen_minutes)}. Get knocked under 20 and you're in the hospital until you're back to {cfg.hospital_release_pct ?? 80}%. Buy more here — the price per point climbs the more you buy in a day.</div>}
@@ -72,19 +81,21 @@ export default function Services() {
       {me.jailed && (
         <Card title="🔒 County Jail" right={<small>{timeLeft(me.jail_until, now)} left</small>}>
           <div className="bd stack">
-            <div className="small muted">Bail is {money(cfg.bail_base)} plus {money(cfg.bail_per_minute)} per minute remaining.</div>
+            <div className="small muted">Bail is {money(cfg.bail_base)} plus {money(cfg.bail_per_minute)} per minute remaining.{law > 0 ? ' Your Law Office cuts bail, and busts cost you less time inside.' : ''}</div>
+            <PerkTag code="law_office" />
             <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)}` })}>Post Bail · {money(bail)}</Btn>
           </div>
         </Card>
       )}
 
-      <Card id="police" title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat)} per heat point</small>}>
+      <Card id="police" title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat * (1 - bent))} per heat point</small>}>
         <div className="bd stack">
           <div className="spread">
             <div>Heat: <b className={me.heat_level}>{me.heat}</b> / {me.heat_max} <span className="muted small">({me.heat_level})</span></div>
             <Qty value={bribe} onChange={setBribe} min={1} max={Math.max(1, me.heat)} />
           </div>
-          <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeN * cfg.bribe_per_heat} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeN * cfg.bribe_per_heat)}</Btn>
+          <PerkTag code="bent_cop" />
+          <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeCost(bribeN)} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeCost(bribeN))}</Btn>
           <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({cfg.heat_red}+) risks a bust on every job and attack, so you only need to bribe it back under {cfg.heat_red}.</div>
         </div>
       </Card>
@@ -105,12 +116,13 @@ export default function Services() {
       </Card>
 
       <Card id="refills" title="⚡ Refills" right={<small>{Math.min(3, me.refills_used)}/3 full product refills today</small>}>
+        {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
         {(['stamina', 'health'] as const).map(kind => (
           <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
             <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(kind === 'stamina' ? me.stamina : me.health)}/{num(kind === 'stamina' ? me.stamina_max : me.health_max)}</span></div>
             <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max; if (cur >= max) return; if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
             {catalog.commodities.map(c => {
-              const units = kind === 'stamina' ? c.refill_stamina : c.refill_health
+              const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
               return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}` })}>{commodityIcon[c.code]} {units}</Btn>
             })}
           </div>
@@ -138,6 +150,7 @@ export default function Services() {
             {catalog.hoodlums.map(h => <button key={h.code} className={hood.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}>{hoodlumIcon[h.code]} {h.name}</button>)}
           </div>
           <div className="small muted">{hdef.att ? `${hdef.att} attack` : ''}{hdef.att && hdef.def ? ' · ' : ''}{hdef.def ? `${hdef.def} defense` : ''}{hdef.intel ? 'Reveals a block\'s garrison before you attack' : ''} · base {money(hdef.base_price)} — price climbs with how many you hold. You have {num(owned)}.</div>
+          {hoodPerk && <PerkTag code={hoodPerk} />}
           <div className="spread">
             <Qty value={hood.n} onChange={n => setHood({ ...hood, n })} min={1} max={1000} />
             <Btn className="doit" disabled={me.cash < hoodCost} onClick={() => run(() => api.buyHoodlums(hood.code, hood.n), { ok: r => `Hired for ${money(r.cost)}` })}>Hire · {money(hoodCost)}</Btn>

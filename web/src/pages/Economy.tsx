@@ -7,6 +7,10 @@ import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Qty, Seg } from '../components/ui'
 import type { Commodity, Market } from '../lib/types'
 import { PathCard, pathBlock } from '../components/Path'
+import { PerkTag } from '../components/Perk'
+import { perk } from '../lib/perks'
+
+const labFor: Record<Commodity, 'grow_house' | 'dust_lab' | 'pill_factory'> = { herb: 'grow_house', dust: 'dust_lab', pills: 'pill_factory' }
 
 type Tab = 'grow' | 'hustlers' | 'market'
 
@@ -36,6 +40,7 @@ function Grow() {
     <>
       {blocked && <div className="notice blue">{blocked} You can still collect what's already grown.</div>}
       <Card title="Storage" right={<small>{num(me.storage_used)} / {num(me.storage_cap)} units</small>}>
+        {perk(me, 'warehouse') > 0 && <div className="row"><PerkTag code="warehouse" /></div>}
         {catalog.commodities.map(c => (
           <div key={c.code} className="row">
             <span className="ico">{commodityIcon[c.code]}</span>
@@ -45,7 +50,7 @@ function Grow() {
         ))}
         <div className="row">
           <div className="grow s">Expand storage by 250 units</div>
-          <Btn className="sm" onClick={() => run(api.storageUpgrade, { ok: r => `Storage is now ${num(r.storage_cap)} units` })}>{money(me.storage_cap * 20)}</Btn>
+          <Btn className="sm" onClick={() => run(api.storageUpgrade, { ok: () => 'Storage expanded by 250 units' })}>{money((me.storage_base ?? me.storage_cap) * 20)}</Btn>
         </div>
       </Card>
 
@@ -60,6 +65,7 @@ function Grow() {
                 <div><b className="tabular" style={{ fontSize: 20 }}>{num(g.produced)}</b> <span className="muted">/ {num(g.cap)} ready</span></div>
                 <div className="small muted">{num(g.rate)} units / hour</div>
               </div>
+              {(perk(me, labFor[g.commodity]) > 0 || perk(me, 'utility') > 0) && <div className="hstack"><PerkTag code={labFor[g.commodity]} /><PerkTag code="utility" /></div>}
               <div className="bar"><div className="track"><div className="fill" style={{ width: (g.produced / g.cap) * 100 + '%', background: 'linear-gradient(#86efac, #22a34a)' }} /></div></div>
               <div className="hstack">
                 <Btn className="doit" disabled={g.produced === 0} onClick={() => run(() => api.growCollect(g.id), { ok: r => `Collected ${num(r.collected)} ${c.name}${r.left ? ` (${num(r.left)} left — storage full)` : ''}` })}>Collect</Btn>
@@ -77,7 +83,7 @@ function Grow() {
             <span className="ico">{commodityIcon[c.code]}</span>
             <div className="grow">
               <div className="t">{c.name} grow house</div>
-              <div className="s">{c.grow_rate} units/hr · holds {c.grow_cap} · {money(c.grow_price)}{me.grow_houses.length > 0 ? ` + 💎 ${extraDia}` : ''}</div>
+              <div className="s">{num(c.grow_rate * (1 + perk(me, labFor[c.code]) + perk(me, 'utility')))} units/hr · holds {num(Math.floor(c.grow_cap * (1 + perk(me, labFor[c.code]) + perk(me, 'utility'))))} · {money(c.grow_price)}{me.grow_houses.length > 0 ? ` + 💎 ${extraDia}` : ''}</div>
               {!blocked && me.cash < c.grow_price && <div className="why">Need {money(c.grow_price - me.cash)} more cash</div>}
               {!blocked && me.cash >= c.grow_price && me.grow_houses.length > 0 && me.diamonds < extraDia && <div className="why">Need 💎 {extraDia - me.diamonds} more diamonds</div>}
             </div>
@@ -100,22 +106,26 @@ function Hustlers() {
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const c = catalog.commodities.find(x => x.code === com)!
   const price = catalog.config.hustler_price
-  const units = c.hustler_units * n
+  // Strip Club: each hustler carries more · Night Club: trips come back sooner · Dispensary: sells over street
+  const strip = perk(me, 'strip_club'), night = perk(me, 'night_club'), disp = perk(me, 'dispensary')
+  const units = Math.floor(c.hustler_units * n * (1 + strip))
+  const tripH = catalog.config.hustler_hours * (1 - night)
   const back = me.hustlers.filter(h => h.back)
   const due = back.reduce((s, h) => s + h.cash_due, 0)
   const blocked = pathBlock(me, 'trader')
   return (
     <>
       {blocked && <div className="notice blue">{blocked} Trips already out still come back.</div>}
-      <Card title="Hire Hustlers" right={<small>{money(price)} each · {catalog.config.hustler_hours}h trips</small>}>
+      <Card title="Hire Hustlers" right={<small>{money(price)} each · {Math.round(tripH * 10) / 10}h trips</small>}>
         <div className="bd stack">
+          {(strip > 0 || night > 0 || disp > 0) && <div className="hstack"><PerkTag code="strip_club" /><PerkTag code="night_club" /><PerkTag code="dispensary" /></div>}
           <Seg value={com} onChange={setCom} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
           <div className="spread">
             <Qty value={n} onChange={setN} min={1} max={100} />
-            <div className="small muted center">carries {c.hustler_units} {c.name} each</div>
+            <div className="small muted center">carries {Math.round(c.hustler_units * (1 + strip) * 10) / 10} {c.name} each</div>
           </div>
           <div className="small">
-            Takes <b>{num(units)} {c.name}</b> from storage (you have {num(me.storage[com] ?? 0)}), costs <b>{money(price * n)}</b>, returns about <b className="gold">{money(units * me.prices[com])}</b> at today's street price.
+            Takes <b>{num(units)} {c.name}</b> from storage (you have {num(me.storage[com] ?? 0)}), costs <b>{money(price * n)}</b>, returns about <b className="gold">{money(Math.floor(units * me.prices[com] * (1 + disp)))}</b> at today's street price{disp > 0 ? ' plus your Dispensary markup' : ''}.
           </div>
           {!blocked && (me.storage[com] ?? 0) < units && <div className="why">You need {num(units)} {c.name} in storage — you have {num(me.storage[com] ?? 0)}. Grow it or buy it on the Marketplace.</div>}
           {!blocked && (me.storage[com] ?? 0) >= units && me.cash < price * n && <div className="why">Hiring costs {money(price * n)} — you have {money(me.cash)}.</div>}
@@ -152,7 +162,7 @@ function MarketTab() {
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const street = me.prices[sell.com]
   const sellPrice = sell.price ?? street
-  const minL = catalog.config.listing_min, maxL = catalog.config.listing_max
+  const minL = catalog.config.listing_min, maxL = me.listing_max ?? catalog.config.listing_max
   const inStorage = me.storage[sell.com] ?? 0
   const sellName = catalog.commodities.find(x => x.code === sell.com)?.name ?? sell.com
   // say why before they tap, not after
@@ -168,6 +178,7 @@ function MarketTab() {
     <>
       <Card title="Sell" right={<small>truck capacity {num(me.transport_capacity)}</small>}>
         <div className="bd stack">
+          {perk(me, 'trucking') > 0 && <PerkTag code="trucking" />}
           <Seg value={sell.com} onChange={v => setSell({ com: v, n: sell.n, price: null })} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
           <div className="grid2">
             <label className="f">Units ({minL}–{maxL})<input className="input" inputMode="numeric" value={sell.n} onChange={e => setSell({ ...sell, n: Number(e.target.value) || 0 })} /></label>

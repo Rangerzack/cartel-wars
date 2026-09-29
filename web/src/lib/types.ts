@@ -62,6 +62,12 @@ export interface Me {
   unread_activity?: number
   unread_dms?: number
   server_time: string
+  /** Business perks from the blocks your crew holds, as fractions (0.2 = 20%). */
+  perks?: Partial<Record<BusinessCode, number>>
+  /** Storage before the Warehouse perk (storage_cap has it applied). */
+  storage_base?: number
+  /** Most units one market listing can hold (Trucking Co raises it). */
+  listing_max?: number
 }
 
 export interface ActionDef {
@@ -86,11 +92,22 @@ export interface CommodityDef {
 }
 export interface HoodlumDef { code: string; name: string; att: number; def: number; intel: number; base_price: number }
 
+export type BusinessCode = 'grow_house' | 'dust_lab' | 'pill_factory' | 'utility' | 'chop_shop' | 'trucking' | 'repo'
+  | 'strip_club' | 'night_club' | 'dispensary' | 'gym' | 'shooting_range' | 'security_firm'
+  | 'pawn_shop' | 'pharmacy' | 'warehouse' | 'clinic' | 'law_office' | 'bent_cop'
+export type BusinessCategory = 'production' | 'transport' | 'nightlife' | 'muscle' | 'retail' | 'services'
+export interface BusinessDef {
+  code: BusinessCode; name: string; category: BusinessCategory; slot: number; rot: number; icon: string
+  perk: string; base: number; ceiling: number; sort: number
+}
+
 export interface Catalog {
   actions: ActionDef[]
   items: ItemDef[]
   commodities: CommodityDef[]
   hoodlums: HoodlumDef[]
+  /** Optional so the page still works against an older database. */
+  businesses?: BusinessDef[]
   config: Record<string, number>
 }
 
@@ -133,13 +150,19 @@ export interface CrewDetail {
   co_capo_id: string | null; is_co_capo: boolean; is_boss: boolean; created_at: string
   bank: number | null; cartel: { id: string; name: string; don_id: string } | null
   members: { id: string; name: string; avatar: string; fights_won: number; actions: number; is_capo: boolean; is_co_capo: boolean; last_seen: string }[]
-  blocks: { id: number; name: string; hood: string; hood_id: number; island: string; bonus_at: string | null }[]
+  blocks: { id: number; name: string; hood: string; hood_id: number; island: string; bonus_at: string | null; business?: BusinessCode }[]
   applications: { id: string; name: string; at: string }[] | null
   applied: boolean
   invites: { id: string; name: string }[] | null
   power: { att: number; def: number }
   fights: CrewFight[]
   next_fight_at: string | null
+  perks?: CrewPerk[]
+}
+/** One of a crew's business perks: stacked value, how many blocks feed it, and the best one. */
+export interface CrewPerk {
+  code: BusinessCode; value: number; blocks: number; best: number; best_full: boolean
+  best_block: number; best_name: string; best_hood_id: number
 }
 export interface CrewFight {
   id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
@@ -157,13 +180,15 @@ export interface CrewRef { id: string; name: string; emblem: string }
 export interface Block {
   id: number; slot: number; name: string; owner: CrewRef | null; mine: boolean; garrisoned: boolean; garrison_size: number | null
   garrison: Record<string, number> | null; bonus_at: string | null; my_wins: number; top_wins: number
+  business?: BusinessCode
 }
 export interface Hood {
   id: number; name: string; district: string; gx: number; gy: number; price: number; claim_price: number
   daily_income: number; block_bonus: number; base_resistance: number; my_blocks: number; owner: CrewRef | null; blocks: Block[]
+  ring?: number; full_hood?: boolean
 }
 export interface TerritoryRules { siege_wins: number; min_thugs: number; bonus_hours: number; stamina: number }
-export interface Territory { hoods: Hood[]; rules: TerritoryRules }
+export interface Territory { hoods: Hood[]; rules: TerritoryRules; my_perks?: Partial<Record<BusinessCode, number>> }
 export interface TerritoryLog {
   id: number; block_id: number; block: string; hood: string; hood_id: number; attacker: string | null; attacker_id: string | null
   crew: string | null; crew_emblem: string | null; defender_crew: string | null; success: boolean; captured: boolean
@@ -176,6 +201,16 @@ export interface BlockDetail {
   owner: CrewRef | null; garrisoned: boolean; garrison: Record<string, number> | null
   siege: { crew_id: string; crew: string; emblem: string; wins: number; mine: boolean; at: string }[]
   log: TerritoryLog[]
+  ring?: number
+  business?: BlockBusiness | null
+}
+export interface BlockBusiness {
+  code: BusinessCode; name: string; icon: string; category: BusinessCategory; perk: string; ceiling: number
+  /** This block on its own, with the whole hood, and with the whole hood in a cartel. */
+  value: number; value_full: number; value_full_cartel: number
+  /** What it gives the crew holding it now, and that crew's total for this business. */
+  owner_value: number | null; owner_full: boolean; owner_total: number | null
+  my_total: number
 }
 export interface AttackBlockResult {
   success: boolean; captured: boolean; attack: number; resistance: number; lost_thugs: number; lost_mercs: number

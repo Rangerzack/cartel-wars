@@ -752,3 +752,21 @@ textarea.input { resize: vertical; font: inherit; }
 .finds-ticker { display: flex; flex-direction: column; gap: 2px; }
 .thug-row .pay { min-width: 84px; text-align: right; }
 .thug-row.dry { opacity: .55; }
+
+/* Businesses: perk tags, the map filter, business tiles and the block panel */
+.perk-tag { display: inline-flex; align-self: flex-start; align-items: center; gap: 4px; font-size: 11.5px; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  color: #c9f0d4; border: 1px solid #1f5a31; background: linear-gradient(#12301c, #0b1d11); }
+.hstack:has(> .perk-tag) { gap: 6px; }
+.btn s.was { opacity: .55; font-weight: 500; margin-right: 5px; font-size: .85em; }
+.biz-filter { margin-bottom: 10px; }
+.hcell.biz-dim { opacity: .35; }
+.hcell.biz-hit { opacity: 1; }
+.hcell .mini i.biz, .legend i.biz { background: linear-gradient(#b89bff, #6d4bd6); box-shadow: 0 0 6px rgba(160,130,255,.8); }
+.block.biz-hl { outline: 2px solid #9f86ff; outline-offset: 1px; }
+.biz-name { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; line-height: 1.15; }
+.biz-name span { font-size: 16px; }
+.biz-name b { font-size: 11.5px !important; }
+.biz-panel { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; background: rgba(120,90,255,.06); border: 1px solid rgba(160,130,255,.25); }
+.biz-values .stat { padding: 6px 8px; }
+.biz-values .stat .v.sm { font-size: 15px; }
+.pill.nowrap { white-space: nowrap; }
