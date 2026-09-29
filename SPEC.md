@@ -118,19 +118,22 @@ business rotates hood to hood:
 
 | Slot | Category | Businesses (perk from one outer block → ceiling) |
 |---|---|---|
-| A | Production | Grow House / Dust Lab / Pill Factory: that product +10% (→ +50%) · Utility Co: all three +5% (→ +25%) |
-| B | Transport | Chop Shop: vehicles −10% (→ −40%) · Trucking Co: cargo and listing size +25% (→ +100%) · Repo Co: resale 55% (→ 60%) |
-| C | Nightlife | Strip Club: hustlers carry +10% (→ +40%) · Night Club: trips 10% sooner (→ 40%) · Dispensary: +5% over street (→ +20%) |
-| D | Muscle | Gym: thugs −10% (→ −40%) · Shooting Range: mercs and enforcers −10% (→ −40%) · Security Firm: crew garrisons +10% (→ +40%) |
-| E | Retail | Pawn Shop: weapons and protection −5% (→ −20%) · Pharmacy: product refills −10% (→ −40%) · Warehouse: storage +10% (→ +40%) |
-| F | Services | Clinic: hospital health −10% (→ −40%) · Law Office: bail and bust jail time −15% (→ −40%) · Bent Cop: bribes −10% (→ −40%) |
+| A | Production | Grow House / Dust Lab / Pill Factory: that product +7.5% (→ +37.5%) · Utility Co: all three +3.75% (→ +18.75%) |
+| B | Transport | Chop Shop: vehicles −7.5% (→ −30%) · Trucking Co: cargo and listing size +18.75% (→ +75%) · Repo Co: resale 53.75% (→ 57.5%) |
+| C | Nightlife | Strip Club: hustlers carry +7.5% (→ +30%) · Night Club: trips 7.5% sooner (→ 30%) · Dispensary: +3.75% over street (→ +15%) |
+| D | Muscle | Gym: thugs −7.5% (→ −30%) · Shooting Range: mercs and enforcers −7.5% (→ −30%) · Security Firm: crew garrisons +7.5% (→ +30%) |
+| E | Retail | Pawn Shop: weapons and protection −3.75% (→ −15%) · Pharmacy: product refills −7.5% (→ −30%) · Warehouse: storage +7.5% (→ +30%) |
+| F | Services | Clinic: hospital health −7.5% (→ −30%) · Law Office: bail and bust jail time −11.25% (→ −30%) · Bent Cop: bribes −7.5% (→ −30%) |
+
+These are 75% of the launch values (cut 2026-10-01 along with block bonuses).
 
 - One block's perk doubles from the outer ring to the center hood, ×1.5 when the
   crew holds all six blocks of that hood, ×1.75 if that crew is also in a cartel.
 - Several of the same business stack: the best counts in full, each extra adds a
   quarter of its own value, up to double the best one; then the ceiling.
-- Perks are personal (prices, speed, amounts), never crew-bank money. Chop Shop's
-  −40% and Repo Co's 60% resale meet exactly, so nothing sells back at a profit.
+- Perks are personal (prices, speed, amounts), never crew-bank money. At most a
+  vehicle costs 70% (Chop Shop) and resells for 57.5% (Repo Co), so nothing sells
+  back at a profit.
 - The Territory map filters by business; each block shows its perk at that spot,
   with the full hood and with a cartel; the Crew page lists the crew's perks.
 
