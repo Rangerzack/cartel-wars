@@ -7,10 +7,8 @@ import { useNow } from '../lib/useNow'
 import type { DropPrize, DropResult, RecentDrop } from '../lib/types'
 import { Btn, Card, Modal } from './ui'
 
-const pct = (weight: number, total: number) => {
-  const p = (weight / total) * 100
-  return `${Number.isInteger(p) ? p : p.toFixed(1)}%`
-}
+// 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
+const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
 
 /** The Daily Drop card on Home: subscribe, the crate stack, opening a crate, and the odds. */
 export function DailyDrop() {
