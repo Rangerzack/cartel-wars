@@ -134,6 +134,34 @@ business rotates hood to hood:
 - The Territory map filters by business; each block shows its perk at that spot,
   with the full hood and with a cartel; the Crew page lists the crew's perks.
 
+## Daily Drop *(Zack's idea and odds)*
+
+A subscription that leaves one crate a day. It will be $2.99 a month; for now
+it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
+
+- A crate lands at every 00:00 UTC rollover while subscribed, and one straight
+  away on subscribing (once per game day, so re-subscribing doesn't farm crates).
+- Unopened crates stack up to 7; a day that lands on a full stack is lost.
+  Cancelling stops new crates; crates already left can still be opened.
+- Each crate is one roll on this table (out of 1,000):
+
+| Prize | Odds | | Prize | Odds |
+|---|---|---|---|---|
+| 1,000 Herb | 10% | | $100,000 cash | 10% |
+| 700 Dust | 10% | | 1,000 Thugs | 5% |
+| 250 Pills | 10% | | 100 Hustlers | 5% |
+| 5 Diamonds | 20% | | **Jackpot:** 25 Diamonds | 7% |
+| 10 Diamonds | 10% | | **Jackpot:** $1,000,000 cash | 3% |
+| 2 Free Refills | 10% | | | |
+
+- Product goes into storage even past the cap (you just can't add more until
+  you're back under). Cash lands on hand, with a Bank button on the reveal.
+- Free Refills are stamina refill credits: a full refill each that doesn't count
+  toward the three product refills a day. Hustlers are credits that waive the
+  $400 hire fee, one hustler each (Traders only, like hustlers themselves).
+- Paid plan, later: the payment webhook calls `_drop_subscribe(player, paid_through)`
+  and `drop_free` goes to 0. Crates stop after the paid-through day.
+
 ## Heat, police and jail
 
 - Police Station (Services): **Bribe** to lower Heat at $40 per point *(wiki)*.

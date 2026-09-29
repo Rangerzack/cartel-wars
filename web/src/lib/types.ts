@@ -68,7 +68,22 @@ export interface Me {
   storage_base?: number
   /** Most units one market listing can hold (Trucking Co raises it). */
   listing_max?: number
+  /** Daily Drop subscription and crates. Optional so a frontend ahead of the database still works. */
+  drop?: DropState
+  /** Daily Drop credits: full stamina refills, and hustlers hired without the fee. */
+  free_refills?: number
+  free_hustlers?: number
 }
+
+export type DropKind = 'herb' | 'dust' | 'pills' | 'diamonds' | 'cash' | 'refills' | 'thugs' | 'hustlers'
+/** One line of the Daily Drop prize table; weight is out of the table's total (1,000). */
+export interface DropPrize { code: string; label: string; kind: DropKind; amount: number; weight: number; jackpot: boolean; sort: number }
+export interface DropState {
+  subscribed: boolean; since: string | null; until: string | null; crates: number; max: number; opened: number
+  last: { label: string; kind: DropKind; amount: number; jackpot: boolean; at: string } | null
+}
+export interface DropResult { code: string; label: string; kind: DropKind; amount: number; jackpot: boolean; crates: number }
+export interface RecentDrop { player_id: string; player: string; label: string; kind: DropKind; amount: number; at: string }
 
 export interface ActionDef {
   id: number; name: string; description: string; stamina_cost: number; pay_min: number; pay_max: number
@@ -108,6 +123,7 @@ export interface Catalog {
   hoodlums: HoodlumDef[]
   /** Optional so the page still works against an older database. */
   businesses?: BusinessDef[]
+  drop_prizes?: DropPrize[]
   config: Record<string, number>
 }
 

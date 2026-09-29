@@ -12,6 +12,7 @@ import { GettingStarted } from '../components/GettingStarted'
 import { features } from '../lib/features'
 import { ActivityRow } from '../components/Activity'
 import { HomePath } from '../components/Path'
+import { DailyDrop } from '../components/DailyDrop'
 
 export default function Home() {
   const me = useMe()
@@ -56,6 +57,7 @@ export default function Home() {
         <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services">Buy health →</Link></div>
       )}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
+      {(me.drop?.crates ?? 0) > 0 && <div className="notice gold">📦 {me.drop!.crates === 1 ? 'A Daily Drop crate is' : `${me.drop!.crates} Daily Drop crates are`} waiting. <a onClick={() => document.getElementById('drop')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Open →</a></div>}
       {full > 0 && <div className="notice gold">{full} grow house{full > 1 ? 's are' : ' is'} full — collect to keep production going. <Link to="/economy">Collect →</Link></div>}
 
       {away.length > 0 && (
@@ -80,6 +82,8 @@ export default function Home() {
         <Stat k="Defense" v={def.def} />
         <Stat k="Fights" v={`${me.fights_won}W · ${me.fights_lost}L`} cls="sm" />
       </div>
+
+      <DailyDrop />
 
       <Card title="Storage" right={<small>{num(me.storage_used)} / {num(me.storage_cap)}</small>}>
         <div className="bd hstack" style={{ justifyContent: 'space-around' }}>

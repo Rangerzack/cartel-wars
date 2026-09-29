@@ -113,11 +113,15 @@ function Hustlers() {
   const back = me.hustlers.filter(h => h.back)
   const due = back.reduce((s, h) => s + h.cash_due, 0)
   const blocked = pathBlock(me, 'trader')
+  // Daily Drop hustler credits waive the fee, one hustler each
+  const comped = Math.min(n, me.free_hustlers ?? 0)
+  const cost = price * (n - comped)
   return (
     <>
       {blocked && <div className="notice blue">{blocked} Trips already out still come back.</div>}
       <Card title="Hire Hustlers" right={<small>{money(price)} each · {Math.round(tripH * 10) / 10}h trips</small>}>
         <div className="bd stack">
+          {(me.free_hustlers ?? 0) > 0 && <div className="notice gold">🎁 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} from the Daily Drop — no hire fee for them.</div>}
           {(strip > 0 || night > 0 || disp > 0) && <div className="hstack"><PerkTag code="strip_club" /><PerkTag code="night_club" /><PerkTag code="dispensary" /></div>}
           <Seg value={com} onChange={setCom} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
           <div className="spread">
@@ -125,11 +129,11 @@ function Hustlers() {
             <div className="small muted center">carries {Math.round(c.hustler_units * (1 + strip) * 10) / 10} {c.name} each</div>
           </div>
           <div className="small">
-            Takes <b>{num(units)} {c.name}</b> from storage (you have {num(me.storage[com] ?? 0)}), costs <b>{money(price * n)}</b>, returns about <b className="gold">{money(Math.floor(units * me.prices[com] * (1 + disp)))}</b> at today's street price{disp > 0 ? ' plus your Dispensary markup' : ''}.
+            Takes <b>{num(units)} {c.name}</b> from storage (you have {num(me.storage[com] ?? 0)}), costs <b>{money(cost)}</b>{comped > 0 ? <> ({comped} free)</> : null}, returns about <b className="gold">{money(Math.floor(units * me.prices[com] * (1 + disp)))}</b> at today's street price{disp > 0 ? ' plus your Dispensary markup' : ''}.
           </div>
           {!blocked && (me.storage[com] ?? 0) < units && <div className="why">You need {num(units)} {c.name} in storage — you have {num(me.storage[com] ?? 0)}. Grow it or buy it on the Marketplace.</div>}
-          {!blocked && (me.storage[com] ?? 0) >= units && me.cash < price * n && <div className="why">Hiring costs {money(price * n)} — you have {money(me.cash)}.</div>}
-          <Btn className="doit block" disabled={!!blocked || (me.storage[com] ?? 0) < units || me.cash < price * n} onClick={() => run(() => api.hireHustlers(com, n), { ok: r => `${n} hustler${n > 1 ? 's' : ''} out the door with ${num(r.units)} units` })}>Send Them Out</Btn>
+          {!blocked && (me.storage[com] ?? 0) >= units && me.cash < cost && <div className="why">Hiring costs {money(cost)} — you have {money(me.cash)}.</div>}
+          <Btn className="doit block" disabled={!!blocked || (me.storage[com] ?? 0) < units || me.cash < cost} onClick={() => run(() => api.hireHustlers(com, n), { ok: r => `${n} hustler${n > 1 ? 's' : ''} out the door with ${num(r.units)} units${r.free ? ` (${r.free} free)` : ''}` })}>Send Them Out</Btn>
         </div>
       </Card>
       <Card title="On the Street" right={back.length > 0 && <Btn className="sm gold" onClick={() => run(api.collectHustlers, { ok: r => `Collected ${money(r.cash)}` })}>Collect {money(due)}</Btn>}>

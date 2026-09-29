@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  ActionResult, ActivityItem, RecentFind, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
+  ActionResult, ActivityItem, RecentFind, DropResult, RecentDrop, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -25,6 +25,10 @@ export const api = {
   doAction: (action_id: number) => rpc<ActionResult>('do_action', { action_id }),
   recentFinds: (limit_n = 8) => rpc<RecentFind[]>('recent_finds', { limit_n }),
   findThugs: () => rpc<ThugRow[]>('find_thugs'),
+  subscribeDrop: () => rpc<{ crates: number }>('subscribe_drop'),
+  unsubscribeDrop: () => rpc<{ crates: number }>('unsubscribe_drop'),
+  openCrate: () => rpc<DropResult>('open_crate'),
+  recentDrops: (limit_n = 5) => rpc<RecentDrop[]>('recent_drops', { limit_n }),
 
   // fights
   attack: (target: string) => rpc<FightResult>('attack', { target }),
@@ -60,7 +64,7 @@ export const api = {
   growUpgrade: (house: string) => rpc<{ cost: number; level: number }>('grow_upgrade', { house }),
   growAbandon: (house: string) => rpc<{ ok: boolean }>('grow_abandon', { house }),
   storageUpgrade: () => rpc<{ cost: number; storage_cap: number }>('storage_upgrade'),
-  hireHustlers: (commodity: string, n: number) => rpc<{ units: number; cash_due: number; cost: number }>('hire_hustlers', { commodity, n }),
+  hireHustlers: (commodity: string, n: number) => rpc<{ units: number; cash_due: number; cost: number; free?: number }>('hire_hustlers', { commodity, n }),
   collectHustlers: () => rpc<{ cash: number; units: number }>('collect_hustlers'),
 
   // market

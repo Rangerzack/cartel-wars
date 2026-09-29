@@ -770,3 +770,31 @@ textarea.input { resize: vertical; font: inherit; }
 .biz-values .stat { padding: 6px 8px; }
 .biz-values .stat .v.sm { font-size: 15px; }
 .pill.nowrap { white-space: nowrap; }
+
+/* Daily Drop: the Home card, the crate stack, the odds table and the reveal */
+.drop-card.has-crates { border-color: rgba(227,179,65,.45); box-shadow: 0 0 0 1px rgba(227,179,65,.15), 0 0 22px rgba(227,179,65,.12); }
+.drop-price s { opacity: .55; margin-right: 3px; }
+.drop-price b { color: #7ee2a0; letter-spacing: .6px; }
+.crate-stack { display: flex; justify-content: center; gap: 6px; font-size: 26px; line-height: 1; padding: 4px 0; }
+.crate-stack span { filter: grayscale(1) brightness(.45); opacity: .5; }
+.crate-stack span.on { filter: drop-shadow(0 0 8px rgba(227,179,65,.45)); opacity: 1; animation: crate-bob 2.4s ease-in-out infinite; }
+.crate-stack span.on:nth-child(2n) { animation-delay: -.8s; }
+.crate-stack span.on:nth-child(3n) { animation-delay: -1.6s; }
+@keyframes crate-bob { 0%, 100% { transform: none } 50% { transform: translateY(-3px) } }
+.crate-empty { display: flex; align-items: center; gap: 12px; }
+.crate-empty > span { font-size: 30px; filter: grayscale(1) brightness(.5); }
+.crate-pitch { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.crate-hero { font-size: 46px; line-height: 1; filter: drop-shadow(0 0 16px rgba(227,179,65,.5)); animation: crate-bob 2.4s ease-in-out infinite; }
+.drop-credits { flex-wrap: wrap; gap: 6px; }
+.drop-odds .row { padding-top: 7px; padding-bottom: 7px; }
+.drop-odds .row .ico { width: 24px; text-align: center; }
+.drop-odds .row.jackpot { background: linear-gradient(90deg, rgba(227,179,65,.12), transparent); }
+.drop-odds .row.jackpot .t, .drop-odds .row.jackpot b { color: var(--gold); }
+.drop-odds .pill { margin-left: 6px; font-size: 10.5px; }
+.crate-open { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 6px; }
+.crate-shake { font-size: 64px; line-height: 1; animation: crate-shake .45s ease-in-out infinite; filter: drop-shadow(0 0 18px rgba(227,179,65,.4)); }
+@keyframes crate-shake { 0%, 100% { transform: rotate(0) } 20% { transform: rotate(-9deg) translateY(-2px) } 40% { transform: rotate(8deg) } 60% { transform: rotate(-6deg) translateY(-3px) } 80% { transform: rotate(5deg) } }
+.drop-prize .big { filter: drop-shadow(0 0 18px rgba(227,179,65,.5)); }
+.drop-prize .name { color: #f6e7b8; text-shadow: 0 0 18px rgba(227,179,65,.4); }
+.drop-prize.jackpot .big { font-size: 68px; filter: drop-shadow(0 0 26px rgba(255,210,90,.9)); }
+.drop-prize.jackpot .name { color: var(--gold); font-size: 30px; }

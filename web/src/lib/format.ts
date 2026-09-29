@@ -65,3 +65,5 @@ export const dropOdds = (stamina: number, dropStamina: number | undefined) =>
 
 /** Icons for the four rare finds, by kind. */
 export const findIcon: Record<string, string> = { weapon: '🚀', protection: '🦺', transport: '🚙', jail_weapon: '🔫' }
+/** Daily Drop prize icons. */
+export const dropIcon: Record<string, string> = { herb: '🌿', dust: '❄️', pills: '💊', diamonds: '💎', cash: '💵', refills: '⚡', thugs: '🧢', hustlers: '🚶' }
