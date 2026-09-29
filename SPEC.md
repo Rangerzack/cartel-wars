@@ -110,6 +110,30 @@ from jail. The initiator gains 3 Heat and rolls for a bust like any attack.
 The defending crew gets a line in its Crew Chat. *(ours — the original had crew
 fights "launched from crew profiles" but no surviving details.)*
 
+## Businesses *(Zack's idea; numbers ours)*
+
+Every block is a business, and every member of the crew holding it gets its perk.
+Each hood's blocks A–F are one of each category, and within a category the
+business rotates hood to hood:
+
+| Slot | Category | Businesses (perk from one outer block → ceiling) |
+|---|---|---|
+| A | Production | Grow House / Dust Lab / Pill Factory: that product +10% (→ +50%) · Utility Co: all three +5% (→ +25%) |
+| B | Transport | Chop Shop: vehicles −10% (→ −40%) · Trucking Co: cargo and listing size +25% (→ +100%) · Repo Co: resale 55% (→ 60%) |
+| C | Nightlife | Strip Club: hustlers carry +10% (→ +40%) · Night Club: trips 10% sooner (→ 40%) · Dispensary: +5% over street (→ +20%) |
+| D | Muscle | Gym: thugs −10% (→ −40%) · Shooting Range: mercs and enforcers −10% (→ −40%) · Security Firm: crew garrisons +10% (→ +40%) |
+| E | Retail | Pawn Shop: weapons and protection −5% (→ −20%) · Pharmacy: product refills −10% (→ −40%) · Warehouse: storage +10% (→ +40%) |
+| F | Services | Clinic: hospital health −10% (→ −40%) · Law Office: bail and bust jail time −15% (→ −40%) · Bent Cop: bribes −10% (→ −40%) |
+
+- One block's perk doubles from the outer ring to the center hood, ×1.5 when the
+  crew holds all six blocks of that hood, ×1.75 if that crew is also in a cartel.
+- Several of the same business stack: the best counts in full, each extra adds a
+  quarter of its own value, up to double the best one; then the ceiling.
+- Perks are personal (prices, speed, amounts), never crew-bank money. Chop Shop's
+  −40% and Repo Co's 60% resale meet exactly, so nothing sells back at a profit.
+- The Territory map filters by business; each block shows its perk at that spot,
+  with the full hood and with a cartel; the Crew page lists the crew's perks.
+
 ## Heat, police and jail
 
 - Police Station (Services): **Bribe** to lower Heat at $40 per point *(wiki)*.

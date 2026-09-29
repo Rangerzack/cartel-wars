@@ -8,6 +8,7 @@ import { Ledger } from '../components/Ledger'
 import { useNow } from '../lib/useNow'
 import { timeLeft } from '../lib/format'
 import type { CrewDetail, CrewFightResult, CrewSummary } from '../lib/types'
+import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
 
 export default function Crew() {
@@ -68,7 +69,7 @@ function CrewHub() {
 
 function CrewPage({ id }: { id: string }) {
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run, toast, catalog } = useGame()
   const nav = useNavigate()
   const [c, setC] = useState<CrewDetail | null>(null)
   const [amount, setAmount] = useState(0)
@@ -199,11 +200,30 @@ function CrewPage({ id }: { id: string }) {
         ))}
       </Card>
 
+      {c.perks && c.perks.length > 0 && (
+        <Card title="Crew perks" right={<small>{c.perks.length} of {catalog?.businesses?.length ?? 19} businesses</small>}>
+          {c.perks.map(p => {
+            const d = businessDef(catalog, p.code)
+            return (
+              <div key={p.code} className="row link" onClick={() => nav(`/territory?hood=${p.best_hood_id}&block=${p.best_block}`)}>
+                <span className="ico">{d?.icon}</span>
+                <div className="grow">
+                  <div className="t">{d?.name} <b className="gold tabular">{perkLabel(p.code, p.value)}</b>{d && p.value >= d.ceiling - 0.0001 && <span className="muted small"> · maxed</span>}</div>
+                  <div className="s">{d?.perk} · {p.blocks} {p.blocks === 1 ? 'block' : 'blocks'} · best: {p.best_name}{p.best_full ? ' (full hood)' : ''}</div>
+                </div>
+                <span className="chev">›</span>
+              </div>
+            )
+          })}
+          <div className="row small muted">{mine ? 'Every member gets these.' : 'Every member of this crew gets these.'} The best block of each business counts in full; each extra adds a quarter of its own value, up to double the best one.</div>
+        </Card>
+      )}
+
       {c.blocks.length > 0 && (
         <Card title="Blocks held" right={<small>{mine ? 'next bonus first' : `${c.blocks.length} blocks`}</small>}>
           {(allBlocks ? c.blocks : c.blocks.slice(0, 8)).map(b => (
             <div key={b.id} className={`row ${mine ? 'link' : ''}`} onClick={mine ? () => nav(`/territory?hood=${b.hood_id}`) : undefined}>
-              <div className="grow"><div className="t">{b.name}</div><div className="s">{b.island}{mine && b.bonus_at ? ` · bonus in ${timeLeft(b.bonus_at, now)}` : ''}</div></div>
+              <div className="grow"><div className="t">{b.name}</div><div className="s">{b.business ? `${businessDef(catalog, b.business)?.icon ?? ''} ${businessDef(catalog, b.business)?.name ?? ''} · ` : ''}{b.island}{mine && b.bonus_at ? ` · bonus in ${timeLeft(b.bonus_at, now)}` : ''}</div></div>
               {mine && <span className="chev">›</span>}
             </div>
           ))}

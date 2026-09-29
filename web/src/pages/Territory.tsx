@@ -5,7 +5,8 @@ import { api } from '../lib/api'
 import { ago, hoodlumIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Modal, Qty } from '../components/ui'
-import type { AttackBlockResult, Block, BlockDetail, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
+import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
+import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
 
 const ROWS = 'ABCDEFGHI'
@@ -23,6 +24,9 @@ export default function Territory() {
   // ?hood=12 opens a hood; &block=70 also opens that block (links from the activity feed)
   const [blockId, setBlockId] = useState<number | null>(() => Number(sp.get('block')) || null)
   const hoodId = Number(sp.get('hood')) || null
+  // highlight one business across the city (?biz=gym); kept in the URL so Back keeps it
+  const biz = (sp.get('biz') as BusinessCode | null) || null
+  const { catalog } = useGame()
 
   const load = useCallback(() => Promise.all([api.territory(), api.territoryLog(15)]).then(([t, l]) => { setData(t); setLog(l) }).catch(e => toast(e.message, 'bad')), [toast])
   useEffect(() => { load() }, [load])
@@ -30,7 +34,9 @@ export default function Territory() {
   if (!data) return <Empty><span className="spin" /></Empty>
   const hood = hoodId ? data.hoods.find(h => h.id === hoodId) ?? null : null
   const thugs = me.hoodlums.thug ?? 0, mercs = me.hoodlums.mercenary ?? 0, spies = me.hoodlums.spy ?? 0
-  const openHood = (id: number | null) => setSp(id ? { hood: String(id) } : {})
+  const openHood = (id: number | null) => setSp(id ? { hood: String(id), ...(biz ? { biz } : {}) } : biz ? { biz } : {})
+  const setBiz = (b: string) => setSp(b ? { biz: b } : {})
+  const bizList = catalog?.businesses ?? []
 
   return (
     <div className="page">
@@ -43,24 +49,33 @@ export default function Territory() {
       </div>
 
       {hood ? (
-        <HoodView hood={hood} onBack={() => openHood(null)} onBlock={setBlockId} />
+        <HoodView hood={hood} onBack={() => openHood(null)} onBlock={setBlockId} biz={biz} />
       ) : (
         <>
           <Card title="The City" right={<small>tap a hood</small>}>
             <div className="bd">
+              {bizList.length > 0 && (
+                <select className="input biz-filter" value={biz ?? ''} onChange={e => setBiz(e.target.value)} aria-label="Show a business">
+                  <option value="">All businesses</option>
+                  {bizList.map(d => <option key={d.code} value={d.code}>{d.icon} {d.name} — {d.perk}</option>)}
+                </select>
+              )}
               <div className="hoodgrid">
                 <span />
                 {Array.from({ length: 9 }, (_, i) => <span key={i} className="axis">{i + 1}</span>)}
                 {Array.from({ length: 9 }, (_, y) => (
-                  <Row key={y} y={y + 1} hoods={data.hoods.filter(h => h.gy === y + 1)} onOpen={openHood} />
+                  <Row key={y} y={y + 1} hoods={data.hoods.filter(h => h.gy === y + 1)} onOpen={openHood} biz={biz} />
                 ))}
               </div>
               <div className="legend small muted">
                 <span><i className="mine" /> your crew</span><span><i className="enemy" /> rival</span><span><i /> unclaimed</span><span><i className="siege" /> under your siege</span>
+                {biz && <span><i className="biz" /> {businessDef(catalog, biz)?.name}</span>}
               </div>
             </div>
           </Card>
           <div className="small muted">
+            Every block is a business, and your crew gets its perk while it holds the block: one of each kind per hood, stronger toward the center,
+            ×1.5 when your crew holds the whole hood (×1.75 in a cartel). More of the same business adds a little, up to double your best one.
             Hoods pay more toward the center. Each block pays its bonus every {data.rules.bonus_hours}h. A turf attack needs at least {data.rules.min_thugs} thugs and {data.rules.stamina} stamina.
             Empty blocks fall to one win; a held block falls after your crew lands {data.rules.siege_wins} successful hits — and every hit restarts the owner's bonus clock.
           </div>
@@ -81,16 +96,17 @@ export default function Territory() {
   )
 }
 
-function Row({ y, hoods, onOpen }: { y: number; hoods: Hood[]; onOpen: (id: number) => void }) {
+function Row({ y, hoods, onOpen, biz }: { y: number; hoods: Hood[]; onOpen: (id: number) => void; biz: BusinessCode | null }) {
   return (
     <>
       <span className="axis">{ROWS[y - 1]}</span>
       {hoods.sort((a, b) => a.gx - b.gx).map(h => {
         const sieging = h.blocks.some(b => b.my_wins > 0)
+        const hit = biz ? h.blocks.some(b => b.business === biz) : false
         return (
-          <button key={h.id} className={`hcell r${ring(h)} ${h.owner ? (h.my_blocks >= 4 ? 'own-mine' : 'own-enemy') : ''}`} title={`${h.name} (${coord(h)})`} onClick={() => onOpen(h.id)}>
+          <button key={h.id} className={`hcell r${ring(h)} ${h.owner ? (h.my_blocks >= 4 ? 'own-mine' : 'own-enemy') : ''} ${biz ? (hit ? 'biz-hit' : 'biz-dim') : ''}`} title={`${h.name} (${coord(h)})`} onClick={() => onOpen(h.id)}>
             <span className="mini">
-              {h.blocks.map(b => <i key={b.id} className={`${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${b.my_wins > 0 ? 'siege' : ''}`} />)}
+              {h.blocks.map(b => <i key={b.id} className={`${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${b.my_wins > 0 ? 'siege' : ''} ${biz && b.business === biz ? 'biz' : ''}`} />)}
             </span>
             <span className="lbl">{h.owner ? h.owner.emblem : sieging ? '⚔️' : coord(h)}</span>
           </button>
@@ -100,28 +116,31 @@ function Row({ y, hoods, onOpen }: { y: number; hoods: Hood[]; onOpen: (id: numb
   )
 }
 
-function HoodView({ hood, onBack, onBlock }: { hood: Hood; onBack: () => void; onBlock: (id: number) => void }) {
+function HoodView({ hood, onBack, onBlock, biz }: { hood: Hood; onBack: () => void; onBlock: (id: number) => void; biz: BusinessCode | null }) {
   const now = useNow()
   return (
     <>
       <div className="backbar"><button className="back" onClick={onBack}>‹ City</button><span className="muted small">{hood.district} · {coord(hood)}</span></div>
       <Card title={<>{hood.name} {hood.owner && <span className="small muted">· held by {hood.owner.emblem} {hood.owner.name}</span>}</>} right={<small className="gold">{money(hood.block_bonus)}/block</small>}>
         <div className="blocks6">
-          {hood.blocks.map(b => <BlockTile key={b.id} b={b} hood={hood} now={now} onClick={() => onBlock(b.id)} />)}
+          {hood.blocks.map(b => <BlockTile key={b.id} b={b} hood={hood} now={now} onClick={() => onBlock(b.id)} hl={!!biz && b.business === biz} />)}
         </div>
+        {hood.full_hood && <div className="row small"><span className="pill gold nowrap">★ Full hood</span><span className="muted"> {(hood.owner ?? hood.blocks[0]?.owner)?.name} holds all six — every business here counts ×1.5 for them (×1.75 in a cartel).</span></div>}
         <div className="row small muted">
-          Base resistance {num(hood.base_resistance)} · empty blocks cost {money(hood.claim_price)} to claim · hold 4 of 6 to own the hood.
+          Base resistance {num(hood.base_resistance)} · empty blocks cost {money(hood.claim_price)} to claim · hold 4 of 6 to own the hood, all 6 for the full-hood bonus.
         </div>
       </Card>
     </>
   )
 }
 
-function BlockTile({ b, hood, now, onClick }: { b: Block; hood: Hood; now: number; onClick: () => void }) {
+function BlockTile({ b, hood, now, onClick, hl }: { b: Block; hood: Hood; now: number; onClick: () => void; hl: boolean }) {
+  const { catalog } = useGame()
+  const d = businessDef(catalog, b.business)
   return (
-    <div className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''}`} onClick={onClick}>
+    <div className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${hl ? 'biz-hl' : ''}`} onClick={onClick}>
       <div className="em">{b.owner ? b.owner.emblem : ' '}</div>
-      <div><b>{slotName(b)}</b></div>
+      {d ? <div className="biz-name" title={d.perk}><span>{d.icon}</span> <b>{d.name}</b></div> : <div><b>{slotName(b)}</b></div>}
       {b.owner ? (
         <>
           <div className="small tabular">⏱ {timeLeft(b.bonus_at, now)}</div>
@@ -195,6 +214,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
             {b.owner ? <>Held by {b.owner.emblem} <b>{b.owner.name}</b>{b.taken_at ? ` · taken ${ago(b.taken_at)}` : ''}.{!b.mine && (b.garrisoned ? ' There is a garrison — send a spy to size it up.' : ' No garrison.')}</>
               : <>Unclaimed. Taking it costs {money(b.claim_price)} on top of beating the base resistance of {num(b.base_resistance)}.</>}
           </div>
+          {b.business && <BusinessPanel b={b} />}
           {b.owner && (
             <div className="grid2">
               <div className="stat"><div className="k">Next bonus</div><div className="v">⏱ {timeLeft(b.bonus_at, now)}</div></div>
@@ -265,5 +285,28 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
         </div>
       )}
     </Modal>
+  )
+}
+
+/** What this block's business does, what it's worth here, and who's getting it. */
+function BusinessPanel({ b }: { b: BlockDetail }) {
+  const biz = b.business!
+  const code = biz.code
+  return (
+    <div className="biz-panel">
+      <div className="spread"><b>{biz.icon} {biz.name}</b><span className="small muted">{biz.perk}</span></div>
+      <div className="grid3 biz-values">
+        <div className="stat"><div className="k">This block</div><div className="v sm">{perkLabel(code, biz.value)}</div></div>
+        <div className="stat"><div className="k">Full hood</div><div className="v sm">{perkLabel(code, biz.value_full)}</div></div>
+        <div className="stat"><div className="k">+ cartel</div><div className="v sm">{perkLabel(code, biz.value_full_cartel)}</div></div>
+      </div>
+      <div className="small muted">
+        {b.owner && biz.owner_total != null
+          ? <>{b.mine ? 'Your crew' : `${b.owner.emblem} ${b.owner.name}`} gets {perkLabel(code, biz.owner_value ?? 0)} from it{biz.owner_full ? ' (full hood)' : ''}, and {perkLabel(code, biz.owner_total)} from all their {biz.name}s together. </>
+          : 'Nobody holds it yet. '}
+        {!b.mine && biz.my_total > 0 ? <>Your crew's {biz.name} perk is {perkLabel(code, biz.my_total)}. </> : null}
+        Tops out at {perkLabel(code, biz.ceiling)}.
+      </div>
+    </div>
   )
 }
