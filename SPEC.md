@@ -148,7 +148,7 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
 | Prize | Odds | | Prize | Odds |
 |---|---|---|---|---|
 | 1,000 Herb | 10% | | $100,000 cash | 10% |
-| 700 Dust | 10% | | 1,000 Thugs | 5% |
+| 700 Dust | 10% | | 250 Thugs | 5% |
 | 250 Pills | 10% | | 100 Hustlers | 5% |
 | 5 Diamonds | 20% | | **Jackpot:** 25 Diamonds | 7% |
 | 10 Diamonds | 10% | | **Jackpot:** $1,000,000 cash | 3% |
@@ -230,8 +230,9 @@ the center cost more, pay more and resist harder:
 | 3 | 24 | $24,000 | $480,000 | 400 |
 | edge | 32 | $16,000 | $320,000 | 250 |
 
-- **Block bonus**: every held block pays its share of the hood's income
-  (income ÷ 6) once every 24h — 80% to the holding Crew's bank, 20% to its
+- **Block bonus**: every held block pays 75% of its share of the hood's income
+  (income ÷ 6 × 0.75, `_cfg block_bonus_pct`; cut from 100%) once every 24h —
+  80% to the holding Crew's bank, 20% to its
   Cartel's bank *(wiki split)*. Each block shows a countdown to its next bonus.
 - Holding 4 of a hood's 6 blocks makes your Crew the **Hood owner** (shown on
   the map).

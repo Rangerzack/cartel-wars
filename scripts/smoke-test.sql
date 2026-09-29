@@ -222,11 +222,12 @@ do $$ declare r jsonb; t jsonb; b int; hid int; begin
     assert (r->>'captured')::boolean, 'block ' || i || ': ' || r::text;
   end loop;
   assert (select owner_crew_id from hoods where id = hid) = (select id from crews where name = 'Los Pollos'), 'hood captured';
-  -- block bonuses: 320k/day hood = 53,333 per block; 80% crew, 20% cartel
+  -- block bonuses: 320k/day hood = 53,333 a sixth, paid at 75% = 40,000 per block; 80% crew, 20% cartel
+  assert _block_bonus(320000) = 40000, 'block bonus: ' || _block_bonus(320000);
   update blocks set bonus_at = now() - interval '1 minute' where hood_id = hid;
   perform get_me();
-  assert (select bank from crews where name = 'Los Pollos') = 500 + 6 * 42666, 'crew got 80%: ' || (select bank from crews where name = 'Los Pollos');
-  assert (select bank from cartels where name = 'Juárez') = 100 + 6 * 10667, 'cartel got 20%: ' || (select bank from cartels where name = 'Juárez');
+  assert (select bank from crews where name = 'Los Pollos') = 500 + 6 * 32000, 'crew got 80%: ' || (select bank from crews where name = 'Los Pollos');
+  assert (select bank from cartels where name = 'Juárez') = 100 + 6 * 8000, 'cartel got 20%: ' || (select bank from cartels where name = 'Juárez');
   assert (select count(*) from blocks where hood_id = hid and bonus_at > now() + interval '23 hours') = 6, 'bonus clocks rolled';
   assert jsonb_array_length(get_bank_ledger('crew')) = 8, 'crew ledger: deposit, withdraw, 6 bonuses';
   assert jsonb_array_length(get_bank_ledger('cartel')) = 7, 'cartel ledger: deposit + 6 bonuses';

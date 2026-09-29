@@ -130,7 +130,7 @@ try {
 } finally {
   if (rigged) {
     await db.query(`update drop_prizes set weight = case code when 'herb_1000' then 100 when 'dust_700' then 100 when 'pills_250' then 100
-                      when 'dia_5' then 200 when 'dia_10' then 100 when 'refills_2' then 100 when 'cash_100k' then 100 when 'thugs_1000' then 50
+                      when 'dia_5' then 200 when 'dia_10' then 100 when 'refills_2' then 100 when 'cash_100k' then 100 when 'thugs_250' then 50
                       when 'hustlers_100' then 50 when 'dia_25' then 70 when 'cash_1m' then 30 end`)
   }
   if (errors.length) { console.error('Page errors:\n' + errors.join('\n')); process.exitCode = 1 }
