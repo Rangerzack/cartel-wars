@@ -18,6 +18,10 @@ create or replace function blocks_of(biz text, rng integer, n integer) returns i
   select array(select b.id from blocks b join hoods h on h.id = b.hood_id
                 where b.business = biz and greatest(abs(h.gx - 5), abs(h.gy - 5)) = rng order by b.id limit n) $$;
 create or replace function near(a numeric, b numeric) returns boolean language sql immutable as $$ select abs(a - b) < 0.0001 $$;
+-- A business's base (one outer block) and ceiling. The checks below are written against these, so they hold
+-- whatever the table is tuned to (perks were cut to 75% of launch on 2026-10-01).
+create or replace function base_of(biz text) returns numeric language sql stable as $$ select base from business_defs where code = biz $$;
+create or replace function top_of(biz text) returns numeric language sql stable as $$ select ceiling from business_defs where code = biz $$;
 
 -- The map ---------------------------------------------------------------------------------------------------
 do $$ declare r record; begin
@@ -33,6 +37,9 @@ do $$ declare r record; begin
     assert r.rings = 4 and r.outer_n between 8 and 11, 'spread: ' || r.code || ' outer ' || r.outer_n || ' rings ' || r.rings;
   end loop;
   assert jsonb_array_length(get_catalog()->'businesses') = 19;
+  -- tuning: every perk at 75% of launch
+  assert near(base_of('gym'), 0.075) and near(top_of('gym'), 0.30) and near(top_of('trucking'), 0.75)
+     and near(top_of('repo'), 0.075) and near(base_of('law_office'), 0.1125), 'perks at 75% of launch';
 end $$;
 
 -- One block's value ---------------------------------------------------------------------------------------------
@@ -50,19 +57,20 @@ select as_user('f1111111-1111-1111-1111-111111111111');
 do $$ declare cid uuid; p jsonb; hid int; begin
   perform get_me();
   cid := (crew_create('Gray Matter', '⚗️', 'Chemistry.')->>'id')::uuid;
-  -- one outer Gym
+  assert near(top_of('gym'), 4 * base_of('gym')), 'gym tops out at 4x one outer block';
+  -- one outer Gym: its base (b)
   perform give_blocks(cid, blocks_of('gym', 4, 1));
-  assert near(_pk(_crew_perks(cid), 'gym'), 0.10), 'one outer gym: ' || _crew_perks(cid)::text;
-  assert near(_pk(get_me()->'perks', 'gym'), 0.10), 'members see it in get_me';
-  -- five outer Gyms: 0.10 + 4 x 0.025
+  assert near(_pk(_crew_perks(cid), 'gym'), base_of('gym')), 'one outer gym: ' || _crew_perks(cid)::text;
+  assert near(_pk(get_me()->'perks', 'gym'), base_of('gym')), 'members see it in get_me';
+  -- five outer Gyms: b + 4 x b/4 = 2b
   perform give_blocks(cid, blocks_of('gym', 4, 5));
-  assert near(_pk(_crew_perks(cid), 'gym'), 0.20), 'five: ' || _crew_perks(cid)::text;
-  -- eight: would be 0.275, but tops out at double the best block
+  assert near(_pk(_crew_perks(cid), 'gym'), 2 * base_of('gym')), 'five: ' || _crew_perks(cid)::text;
+  -- eight: would be 2.75b, but tops out at double the best block
   perform give_blocks(cid, blocks_of('gym', 4, 8));
-  assert near(_pk(_crew_perks(cid), 'gym'), 0.20), 'capped at 2x best';
-  -- a ring-2 gym is the new best (0.15); the eight outer ones add a quarter each, capped at 0.30
+  assert near(_pk(_crew_perks(cid), 'gym'), 2 * base_of('gym')), 'capped at 2x best';
+  -- a ring-2 gym is the new best (1.5b); the eight outer ones add a quarter each, capped at 3b
   perform give_blocks(cid, blocks_of('gym', 4, 8) || blocks_of('gym', 2, 1));
-  assert near(_pk(_crew_perks(cid), 'gym'), 0.30), 'better best raises the cap: ' || _crew_perks(cid)::text;
+  assert near(_pk(_crew_perks(cid), 'gym'), 3 * base_of('gym')), 'better best raises the cap: ' || _crew_perks(cid)::text;
 
   -- the whole center hood: every business there counts x2 (center) x1.5 (full hood)
   hid := (select id from hoods where gx = 5 and gy = 5);
@@ -99,12 +107,14 @@ do $$ declare t jsonb; b jsonb; bid int; begin
   t := get_territory();
   assert (select bool_and((e->>'full_hood')::boolean) from jsonb_array_elements(t->'hoods') e), 'every hood full';
   assert (select count(*) from jsonb_array_elements(t->'hoods') h, jsonb_array_elements(h->'blocks') bl where bl->>'business' is not null) = 486;
-  assert near(_pk(t->'my_perks', 'gym'), 0.40);
+  assert near(_pk(t->'my_perks', 'gym'), top_of('gym'));
   bid := (blocks_of('pawn_shop', 4, 1))[1];
   b := get_block(bid)->'business';
   assert b->>'code' = 'pawn_shop' and b->>'name' = 'Pawn Shop', b::text;
-  assert near((b->>'value')::numeric, 0.05) and near((b->>'value_full')::numeric, 0.075) and near((b->>'value_full_cartel')::numeric, 0.0875), b::text;
-  assert (b->>'owner_full')::boolean and near((b->>'owner_value')::numeric, 0.0875) and near((b->>'owner_total')::numeric, 0.20) and near((b->>'my_total')::numeric, 0.20);
+  assert near((b->>'value')::numeric, base_of('pawn_shop')) and near((b->>'value_full')::numeric, 1.5 * base_of('pawn_shop'))
+     and near((b->>'value_full_cartel')::numeric, 1.75 * base_of('pawn_shop')), b::text;
+  assert (b->>'owner_full')::boolean and near((b->>'owner_value')::numeric, 1.75 * base_of('pawn_shop'))
+     and near((b->>'owner_total')::numeric, top_of('pawn_shop')) and near((b->>'my_total')::numeric, top_of('pawn_shop'));
 end $$;
 
 -- Effects: Skyler's crew holds the whole city in a cartel, so every perk is at its ceiling -------------------------
@@ -114,75 +124,78 @@ do $$ declare u uuid := auth.uid(); r jsonb; mg item_defs; ct item_defs; c bigin
   select * into ct from item_defs where name = 'Cargo Truck';
   update profiles set cash = 100000000, heat = 50, health = 50, health_bought = 0, jail_until = null, stamina = 25 where id = u;
 
-  -- Pawn Shop -20% on weapons, Chop Shop -40% on vehicles
+  -- Pawn Shop off weapons, Chop Shop off vehicles
   r := buy_item(mg.id, 1);
-  assert (r->>'cost')::bigint = round(mg.price * 0.80) and near((r->>'discount')::numeric, 0.20), 'pawn: ' || r::text;
+  assert (r->>'cost')::bigint = round(mg.price * (1 - top_of('pawn_shop'))) and near((r->>'discount')::numeric, top_of('pawn_shop')), 'pawn: ' || r::text;
   r := buy_item(ct.id, 2);
-  assert (r->>'cost')::bigint = round(ct.price * 0.60) * 2, 'chop: ' || r::text;
-  -- Repo Co: 60% back, never more than it cost
+  assert (r->>'cost')::bigint = round(ct.price * (1 - top_of('chop_shop'))) * 2, 'chop: ' || r::text;
+  -- Repo Co: half back plus the perk, never more than it cost
   r := sell_item(ct.id, 1);
-  assert (r->>'refund')::bigint = floor(ct.price * 0.60), 'repo: ' || r::text;
-  assert (r->>'refund')::bigint <= round(ct.price * 0.60), 'no buy-low sell-high loop';
+  assert (r->>'refund')::bigint = floor(ct.price * (0.5 + top_of('repo'))), 'repo: ' || r::text;
+  assert (r->>'refund')::bigint <= round(ct.price * (1 - top_of('chop_shop'))), 'no buy-low sell-high loop';
   assert not exists (select 1 from item_defs d where not d.drop_only and d.rep_price = 0
-                       and floor(d.price * 0.60) > round(d.price * (1 - case when d.category = 'transport' then 0.40 else 0.20 end))), 'no loop anywhere';
+                       and floor(d.price * (0.5 + top_of('repo')))
+                           > round(d.price * (1 - case when d.category = 'transport' then top_of('chop_shop') else top_of('pawn_shop') end))), 'no loop anywhere';
 
-  -- Gym -40% thugs, Shooting Range -40% mercs and enforcers
+  -- Gym off thugs, Shooting Range off mercs and enforcers
   delete from player_hoodlums where player_id = u;
   r := buy_hoodlums('thug', 100);
-  assert (r->>'cost')::bigint = ceil(_hoodlum_price('thug', 0, 100) * 0.60), 'gym: ' || r::text;
+  assert (r->>'cost')::bigint = ceil(_hoodlum_price('thug', 0, 100) * (1 - top_of('gym'))), 'gym: ' || r::text;
   r := buy_hoodlums('enforcer', 10);
-  assert (r->>'cost')::bigint = ceil(_hoodlum_price('enforcer', 0, 10) * 0.60), 'range: ' || r::text;
+  assert (r->>'cost')::bigint = ceil(_hoodlum_price('enforcer', 0, 10) * (1 - top_of('shooting_range'))), 'range: ' || r::text;
   r := buy_hoodlums('spy', 10);
   assert (r->>'cost')::bigint = ceil(_hoodlum_price('spy', 0, 10)), 'spies full price';
 
-  -- Bent Cop -40% bribes, Clinic -40% health
+  -- Bent Cop off bribes, Clinic off health
   r := bribe_police(10);
-  assert (r->>'cost')::int = ceil(10 * _cfg('bribe_per_heat') * 0.60), 'bent cop: ' || r::text;
+  assert (r->>'cost')::int = ceil(10 * _cfg('bribe_per_heat') * (1 - top_of('bent_cop'))), 'bent cop: ' || r::text;
   r := buy_health(10);
-  assert (r->>'cost')::bigint = ceil(_health_price(0, 10) * 0.60), 'clinic: ' || r::text;
+  assert (r->>'cost')::bigint = ceil(_health_price(0, 10) * (1 - top_of('clinic'))), 'clinic: ' || r::text;
 
-  -- Law Office -40% bail, and busts are 40% shorter
+  -- Law Office: cheaper bail, and busts are shorter by the same share
   update profiles set jail_until = now() + interval '60 minutes' where id = u;
   r := bail_out();
-  assert (r->>'cost')::int = ceil((_cfg('bail_base') + 60 * _cfg('bail_per_minute')) * 0.60), 'law bail: ' || r::text;
+  assert (r->>'cost')::int = ceil((_cfg('bail_base') + 60 * _cfg('bail_per_minute')) * (1 - top_of('law_office'))), 'law bail: ' || r::text;
   select * into h from profiles where id = u;
   h.heat := 100;
   for i in 1..60 loop exit when h.jail_until is not null; h := _bust_roll(h); end loop;
   assert h.jail_until is not null, 'got busted';
-  assert h.jail_until between now() + make_interval(mins => (_cfg('jail_minutes') * 0.6)::int) - interval '5 seconds'
-                          and now() + make_interval(mins => (_cfg('jail_minutes') * 0.6)::int) + interval '5 seconds', 'shorter jail: ' || h.jail_until;
+  assert h.jail_until between now() + make_interval(secs => _cfg('jail_minutes') * 60 * (1 - top_of('law_office'))) - interval '5 seconds'
+                          and now() + make_interval(secs => _cfg('jail_minutes') * 60 * (1 - top_of('law_office'))) + interval '5 seconds', 'shorter jail: ' || h.jail_until;
 
-  -- Pharmacy: product refills use 40% less
+  -- Pharmacy: product refills use less
   insert into storage (player_id, commodity, qty) values (u, 'herb', 5000) on conflict (player_id, commodity) do update set qty = 5000;
   update profiles set stamina = 0 where id = u;
   r := refill('stamina', 'herb');
-  assert (r->>'units')::int = ceil((select refill_stamina from commodities where code = 'herb') * 0.60), 'pharmacy: ' || r::text;
+  assert (r->>'units')::int = ceil((select refill_stamina from commodities where code = 'herb') * (1 - top_of('pharmacy'))), 'pharmacy: ' || r::text;
   assert (select qty from storage where player_id = u and commodity = 'herb') = 5000 - (r->>'units')::int;
 
-  -- Warehouse +40% storage, Trucking Co +100% cargo and listing size
+  -- Warehouse: more storage. Trucking Co: bigger cargo and listings
   r := get_me();
-  assert (r->>'storage_cap')::int = floor((r->>'storage_base')::int * 1.40), 'warehouse: ' || (r->>'storage_cap');
-  assert _storage_cap(u, 1000) = 1400;
-  assert (r->>'transport_capacity')::int = 2000 and (r->>'listing_max')::int = floor(_cfg('listing_max') * 2), 'trucking: ' || (r->>'transport_capacity');
+  assert (r->>'storage_cap')::int = floor((r->>'storage_base')::int * (1 + top_of('warehouse'))), 'warehouse: ' || (r->>'storage_cap');
+  assert _storage_cap(u, 1000) = floor(1000 * (1 + top_of('warehouse')));
+  assert (r->>'transport_capacity')::int = floor(1000 * (1 + top_of('trucking')))
+     and (r->>'listing_max')::int = floor(_cfg('listing_max') * (1 + top_of('trucking'))), 'trucking: ' || (r->>'transport_capacity');
   update storage set qty = 3000 where player_id = u and commodity = 'herb';
   update profiles set storage_cap = 3000 where id = u;
-  perform list_product('herb', 1800, 1);        -- over the 1000-unit truck and the 1000-unit limit, fine with Trucking Co
+  perform list_product('herb', 1500, 1);        -- over the 1000-unit truck and the 1000-unit limit, fine with Trucking Co
 
-  -- Strip Club +40% carried, Night Club 40% sooner, Dispensary +20% over street
+  -- Strip Club: hustlers carry more. Night Club: back sooner. Dispensary: over street
   r := hire_hustlers('herb', 10);
-  assert (r->>'units')::int = floor(16 * 10 * 1.40), 'strip club: ' || r::text;
-  assert (r->>'cash_due')::bigint = floor((r->>'units')::int * (select price from street_prices where commodity = 'herb') * 1.20), 'dispensary: ' || r::text;
+  assert (r->>'units')::int = floor(16 * 10 * (1 + top_of('strip_club'))), 'strip club: ' || r::text;
+  assert (r->>'cash_due')::bigint = floor((r->>'units')::int * (select price from street_prices where commodity = 'herb') * (1 + top_of('dispensary'))), 'dispensary: ' || r::text;
   t := (select returns_at from hustlers where player_id = u order by returns_at desc limit 1);
-  assert t between now() + make_interval(secs => _cfg('hustler_hours') * 3600 * 0.6) - interval '5 seconds'
-               and now() + make_interval(secs => _cfg('hustler_hours') * 3600 * 0.6) + interval '5 seconds', 'night club: ' || t;
+  assert t between now() + make_interval(secs => _cfg('hustler_hours') * 3600 * (1 - top_of('night_club'))) - interval '5 seconds'
+               and now() + make_interval(secs => _cfg('hustler_hours') * 3600 * (1 - top_of('night_club'))) + interval '5 seconds', 'night club: ' || t;
 
-  -- Grow House +50% herb (and the house holds 50% more), Utility Co +25% on top
+  -- Grow House: herb grows faster (and the house holds more), Utility Co on top
   insert into grow_houses (player_id, commodity, running, started_at, level) values (u, 'herb', true, now() - interval '1 hour', 1);
   r := (select e from jsonb_array_elements(get_me()->'grow_houses') e where e->>'commodity' = 'herb');
-  assert near((r->>'rate')::numeric, 20 * 1.75), 'lab + utility: ' || r::text;
-  assert (r->>'cap')::int = floor(200 * 1.75) and (r->>'produced')::int = floor(20 * 1.75), r::text;
+  assert near((r->>'rate')::numeric, round(20 * (1 + top_of('grow_house') + top_of('utility')), 1)), 'lab + utility: ' || r::text;
+  assert (r->>'cap')::int = floor(200 * (1 + top_of('grow_house') + top_of('utility')))
+     and (r->>'produced')::int = floor(20 * (1 + top_of('grow_house') + top_of('utility'))), r::text;
   r := grow_collect((select id from grow_houses where player_id = u and commodity = 'herb'));
-  assert (r->>'collected')::int = floor(20 * 1.75), 'collect: ' || r::text;
+  assert (r->>'collected')::int = floor(20 * (1 + top_of('grow_house') + top_of('utility'))), 'collect: ' || r::text;
 end $$;
 
 -- Security Firm: the defending crew's garrisons count for more -----------------------------------------------------
@@ -197,9 +210,10 @@ do $$ declare u uuid := auth.uid(); bid int := (blocks_of('pawn_shop', 4, 1))[1]
   base := (select h.base_resistance from blocks b join hoods h on h.id = b.hood_id where b.id = bid);
   insert into player_hoodlums (player_id, code, qty) values (u, 'spy', 1) on conflict (player_id, code) do update set qty = 1;
   r := spy_block(bid);
-  assert (r->>'resistance')::numeric = round(base + 600 * 1.40) and near((r->>'security')::numeric, 0.40), 'spy sees it: ' || r::text;
+  assert (r->>'resistance')::numeric = round(base + 600 * (1 + top_of('security_firm')))
+     and near((r->>'security')::numeric, top_of('security_firm')), 'spy sees it: ' || r::text;
   r := attack_block(bid, 400, 0);
-  assert (r->>'resistance')::numeric = round(base + 600 * 1.40), 'security firm +40%: ' || r::text;
+  assert (r->>'resistance')::numeric = round(base + 600 * (1 + top_of('security_firm'))), 'security firm: ' || r::text;
 end $$;
 
 -- Nobody in a crew: no perks, full prices ------------------------------------------------------------------------
