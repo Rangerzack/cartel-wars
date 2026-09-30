@@ -40,21 +40,25 @@ try {
   const a = await newPlayer(N('Juan'))
   const aId = (await one('select id from profiles where name = $1', [N('Juan')])).id
 
-  // Slots: 15💎 + $100,000 for the 7th, and the button needs both
-  await db.query('update profiles set diamonds = 200, cash = 50000 where id = $1', [aId])
+  // Slots: 1💎 + $20,000 for the 7th, and the button needs both
+  await db.query('update profiles set diamonds = 200, cash = 10000 where id = $1', [aId])
   await a.goto(`${BASE}/services?focus=upgrades`)
   const up = a.locator('#upgrades')
   const slotBtn = up.locator('.row', { hasText: 'Setup slot +1' }).getByRole('button')
-  await slotBtn.getByText('💎 15 + $100,000').waitFor()
+  await slotBtn.getByText('💎 1 + $20,000').waitFor()
   if (!(await slotBtn.isDisabled())) throw new Error('not enough cash on hand: disabled')
   await up.getByText('Slots take cash on hand').waitFor()
   await db.query('update profiles set cash = 1000000 where id = $1', [aId])
   await a.reload()
   await slotBtn.click()
-  await a.getByText('Upgraded for 💎 15 + $100,000').waitFor()
-  await slotBtn.getByText('💎 20 + $400,000').waitFor()
+  await a.getByText('Upgraded for 💎 1 + $20,000').waitFor()
+  await slotBtn.getByText('💎 1 + $40,000').waitFor()
   const p1 = await one('select inventory_slots, diamonds, cash from profiles where id = $1', [aId])
-  if (p1.inventory_slots !== 7 || p1.diamonds !== 185 || Number(p1.cash) !== 900000) throw new Error('charged: ' + JSON.stringify(p1))
+  if (p1.inventory_slots !== 7 || p1.diamonds !== 199 || Number(p1.cash) !== 980000) throw new Error('charged: ' + JSON.stringify(p1))
+  // diamonds come from milestones: the next steps, and the whole ladder
+  await up.getByText(/Next: 50 actions → 💎 5 \(\d+\/50\) · 10 fight wins → 💎 5/).waitFor()
+  await up.getByText('All milestones').click()
+  await up.getByText('100,000 → 💎 250').waitFor()
   await snap(a, 'slots')
 
   // at 130 the button gives way to "Maxed"
@@ -68,7 +72,7 @@ try {
   await db.query(`insert into inventory (player_id, item_id, qty) select $1, id, 7 from item_defs where name = 'Brass Knuckles'`, [aId])
   await db.query(`insert into setup_items (player_id, setup, item_id, qty) select $1, 'offense', id, 7 from item_defs where name = 'Brass Knuckles'`, [aId])
   await a.goto(`${BASE}/items?setup=offense`)
-  await a.getByText('Setup full. The next slot costs 💎 20 + $400,000').waitFor()
+  await a.getByText('Setup full. The next slot costs 💎 1 + $40,000').waitFor()
 
   // Boost: pick a side, then the Offense setup shows +50
   await a.goto(`${BASE}/services?focus=boost`)
@@ -80,7 +84,7 @@ try {
   await boost.getByText('you can switch to defense once this one runs out').waitFor()
   if (await boost.getByRole('button', { name: /Defense/ }).count()) throw new Error('no defense button while attack runs')
   const p2 = await one('select boost_side, boost_until > now() + interval \'23 hours\' as ok, diamonds from profiles where id = $1', [aId])
-  if (p2.boost_side !== 'attack' || !p2.ok || p2.diamonds !== 135) throw new Error('boost: ' + JSON.stringify(p2))
+  if (p2.boost_side !== 'attack' || !p2.ok || p2.diamonds !== 149) throw new Error('boost: ' + JSON.stringify(p2))
   await snap(a, 'boost')
   await a.goto(`${BASE}/items?setup=offense`)
   await a.getByText('⚡ Includes your +50 attack boost').waitFor()

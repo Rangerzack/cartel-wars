@@ -9,11 +9,16 @@ insert into auth.users (id, raw_user_meta_data) values
 
 create or replace function as_user(u text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', u)::text, false) $$;
+-- (the "no error" failure is raised outside the handler — raised inside, its own text contains the needle and passes)
 create or replace function expect_error(sql text, needle text) returns void language plpgsql as $$
+declare ran boolean := false;
 begin
-  execute sql; raise exception 'expected error containing "%" from: %', needle, sql;
-exception when others then
-  if sqlerrm not like '%' || needle || '%' then raise exception 'wrong error: % (wanted "%")', sqlerrm, needle; end if;
+  begin
+    execute sql; ran := true;
+  exception when others then
+    if sqlerrm not like '%' || needle || '%' then raise exception 'wrong error: % (wanted "%")', sqlerrm, needle; end if;
+  end;
+  if ran then raise exception 'expected an error (%) from: %', needle, sql; end if;
 end $$;
 
 select as_user('11111111-1111-1111-1111-111111111111');
@@ -79,17 +84,21 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
 
   -- hustlers
   update storage set qty = 200 where player_id = auth.uid() and commodity = 'herb';
+  perform set_config('test.street', (select price from street_prices where commodity = 'herb')::text, false);
   r := hire_hustlers('herb', 2);
   assert (r->>'units')::int = 32;
+  perform set_config('test.due', r->>'cash_due', false);
   perform expect_error('select collect_hustlers()', 'back yet');
   update hustlers set returns_at = now() - interval '1 minute' where player_id = auth.uid();
   r := collect_hustlers();
-  assert (r->>'cash')::int = 32 * (select price from street_prices where commodity = 'herb'), 'hustler cash';
+  assert (r->>'cash')::int = current_setting('test.due')::int, 'hustler cash';
+  -- 32 units barely move the street: within a dollar a unit of the price before the hire
+  assert abs((r->>'cash')::int - 32 * current_setting('test.street')::int) <= 32, 'hustler cash near street: ' || r::text;
 
   -- marketplace
   perform expect_error('select list_product(''herb'', 100, 10)', 'transport carries 25');
   perform buy_item((select id from item_defs where name = 'Sedan'), 1);
-  perform expect_error('select list_product(''herb'', 100, 99999)', 'cannot list above');
+  perform expect_error('select list_product(''herb'', 100, 99999)', 'you can list up to');
   r := list_product('herb', 100, 40);
   me := get_me();
   assert (me->'storage'->>'herb')::int = 68, 'storage after listing: ' || (me->'storage'->>'herb');

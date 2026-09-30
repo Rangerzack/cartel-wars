@@ -7,7 +7,8 @@ import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
 import { perk } from '../lib/perks'
-import type { BusinessCode } from '../lib/types'
+import { refillShare, shareLabel } from '../lib/market'
+import type { BusinessCode, MilestoneDef } from '../lib/types'
 
 export default function Services() {
   const me = useMe()
@@ -46,6 +47,8 @@ export default function Services() {
   const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
   const refillUnits = (units: number) => Math.ceil(units * (1 - pharmacy))
+  const fullRefills = cfg.refill_full ?? 3
+  const nextShare = refillShare(me, catalog)
   const missing = me.health_max - me.health
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
@@ -117,7 +120,7 @@ export default function Services() {
         </div>
       </Card>
 
-      <Card id="refills" title="⚡ Refills" right={<small>{Math.min(3, me.refills_used)}/3 full product refills today</small>}>
+      <Card id="refills" title="⚡ Refills" right={<small>{Math.min(fullRefills, me.refills_used)}/{fullRefills} full product refills today</small>}>
         {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
         {(['stamina', 'health'] as const).map(kind => (
           <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
@@ -126,12 +129,12 @@ export default function Services() {
             <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max; if (cur >= max) return; if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
             {catalog.commodities.map(c => {
               const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
-              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}` })}>{commodityIcon[c.code]} {units}</Btn>
+              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>
             })}
           </div>
         ))}
         {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, and they don't count toward the three a day.</div>}
-        <div className="row small muted">After three product refills in a day, the next ones only restore half. All three come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}.</div>
+        <div className="row small muted refill-next"><div>After {fullRefills} product refills in a day, each one restores half as much as the one before (½, ¼, ⅛ …). Your next product refill restores <b>{nextShare >= 1 ? 'everything missing' : `${shareLabel(nextShare)} of what's missing`}</b>. The full ones come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Diamond and free refills are always full.</div></div>
       </Card>
 
       <Card id="upgrades" title="💎 Upgrades" right={<small>{num(me.diamonds)} diamonds</small>}>
@@ -149,7 +152,7 @@ export default function Services() {
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <div className="row small muted">Diamonds are earned through achievements — 50, 100, 500, 1,000 and 5,000 actions; 10, 100 and 1,000 fight wins.</div>
+        <Milestones />
       </Card>
 
       <BoostCard />
@@ -211,5 +214,38 @@ function BoostCard() {
         )}
       </div>
     </Card>
+  )
+}
+
+/** Diamonds come from milestones: the next action and fight-win steps, and the whole ladder on tap. */
+function Milestones() {
+  const me = useMe()
+  const { catalog } = useGame()
+  const ladder = catalog?.milestones ?? []
+  if (ladder.length === 0) return null
+  const have = (m: MilestoneDef) => (m.kind === 'actions' ? me.actions_done : me.fights_won)
+  const next = (kind: MilestoneDef['kind']) => ladder.filter(m => m.kind === kind && have(m) < m.n).sort((a, b) => a.n - b.n)[0]
+  const line = (m: MilestoneDef | undefined, label: string) => m
+    ? <span className="nowrap">{num(m.n)} {label} → 💎 {m.reward} <span className="muted">({num(have(m))}/{num(m.n)})</span></span>
+    : <span className="nowrap">every {label} milestone done</span>
+  return (
+    <div className="row small muted milestones">
+      <div className="grow stack" style={{ gap: 4 }}>
+        <div>Diamonds come from milestones. Next: {line(next('actions'), 'actions')} · {line(next('wins'), 'fight wins')}</div>
+        <details>
+          <summary>All milestones</summary>
+          <div className="grid2 milestone-ladder">
+            {(['actions', 'wins'] as const).map(kind => (
+              <div key={kind} className="stack" style={{ gap: 2 }}>
+                <b>{kind === 'actions' ? 'Actions' : 'Fight wins'}</b>
+                {ladder.filter(m => m.kind === kind).sort((a, b) => a.n - b.n).map(m => (
+                  <span key={m.key} className={have(m) >= m.n ? 'done' : ''}>{have(m) >= m.n ? '✓' : '·'} {num(m.n)} → 💎 {m.reward}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
+    </div>
   )
 }

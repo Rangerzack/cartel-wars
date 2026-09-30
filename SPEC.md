@@ -20,11 +20,14 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
 | Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
-| Diamonds | starter grant | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses. Earned via achievements; no real-money purchase in this clone. |
+| Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop; no real-money purchase in this clone. |
 
 Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.
 Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
-halve in effect after 3 in a game day; all three come back at the 00:00 UTC rollover.
+halve in effect after 3 in a game day *(wiki)* — and each one after that halves again
+(½, ¼, ⅛ … of what's missing) *(ours, 2026-09-30: unlimited half refills made product
+worth far more burned than sold)*. The count resets at the 00:00 UTC rollover; diamond
+and Daily Drop refills are always full and don't count.
 
 The **game day** rolls over at 00:00 UTC, the same clock as the weekly boards: refills
 come back and daily cash lands.
@@ -100,10 +103,24 @@ Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
 Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
-*(Zack)*: the k-th extra slot (k = 1 for the 7th) is 10 + 5k Diamonds **and**
-$100,000 × k² cash on hand — 7th 15💎 + $100k, 12th 40💎 + $3.6M, 18th 70💎 +
-$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay. Slots top out
-at **130** *(Zack, the original's cap)*.
+*(Zack)*, and 130 should be reachable by a free daily player (1–2 hours a day) in
+about six months *(Zack, 2026-09-30)*: the k-th extra slot (k = 1 for the 7th) is
+1 Diamond, plus one more every 25 slots, **and** $20,000 × k cash on hand — 7th
+1💎 + $20k, 31st 1💎 + $500k, 56th 2💎 + $1M, 100th 4💎 + $1.88M, 130th 5💎 +
+$2.48M; 💎370 + $155M for all 124 (it was 10 + 5k 💎 and $100,000 × k², $64B in
+all). Slots already bought stay. Slots top out at **130** *(Zack, the original's cap)*.
+
+**Milestones** pay the diamonds, once each *(ours; the ladder was lengthened with
+the slot change so a daily player earns about 💎860 in six months — every slot plus
+maxed stamina and health)*:
+
+| Actions | 50 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 15k | 20k | 30k | 50k | 100k |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 10 | 15 | 25 | 50 | 50 | 100 | 100 | 100 | 125 | 150 | 200 | 250 |
+
+| Fight wins | 10 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 25k |
+|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 20 | 25 | 30 | 75 | 50 | 75 | 100 | 150 |
 
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
 Offensive setup or +50 Defense in the Defensive setup (never jail). One side at
@@ -227,8 +244,8 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
 - Product goes into storage even past the cap (you just can't add more until
   you're back under). Cash lands on hand, with a Bank button on the reveal.
 - Free Refills are stamina refill credits: a full refill each that doesn't count
-  toward the three product refills a day. Hustlers are credits that waive the
-  $400 hire fee, one hustler each (Traders only, like hustlers themselves).
+  toward the three product refills a day. Hustlers are credits, one hustler each:
+  they waive the $400 hire fee, or for a Trader that hustler's cut.
 - Paid plan, later: the payment webhook calls `_drop_subscribe(player, paid_through)`
   and `drop_free` goes to 0. Crates stop after the paid-through day.
 
@@ -252,21 +269,43 @@ Commodities: **Herb**, **Dust**, **Pills** (cheap→expensive, bulky→compact).
   houses cost Diamonds *(wiki: "extra grow houses")*.
 - **Storage**: holds collected product; base capacity 500 units *(ours)*,
   upgradable with cash.
-- **Street Price**: per-commodity price that random-walks every time it's
-  read (bounded ±35% of base *(ours)*). The Marketplace can't list above it.
-- **Hustlers** *(wiki)*: hire for $400 each; a hustler carries 16 Herb / 8 Dust
-  / 4 Pills, is gone 4 hours, and returns with cash at the street price at
-  departure. Collect when they're back.
-- **Marketplace** *(wiki)*: list 25–1,000 units at ≤ street price; listing
-  needs Transport capacity ≥ batch size and expires in 48h. Buyers pay cash
-  and need storage room. Cancelled or expired product returns to storage up to
+- **Street Price** *(ours, reworked 2026-09-30)*: base × a small wiggle × what
+  hustler dumping has knocked off.
+  - The wiggle takes one random step (±4%) every 10 minutes, drifts 10% of the
+    way back to base each step, and stays within ±15% (it used to be a ±35% walk).
+  - Every unit hustlers sell adds `units / market_depth` of pressure (depth:
+    Herb 50,000, Dust 15,000, Pills 5,000 — about $3M of each). Pressure takes up
+    to 60% off street and fades by half every 4 hours; stored pressure caps at
+    1.5, so a flood clears in hours, not days.
+  - A batch sells at the price halfway through its own push, so dumping a
+    mountain at once pays less per unit.
+- **Hustlers** *(wiki)*: a hustler carries 16 Herb / 8 Dust / 4 Pills, is gone
+  4 hours, and returns with cash at the street price at departure. Collect when
+  they're back. Without a path they cost $400 each. **Traders** pay nothing up
+  front: their hustlers keep 10% of the take, and Traders sell 10% over street
+  (stacking with the Dispensary) *(ours)*.
+- **Marketplace** *(wiki, extended)*: list 25–1,000 units at up to 150% of
+  street *(was: ≤ street)*; listing needs Transport capacity ≥ batch size and
+  expires in 48h. Buyers pay cash and need storage room. The seller pays a 5%
+  fee on every sale *(ours: a cash sink, and it stops free back-and-forth trades
+  for the Market board)*. Cancelled or expired product returns to storage up to
   the cap; the rest waits on the listing until you make room.
-- **Producers and Traders** *(ours)*: once a player has earned 100 reputation
-  (lifetime — spending rep on items doesn't reset it) they pick a path.
-  Producers build, run and upgrade grow houses but can't send hustlers;
-  Traders send hustlers but can't run grow houses (theirs stop; anything
-  already grown can still be collected). Both use the Marketplace, where
-  producers sell and traders buy. The first pick is free; switching costs 💎50.
+- **Buy orders** *(ours)*: post "Wanted: 2,000 Dust at $170" (25–10,000 units,
+  up to 150% of street, 5 open at a time). The cash for what's still wanted is
+  held off your hand; sellers fill any amount (they need the product and a
+  vehicle that carries the lot, and pay the 5% fee); the product lands in your
+  storage even past the cap. Cancel any time, or it expires in 48h — what's
+  left comes back. The buyer gets a feed line per seller.
+- **Prices board**: street per product (and whether dumping is behind it), the
+  last trade, and 24-hour volume and average from a trade log.
+- **Producers and Traders** *(ours)*: pick a path any time. Until you do you
+  can run grow houses up to level 5 and send hustlers at the $400 fee; taking
+  a grow house past level 5, or earning 100 reputation (lifetime — spending rep
+  doesn't reset it), means picking one. Producers build, run and upgrade grow
+  houses but can't send hustlers; Traders send hustlers on the terms above but
+  can't run grow houses (theirs stop; anything already grown can still be
+  collected). Producers sell on the Marketplace and into buy orders; Traders
+  buy there. The first pick is free; switching costs 💎50.
 - **Bank**: personal bank — deposit/withdraw, no fee (none found in sources).
   Crew Bank and Cartel Bank receive block bonuses and accept deposits; the
   Capo or Co-Capo / the Don can withdraw. Every movement (deposits,
@@ -382,7 +421,8 @@ the `admins` table (flagged on `profiles.is_admin` at registration).
 
 ## Economy at a glance (for tuning)
 
-With base stamina regen (+12/hour) and the seeded numbers:
+With the original stamina regen (+12/hour) and the seeded numbers. (Regen is currently
+boosted 10×, to +120/hour — see `_cfg` — which multiplies the action rows by 10.)
 
 | Income source | Cost | Return |
 |---|---|---|
@@ -391,8 +431,9 @@ With base stamina regen (+12/hour) and the seeded numbers:
 | Herb grow house L1 | $5,000 | 20 u/h × $60 = $1,200/hour (pays off in ~4h) |
 | Dust grow house L1 | $15,000 + 💎20 | 8 u/h × $200 = $1,600/hour (~9h) |
 | Pills grow house L1 | $40,000 + 💎20 | 3 u/h × $600 = $1,800/hour (~22h) |
-| Hustler (herb) | $400 + 16 herb | $960 after 4h (≈$560 net per trip) |
-| Marketplace | transport | up to street price, buyer pays |
+| Hustler (herb), no path | $400 + 16 herb | $960 after 4h (≈$560 net per trip) |
+| Hustler (herb), Trader | 16 herb | $960 × 1.10 × 0.90 ≈ $950 after 4h |
+| Marketplace / buy orders | transport | up to 150% of street, buyer pays, seller keeps 95% |
 | Block (crew) | claim + 51+ thugs (50 wins if held) | $53k–$167k/day per block, 80% crew bank / 20% cartel bank |
 
 Territory is by far the biggest faucet, as in the original — it's what makes

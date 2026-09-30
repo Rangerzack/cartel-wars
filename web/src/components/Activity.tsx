@@ -6,7 +6,7 @@ import { CrewLink, PlayerLink } from './Linked'
 import { ComboPill } from './Combo'
 
 const icon: Record<ActivityItem['kind'], string> = {
-  attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', applied: '📨', joined: '🤝', kicked: '🚪',
+  attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', filled: '📦', applied: '📨', joined: '🤝', kicked: '🚪',
   daily_cash: '💰',
 }
 
@@ -16,7 +16,7 @@ export function activityLink(a: ActivityItem): string | null {
     case 'attacked': return a.actor_id ? `/player/${a.actor_id}` : '/fight?tab=log'
     case 'crew_fight': case 'joined': case 'kicked': case 'applied': return a.crew_id ? `/crew/${a.crew_id}` : '/crew'
     case 'siege': case 'block_lost': case 'block_taken': return a.hood_id ? `/territory?hood=${a.hood_id}${a.block_id ? `&block=${a.block_id}` : ''}` : '/territory'
-    case 'sold': return '/economy?tab=market'
+    case 'sold': case 'filled': return '/economy?tab=market'
     case 'daily_cash': return '/services?focus=bank'
     default: return null
   }
@@ -51,6 +51,7 @@ function Sentence({ a }: { a: ActivityItem }) {
     case 'block_lost': body = <>{crew} took your block {block}{a.actor ? <> ({who})</> : null}</>; break
     case 'block_taken': body = <>{who} took {block} for your crew{a.crew ? <> from {crew}</> : null}</>; break
     case 'sold': body = <>{who} bought {num(d.units ?? 0)} {d.commodity ? `${commodityIcon[d.commodity]} ${d.commodity}` : 'units'} from your listing</>; break
+    case 'filled': body = <>{who} filled your buy order: {num(d.units ?? 0)} {d.commodity ? `${commodityIcon[d.commodity]} ${d.commodity}` : 'units'} for {money(d.cash ?? 0)}</>; break
     case 'applied': body = <>{who} applied to join your crew</>; break
     case 'joined': body = <>{who} let you into {crew}</>; break
     case 'kicked': body = <>{who} removed you from {crew}</>; break

@@ -69,7 +69,7 @@ export default function Actions() {
       <h2>{me.jailed ? 'Jail Actions' : 'Actions'}</h2>
       {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <a onClick={() => nav('/services')}>Post bail →</a></div>}
       {me.hospital && <div className="notice red">You can't work from a hospital bed. <a onClick={() => nav('/services')}>Buy health →</a></div>}
-      {me.path_required && <div className="notice gold">You've earned your stripes — time to pick Producer or Trader. <a onClick={() => nav('/')}>Choose your path →</a></div>}
+      {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <a onClick={() => nav('/economy')}>Choose your path →</a></div>}
       {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <a onClick={() => nav('/services?focus=refills')}>refill it →</a></div>}
 
       <div className="spread">
