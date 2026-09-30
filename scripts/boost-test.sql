@@ -37,6 +37,13 @@ do $$ declare u uuid := auth.uid(); m jsonb; r jsonb; begin
   m := get_me();
   assert (m->'slot_cost'->>'diamonds')::int = 25 and (m->'slot_cost'->>'cash')::int = 900000;
   perform expect_error('select upgrade_stat(''slots'')', 'cash on hand');
+  -- slots top out at 130
+  update profiles set inventory_slots = 129, diamonds = 1000, cash = 2000000000 where id = u;
+  r := upgrade_stat('slots');
+  assert (r->>'cost')::int = 630 and (r->>'cash')::bigint = 1537600000 and (select inventory_slots from profiles where id = u) = 130, r::text;
+  perform expect_error('select upgrade_stat(''slots'')', 'maxed at 130');
+  assert (get_catalog()->'config'->>'max_slots')::int = 130;
+  update profiles set inventory_slots = 8 where id = u;
   -- stamina and health are unchanged: 10 diamonds, no cash
   update profiles set cash = 0 where id = u;
   r := upgrade_stat('health');

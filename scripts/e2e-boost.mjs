@@ -57,6 +57,13 @@ try {
   if (p1.inventory_slots !== 7 || p1.diamonds !== 185 || Number(p1.cash) !== 900000) throw new Error('charged: ' + JSON.stringify(p1))
   await snap(a, 'slots')
 
+  // at 130 the button gives way to "Maxed"
+  await db.query('update profiles set inventory_slots = 130 where id = $1', [aId])
+  await a.reload()
+  await up.locator('.row', { hasText: 'Setup slot +1' }).getByText('130/130 slots').waitFor()
+  await up.locator('.row', { hasText: 'Setup slot +1' }).locator('.pill', { hasText: 'Maxed' }).waitFor()
+  await db.query('update profiles set inventory_slots = 7 where id = $1', [aId])
+
   // Items: a full setup points at the next slot's price
   await db.query(`insert into inventory (player_id, item_id, qty) select $1, id, 7 from item_defs where name = 'Brass Knuckles'`, [aId])
   await db.query(`insert into setup_items (player_id, setup, item_id, qty) select $1, 'offense', id, 7 from item_defs where name = 'Brass Knuckles'`, [aId])

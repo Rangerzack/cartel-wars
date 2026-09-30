@@ -50,6 +50,8 @@ export default function Services() {
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
   const outN = Math.max(0, outAt - me.health)
+  const maxSlots = cfg.max_slots ?? 130
+  const slotsMaxed = me.inventory_slots >= maxSlots
 
   return (
     <div className="page">
@@ -136,17 +138,17 @@ export default function Services() {
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },
-          { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots} slots · each one past ${cfg.base_slots ?? 6} costs more`, c: me.slot_cost?.diamonds ?? 15, cash: me.slot_cost?.cash ?? 0, dis: false },
+          { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots}/${maxSlots} slots · each one past ${cfg.base_slots ?? 6} costs more`, c: me.slot_cost?.diamonds ?? 15, cash: me.slot_cost?.cash ?? 0, dis: slotsMaxed },
         ].map(u => (
           <div key={u.k} className="row">
             <div className="grow"><div className="t">{u.t}</div><div className="s">{u.s}</div></div>
-            <Btn className="sm" disabled={u.dis || me.diamonds < u.c || me.cash < u.cash}
+            {u.k === 'slots' && slotsMaxed ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={u.dis || me.diamonds < u.c || me.cash < u.cash}
               onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : 'Upgraded' })}>
               💎 {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
-            </Btn>
+            </Btn>}
           </div>
         ))}
-        {(me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
+        {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
         <div className="row small muted">Diamonds are earned through achievements — 50, 100, 500, 1,000 and 5,000 actions; 10, 100 and 1,000 fight wins.</div>
       </Card>
 

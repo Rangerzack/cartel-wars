@@ -102,7 +102,8 @@ defense when attacked, jail for both while jailed). Items are never consumed.
 Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
 *(Zack)*: the k-th extra slot (k = 1 for the 7th) is 10 + 5k Diamonds **and**
 $100,000 × k² cash on hand — 7th 15💎 + $100k, 12th 40💎 + $3.6M, 18th 70💎 +
-$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay.
+$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay. Slots top out
+at **130** *(Zack, the original's cap)*.
 
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
 Offensive setup or +50 Defense in the Defensive setup (never jail). The first

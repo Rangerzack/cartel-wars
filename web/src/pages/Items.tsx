@@ -65,7 +65,7 @@ export default function Items() {
             {boosted && <div className="row small"><span className="gold">⚡ Includes your +{me.boost!.amount} {me.boost!.side} boost</span><span className="grow" /><button className="btn sm ghost" onClick={() => nav('/services?focus=boost')}>Boost ›</button></div>}
             <div className="bd stack">
               <div className="slots">{Array.from({ length: me.inventory_slots }, (_, i) => <span key={i} className={`slot ${i < used ? 'on' : ''}`} />)}</div>
-              {used >= me.inventory_slots && me.slot_cost && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <a onClick={() => nav('/services?focus=upgrades')}>Services ›</a></div>}
+              {used >= me.inventory_slots && me.slot_cost && me.inventory_slots < (catalog.config.max_slots ?? 130) && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <a onClick={() => nav('/services?focus=upgrades')}>Services ›</a></div>}
               <div className="small muted">
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}
