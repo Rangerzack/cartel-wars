@@ -30,6 +30,8 @@ export default function Items() {
   const used = [...equipped.values()].reduce((a, b) => a + b, 0)
   const power = me.power[setup]
   const allowed = (c: ItemCategory) => (setup === 'jail' ? c !== 'weapon' : c !== 'jail_weapon')
+  // an active boost counts in its own setup: attack in Offense, defense in Defense
+  const boosted = !!me.boost?.active && ((me.boost.side === 'attack' && setup === 'offense') || (me.boost.side === 'defense' && setup === 'defense'))
   // weapons and protection count in both fight setups; jail weapons only inside
   const homeSetups: Partial<Record<ItemCategory, SetupKind[]>> = { weapon: ['offense', 'defense'], protection: ['offense', 'defense'], jail_weapon: ['jail'] }
   const setupName: Record<SetupKind, string> = { offense: 'Offensive', defense: 'Defensive', jail: 'Jail' }
@@ -60,8 +62,10 @@ export default function Items() {
         <>
           <Seg value={setup} onChange={setSetup} options={[{ v: 'offense', l: 'Offensive' }, { v: 'defense', l: 'Defensive' }, { v: 'jail', l: 'Jail' }]} />
           <Card title={<>Attack {power.att} · Defense {power.def}</>} right={<small>{used}/{me.inventory_slots} slots</small>}>
+            {boosted && <div className="row small"><span className="gold">⚡ Includes your +{me.boost!.amount} {me.boost!.side} boost</span><span className="grow" /><button className="btn sm ghost" onClick={() => nav('/services?focus=boost')}>Boost ›</button></div>}
             <div className="bd stack">
               <div className="slots">{Array.from({ length: me.inventory_slots }, (_, i) => <span key={i} className={`slot ${i < used ? 'on' : ''}`} />)}</div>
+              {used >= me.inventory_slots && me.slot_cost && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <a onClick={() => nav('/services?focus=upgrades')}>Services ›</a></div>}
               <div className="small muted">
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}

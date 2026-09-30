@@ -75,6 +75,10 @@ export interface Me {
   free_hustlers?: number
   /** Per setup: the combos it completes, the one it runs, and the one the player picked (null = best). */
   combos?: Record<SetupKind, SetupCombos>
+  /** What the next setup slot costs (it climbs with every slot past the free six). */
+  slot_cost?: { diamonds: number; cash: number }
+  /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
+  boost?: { side: 'attack' | 'defense' | null; until: string | null; active: boolean; amount: number }
 }
 
 export type StyleCode = 'armored' | 'antitank' | 'infantry' | 'blitz' | 'blackout'

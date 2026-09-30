@@ -99,7 +99,16 @@ Hospital. Attacking adds Heat.
 Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
-Slot count = Inventory slots (base 6 *(ours)*, upgradable with Diamonds).
+Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
+*(Zack)*: the k-th extra slot (k = 1 for the 7th) is 10 + 5k Diamonds **and**
+$100,000 × k² cash on hand — 7th 15💎 + $100k, 12th 40💎 + $3.6M, 18th 70💎 +
+$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay.
+
+**Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
+Offensive setup or +50 Defense in the Defensive setup (never jail). The first
+boost picks the side for good: a player boosts attack or defense, never both.
+One boost at a time; buying again while it runs adds another 24 hours. It counts
+everywhere that setup does (fights, the preview, crew fights).
 Only the single best Transport's att/def counts *(wiki)*.
 
 ### Combos *(Zack: "our own combos, max +10, that counter popular combos")*
