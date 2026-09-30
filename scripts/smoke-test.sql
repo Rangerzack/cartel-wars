@@ -340,7 +340,7 @@ do $$ declare r jsonb; begin
   assert (select jail_until from profiles where id = auth.uid()) < now() + interval '2 minutes', 'sentence not extended';
   update profiles set jail_until = null, heat = 0 where id = auth.uid();
   -- upgrade_stat('heat') is gone
-  perform expect_error('select upgrade_stat(''heat'')', 'Bad upgrade');
+  perform expect_error('select upgrade_stat(''luck'')', 'Bad upgrade');
   -- reputation actions and rare items
   update profiles set stamina = 150, health = 100, cash = cash + 100000 where id = auth.uid();
   r := do_action((select id from action_defs where sort = 40));

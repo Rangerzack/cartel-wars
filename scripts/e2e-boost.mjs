@@ -61,6 +61,18 @@ try {
   await up.getByText('100,000 → 💎 250').waitFor()
   await snap(a, 'slots')
 
+  // Heat: 💎30 a time for +50 max heat, and the red line moves up with it
+  const heatRow = up.locator('.row', { hasText: 'Max heat +50' })
+  await heatRow.getByText('100 max · red from 75').waitFor()
+  await a.locator('#police').getByText('Red (75+)').waitFor()
+  await heatRow.getByRole('button', { name: '💎 30' }).click()
+  await heatRow.getByText('150 max · red from 125').waitFor()
+  await a.locator('#police').getByText('Red (125+) risks a bust').waitFor()
+  await a.locator('#police').getByText('Your heat upgrades moved it up from 75').waitFor()
+  const ph = await one('select heat_max, diamonds from profiles where id = $1', [aId])
+  if (ph.heat_max !== 150 || ph.diamonds !== 169) throw new Error('heat upgrade: ' + JSON.stringify(ph))
+  await snap(a, 'heat')
+
   // at 130 the button gives way to "Maxed"
   await db.query('update profiles set inventory_slots = 130 where id = $1', [aId])
   await a.reload()
@@ -84,7 +96,7 @@ try {
   await boost.getByText('you can switch to defense once this one runs out').waitFor()
   if (await boost.getByRole('button', { name: /Defense/ }).count()) throw new Error('no defense button while attack runs')
   const p2 = await one('select boost_side, boost_until > now() + interval \'23 hours\' as ok, diamonds from profiles where id = $1', [aId])
-  if (p2.boost_side !== 'attack' || !p2.ok || p2.diamonds !== 149) throw new Error('boost: ' + JSON.stringify(p2))
+  if (p2.boost_side !== 'attack' || !p2.ok || p2.diamonds !== 119) throw new Error('boost: ' + JSON.stringify(p2))
   await snap(a, 'boost')
   await a.goto(`${BASE}/items?setup=offense`)
   await a.getByText('⚡ Includes your +50 attack boost').waitFor()
@@ -107,6 +119,24 @@ try {
   await a.getByText('+50 Defense for 24h').waitFor()
   await boost.getByText('you can switch to attack once this one runs out').waitFor()
   if ((await one('select boost_side from profiles where id = $1', [aId])).boost_side !== 'defense') throw new Error('switched to defense')
+
+  // Go to jail for 💎50: no stamina — and you're in until you post bail
+  await db.query('update profiles set diamonds = 100, stamina = 0, cash = 10000 where id = $1', [aId])
+  await a.goto(`${BASE}/services?focus=police`)
+  const police = a.locator('#police')
+  await police.getByText('You stay until you post bail ($8,000)').waitFor()
+  await police.getByRole('button', { name: 'Go to Jail · 💎 50' }).click()
+  await a.getByText("You're in County Jail — jail setup is active").waitFor()
+  const jailCard = a.locator('.card', { has: a.locator('.hd', { hasText: 'County Jail' }) })
+  await jailCard.getByText('until you post bail').first().waitFor()
+  await a.locator('.status-strip').getByText('🔒 In jail · until bail').waitFor()
+  if (await police.getByRole('button', { name: /Go to Jail/ }).count()) throw new Error('no second trip while inside')
+  const pj = await one(`select diamonds, jail_until = 'infinity' as ok from profiles where id = $1`, [aId])
+  if (pj.diamonds !== 50 || !pj.ok) throw new Error('jailed for diamonds: ' + JSON.stringify(pj))
+  await snap(a, 'jail')
+  await jailCard.getByRole('button', { name: 'Post Bail · $8,000' }).click()
+  await a.getByText('Bailed out for $8,000').waitFor()
+  if ((await one('select jail_until from profiles where id = $1', [aId])).jail_until !== null) throw new Error('out on bail')
 
   console.log('E2E BOOST PASSED')
 } catch (e) {

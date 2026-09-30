@@ -152,16 +152,14 @@ do $$ declare u uuid := auth.uid(); r jsonb; mg item_defs; ct item_defs; c bigin
   r := buy_health(10);
   assert (r->>'cost')::bigint = ceil(_health_price(0, 10) * (1 - top_of('clinic'))), 'clinic: ' || r::text;
 
-  -- Law Office: cheaper bail, and busts are shorter by the same share
-  update profiles set jail_until = now() + interval '60 minutes' where id = u;
+  -- Law Office: cheaper bail (jail has no timer to shorten any more)
+  update profiles set jail_until = 'infinity' where id = u;
   r := bail_out();
-  assert (r->>'cost')::int = ceil((_cfg('bail_base') + 60 * _cfg('bail_per_minute')) * (1 - top_of('law_office'))), 'law bail: ' || r::text;
+  assert (r->>'cost')::int = ceil(8000 * (1 - top_of('law_office'))), 'law bail: ' || r::text;
   select * into h from profiles where id = u;
   h.heat := 100;
   for i in 1..60 loop exit when h.jail_until is not null; h := _bust_roll(h); end loop;
-  assert h.jail_until is not null, 'got busted';
-  assert h.jail_until between now() + make_interval(secs => _cfg('jail_minutes') * 60 * (1 - top_of('law_office'))) - interval '5 seconds'
-                          and now() + make_interval(secs => _cfg('jail_minutes') * 60 * (1 - top_of('law_office'))) + interval '5 seconds', 'shorter jail: ' || h.jail_until;
+  assert h.jail_until = 'infinity', 'busted until bail: ' || h.jail_until;
 
   -- Pharmacy: product refills use less
   insert into storage (player_id, commodity, qty) values (u, 'herb', 5000) on conflict (player_id, commodity) do update set qty = 5000;

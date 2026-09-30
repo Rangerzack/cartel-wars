@@ -835,3 +835,5 @@ textarea.input { resize: vertical; font: inherit; }
 .milestone-ladder { margin-top: 6px; }
 .milestone-ladder .done { color: var(--green); }
 .milestones .nowrap { white-space: nowrap; }
+.turn-in { gap: 10px; }
+.turn-in .btn { flex-shrink: 0; }

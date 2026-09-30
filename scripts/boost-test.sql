@@ -9,16 +9,16 @@ insert into auth.users (id, raw_user_meta_data) values
 
 -- Slot prices ---------------------------------------------------------------------------------------------------
 do $$ declare c record; begin
-  -- the k-th slot past six: 1 diamond (+1 every 25 slots) and $20,000 x k
+  -- the k-th slot past six: 1 diamond (+1 every 4 slots) and $20,000 x k
   select * into c from _slot_cost(6);   assert c.diamonds = 1 and c.cash = 20000, '7th: ' || c::text;
   select * into c from _slot_cost(7);   assert c.diamonds = 1 and c.cash = 40000, '8th: ' || c::text;
-  select * into c from _slot_cost(30);  assert c.diamonds = 1 and c.cash = 500000, '31st: ' || c::text;
-  select * into c from _slot_cost(31);  assert c.diamonds = 2 and c.cash = 520000, '32nd: ' || c::text;
-  select * into c from _slot_cost(99);  assert c.diamonds = 4 and c.cash = 1880000, '100th: ' || c::text;
-  select * into c from _slot_cost(106); assert c.diamonds = 5 and c.cash = 2020000, '107th: ' || c::text;
-  select * into c from _slot_cost(129); assert c.diamonds = 5 and c.cash = 2480000, '130th: ' || c::text;
-  -- all 124 of them: 💎370 and $155M — reachable for a daily player in about six months
-  assert (select sum((_slot_cost(s)).diamonds) from generate_series(6, 129) s) = 370;
+  select * into c from _slot_cost(9);   assert c.diamonds = 1 and c.cash = 80000, '10th: ' || c::text;
+  select * into c from _slot_cost(10);  assert c.diamonds = 2 and c.cash = 100000, '11th: ' || c::text;
+  select * into c from _slot_cost(30);  assert c.diamonds = 7 and c.cash = 500000, '31st: ' || c::text;
+  select * into c from _slot_cost(99);  assert c.diamonds = 24 and c.cash = 1880000, '100th: ' || c::text;
+  select * into c from _slot_cost(129); assert c.diamonds = 31 and c.cash = 2480000, '130th: ' || c::text;
+  -- all 124 of them: about 💎2,000 (1,984) and $155M
+  assert (select sum((_slot_cost(s)).diamonds) from generate_series(6, 129) s) = 1984;
   assert (select sum((_slot_cost(s)).cash) from generate_series(6, 129) s) = 155000000;
 end $$;
 
@@ -45,7 +45,7 @@ do $$ declare u uuid := auth.uid(); m jsonb; r jsonb; begin
   -- slots top out at 130
   update profiles set inventory_slots = 129, diamonds = 1000, cash = 2000000000 where id = u;
   r := upgrade_stat('slots');
-  assert (r->>'cost')::int = 5 and (r->>'cash')::bigint = 2480000 and (select inventory_slots from profiles where id = u) = 130, r::text;
+  assert (r->>'cost')::int = 31 and (r->>'cash')::bigint = 2480000 and (select inventory_slots from profiles where id = u) = 130, r::text;
   perform expect_error('select upgrade_stat(''slots'')', 'maxed at 130');
   assert (get_catalog()->'config'->>'max_slots')::int = 130;
   update profiles set inventory_slots = 8 where id = u;
@@ -143,6 +143,85 @@ do $$ declare u uuid := auth.uid(); a uuid := 'c8888888-8888-8888-8888-888888888
   assert has_function_privilege('authenticated', 'buy_boost(text)', 'execute');
   assert not has_function_privilege('anon', 'buy_boost(text)', 'execute');
   assert not has_function_privilege('authenticated', '_slot_cost(integer)', 'execute');
+end $$;
+
+-- Heat upgrades: 💎30 for +50 max heat, the yellow and red lines move up with it, flat price, no cap ----------------
+do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb; t uuid; i int; h profiles; begin
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, false);
+  perform reset_fighter(u);
+  update profiles set diamonds = 29, heat = 0, heat_max = 100 where id = u;
+  m := get_me();
+  assert (m->>'heat_yellow')::int = 40 and (m->>'heat_red')::int = 75, 'base lines: ' || (m->>'heat_red');
+  perform expect_error('select upgrade_stat(''heat'')', 'Costs 30 diamonds');
+  update profiles set diamonds = 100 where id = u;
+  r := upgrade_stat('heat');
+  assert (r->>'cost')::int = 30 and (r->>'cash')::int = 0, r::text;
+  assert (select heat_max from profiles where id = u) = 150 and (select diamonds from profiles where id = u) = 70;
+  m := get_me();
+  assert (m->>'heat_max')::int = 150 and (m->>'heat_yellow')::int = 90 and (m->>'heat_red')::int = 125, 'lines moved: ' || m::text;
+  -- 100 heat used to be red; now it's yellow, for you and for anyone looking at you
+  update profiles set heat = 100 where id = u;
+  assert get_me()->>'heat_level' = 'yellow' and get_player(u)->>'heat_level' = 'yellow';
+  -- no bust below the new red line ...
+  select * into h from profiles where id = u;
+  h.heat := 124;
+  for i in 1..300 loop h := _bust_roll(h); end loop;
+  assert h.jail_until is null, 'no bust under 125';
+  -- ... and above it a bust drops you to your yellow line
+  h.heat := 150;
+  for i in 1..300 loop exit when h.jail_until is not null; h := _bust_roll(h); end loop;
+  assert h.jail_until is not null and h.heat = 90, 'bust at 150 → 90: ' || h.heat;
+  -- the fight preview's bust warning uses the moved line (an attack adds 4 heat)
+  t := (select id from profiles where is_bot order by bot_level limit 1);
+  update profiles set health = health_max, in_hospital = false, jail_until = null where id = t;
+  update profiles set heat = 120, last_tick = now() where id = u;
+  assert (fight_preview(t)->>'bust_pct')::int = 0, 'under the line';
+  update profiles set heat = 121, last_tick = now() where id = u;
+  assert (fight_preview(t)->>'bust_pct')::int = 3, 'one over: 1/40';
+  -- the same 30 every time, and no cap
+  r := upgrade_stat('heat');
+  assert (r->>'cost')::int = 30 and (select heat_max from profiles where id = u) = 200;
+  update profiles set heat_max = 10000, diamonds = 30 where id = u;
+  r := upgrade_stat('heat');
+  assert (select heat_max from profiles where id = u) = 10050 and (get_me()->>'heat_red')::int = 75 + 9950;
+  assert (get_catalog()->'config'->>'heat_upgrade_diamonds')::int = 30 and (get_catalog()->'config'->>'heat_upgrade_amount')::int = 50;
+  assert not has_function_privilege('authenticated', '_heat_red(profiles)', 'execute');
+  update profiles set heat = 0, heat_max = 100 where id = u;
+end $$;
+
+-- Going to jail for diamonds: 💎50, no stamina or cash, not an action — and you're in until you post bail -----------
+do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; r jsonb; n int; begin
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, false);
+  perform reset_fighter(u);
+  update profiles set diamonds = 49 where id = u;
+  perform expect_error('select go_to_jail()', 'Costs 50 diamonds');
+  update profiles set diamonds = 60, stamina = 0, cash = 0 where id = u;
+  select actions_done into n from profiles where id = u;
+  r := go_to_jail();
+  assert (r->>'cost')::int = 50 and (r->>'bail')::int = 8000 and (select diamonds from profiles where id = u) = 10, r::text;
+  assert (get_me()->>'jailed')::boolean and get_me()->>'jail_until' is null, 'inside, no end time';
+  assert (select jail_until from profiles where id = u) = 'infinity';
+  assert (select actions_done from profiles where id = u) = n, 'not an action';
+  perform expect_error('select go_to_jail()', 'already in jail');
+  -- time doesn't let you out; bail does: $8,000 flat, cash on hand
+  update profiles set last_tick = now() - interval '3 days', stamina_tick = now() - interval '3 days', health_tick = now() - interval '3 days' where id = u;
+  assert (get_me()->>'jailed')::boolean, 'still inside days later';
+  update profiles set cash = 7999 where id = u;
+  perform expect_error('select bail_out()', 'Bail costs $8000');
+  update profiles set cash = 10000 where id = u;
+  r := bail_out();
+  assert (r->>'cost')::int = 8000 and (select cash from profiles where id = u) = 2000 and not (get_me()->>'jailed')::boolean, r::text;
+  -- the Bribe Police job and a bust from red heat are open-ended too
+  update profiles set stamina = 25, cash = 5000 where id = u;
+  perform do_action((select id from action_defs where effect = 'go_to_jail'));
+  assert (select jail_until from profiles where id = u) = 'infinity', 'bribe job: until bail';
+  update profiles set jail_until = null where id = u;
+  -- not from a hospital bed
+  update profiles set jail_until = null, health = 5, in_hospital = true, health_tick = now(), diamonds = 60 where id = u;
+  perform expect_error('select go_to_jail()', 'in the hospital');
+  assert (get_catalog()->'config'->>'jail_diamonds')::int = 50;
+  assert has_function_privilege('authenticated', 'go_to_jail()', 'execute') and not has_function_privilege('anon', 'go_to_jail()', 'execute');
+  perform reset_fighter(u);
 end $$;
 
 select 'BOOST TEST PASSED';

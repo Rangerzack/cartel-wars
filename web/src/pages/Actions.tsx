@@ -152,7 +152,7 @@ export default function Actions() {
           ) : (
             <>
               {bust.pay > 0 && <p className="gold" style={{ fontSize: 22, fontWeight: 800, margin: '4px 0' }}>+{money(bust.pay)}</p>}
-              <p className="red">Your heat was in the red and a patrol caught you. You're in jail — regular weapons are confiscated, jail setup is active.</p>
+              <p className="red">Your heat was in the red and a patrol caught you. You're in jail until you post bail — regular weapons are confiscated, jail setup is active.</p>
             </>
           )}
           <Btn className="gold block" onClick={() => { setBust(null); nav('/services') }}>Post bail</Btn>
