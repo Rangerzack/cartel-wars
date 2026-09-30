@@ -73,6 +73,24 @@ export interface Me {
   /** Daily Drop credits: full stamina refills, and hustlers hired without the fee. */
   free_refills?: number
   free_hustlers?: number
+  /** Per setup: the combos it completes, the one it runs, and the one the player picked (null = best). */
+  combos?: Record<SetupKind, SetupCombos>
+  /** What the next setup slot costs (it climbs with every slot past the free six). */
+  slot_cost?: { diamonds: number; cash: number }
+  /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
+  boost?: { side: 'attack' | 'defense' | null; until: string | null; active: boolean; amount: number }
+}
+
+export type StyleCode = 'armored' | 'antitank' | 'infantry' | 'blitz' | 'blackout'
+/** A fighting style on the counter wheel: it beats two styles and loses to the other two. */
+export interface ComboStyle { code: StyleCode; name: string; icon: string; blurb: string; beats: StyleCode[] }
+/** A combo: complete when, for each part, one of that part's items is in the setup. Tier 1 street · 2 pro · 3 elite. */
+export interface ComboDef { code: string; name: string; style: StyleCode; tier: 1 | 2 | 3; parts: number[][] }
+export interface SetupCombos { active: string | null; complete: string[]; chosen: string | null }
+/** What active players run (counts by combo code), and how combos did in the last week's fights. */
+export interface ComboMeta {
+  players: number; offense: Record<string, number>; defense: Record<string, number>
+  fights: number; attacks: Record<string, { n: number; won: number }>
 }
 
 export type DropKind = 'herb' | 'dust' | 'pills' | 'diamonds' | 'cash' | 'refills' | 'thugs' | 'hustlers'
@@ -124,6 +142,8 @@ export interface Catalog {
   /** Optional so the page still works against an older database. */
   businesses?: BusinessDef[]
   drop_prizes?: DropPrize[]
+  combo_styles?: ComboStyle[]
+  combos?: ComboDef[]
   config: Record<string, number>
 }
 
@@ -144,14 +164,18 @@ export interface FightResult {
   // head-to-head scoring (optional so the page still works against an older database)
   my_def?: number; their_att?: number; my_score?: number; their_score?: number; my_roll?: number; their_roll?: number
   edges?: FightEdge[]
+  // combos: which each side ran, the most each could roll (10 countering, 5 even, 0 countered) and what it rolled
+  my_combo?: string | null; their_combo?: string | null; my_combo_bonus?: number; their_combo_bonus?: number
+  my_combo_max?: number; their_combo_max?: number
 }
 export interface ThugRow {
   id: string; name: string; avatar: string; level: number; stash: number; health: number; health_max: number
-  hospital: boolean; win_pct: number; hits: number; dry: boolean
+  hospital: boolean; win_pct: number; hits: number; dry: boolean; combo?: string | null
 }
 export interface FightLog {
   id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
   attacker_dmg: number; defender_dmg: number; cash: number; won: boolean; i_attacked: boolean; at: string
+  attacker_combo?: string | null; defender_combo?: string | null; attacker_combo_bonus?: number; defender_combo_bonus?: number
 }
 export interface MarketListing {
   id: string; commodity: Commodity; qty: number; unit_price: number; seller: string; seller_id: string; mine: boolean; expires_at: string
@@ -243,7 +267,7 @@ export interface Conversation { channel: string; other_id: string; other: string
 export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null
@@ -258,6 +282,9 @@ export interface FightPreview {
   win_exact?: number; edges?: FightEdge[]; edge_you?: number; edge_them?: number
   base_you?: number; base_them?: number; combo_you?: boolean; combo_them?: boolean
   my_att?: number; my_def?: number; their_att?: number; their_def?: number
+  // combos: theirs is only known if they're a thug, run none, or you've hit them before (then it's what they ran then)
+  my_combo?: string | null; their_combo?: string | null; their_combo_known?: boolean; their_combo_seen_at?: string | null
+  their_has_combo?: boolean; my_combo_max?: number; their_combo_max?: number
 }
 
 export interface TopUsers {

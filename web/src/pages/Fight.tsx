@@ -5,9 +5,11 @@ import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Card, Empty, Seg } from '../components/ui'
-import type { FightLog, PlayerSummary, ThugRow, TopUsers } from '../lib/types'
+import type { ComboMeta, FightLog, PlayerSummary, StyleCode, ThugRow, TopUsers } from '../lib/types'
+import { ComboPill, StyleLine } from '../components/Combo'
+import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
 
-type Tab = 'players' | 'thugs' | 'log' | 'top'
+type Tab = 'players' | 'thugs' | 'log' | 'combos' | 'top'
 
 export default function Fight() {
   const me = useMe()
@@ -15,11 +17,12 @@ export default function Fight() {
   const tab = (sp.get('tab') as Tab) || 'players'
   return (
     <div className="page">
-      <Seg value={tab} onChange={t => setSp({ tab: t })} options={[{ v: 'players', l: 'Players' }, { v: 'thugs', l: 'Thugs' }, { v: 'log', l: 'My Fights' }, { v: 'top', l: 'Top' }]} />
-      {me.jailed && <div className="notice red">You fight with your jail setup while locked up.</div>}
+      <Seg value={tab} onChange={t => setSp({ tab: t })} options={[{ v: 'players', l: 'Players' }, { v: 'thugs', l: 'Thugs' }, { v: 'log', l: 'My Fights' }, { v: 'combos', l: 'Combos' }, { v: 'top', l: 'Top' }]} />
+      {me.jailed && tab !== 'combos' && <div className="notice red">You're locked up: you can only fight other inmates, with your jail setup.</div>}
       {tab === 'players' && <Players />}
       {tab === 'thugs' && <Thugs />}
       {tab === 'log' && <Log />}
+      {tab === 'combos' && <Combos />}
       {tab === 'top' && <Top />}
     </div>
   )
@@ -91,7 +94,7 @@ function Thugs() {
             <div key={t.id} className={`row link thug-row ${t.dry ? 'dry' : ''}`} onClick={() => nav(`/player/${t.id}`)}>
               <span className="ico">{t.avatar}</span>
               <div className="grow">
-                <div className="t">{t.name}</div>
+                <div className="t">{t.name}{t.combo ? <> <ComboPill code={t.combo} /></> : null}</div>
                 <div className="s"><span className={cls}>{l} · {t.win_pct >= 100 ? '>99' : t.win_pct <= 0 ? '<1' : t.win_pct}%</span> · stash {money(t.stash)}{t.dry ? ' · dry for you this hour' : t.hits ? ` · hit ${t.hits}× this hour` : ''}</div>
               </div>
               {t.hospital ? <span className="pill red">🏥</span> : <b className="tabular gold pay">~{money(worth(t))}</b>}
@@ -123,6 +126,11 @@ function Log() {
             <div className="grow">
               <div className="t">{f.i_attacked ? `You attacked ${other}` : `${other} attacked you`}</div>
               <div className="s">{f.won ? 'Won' : 'Lost'} · dealt {f.i_attacked ? f.attacker_dmg : f.defender_dmg}, took {f.i_attacked ? f.defender_dmg : f.attacker_dmg} · {ago(f.at, now)}</div>
+              {(f.attacker_combo || f.defender_combo) && (
+                <div className="s combo-vs">
+                  {f.i_attacked ? 'You' : 'They'} ran <ComboPill code={f.attacker_combo} /> · {f.i_attacked ? 'they' : 'you'} ran <ComboPill code={f.defender_combo} />
+                </div>
+              )}
             </div>
             <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>
           </div>
@@ -156,6 +164,83 @@ function Top() {
       {board('Top Hustlers', top.hustlers, n => `${num(n)} actions`, id => `/player/${id}`)}
       {board('Top Traders', top.traders, n => money(n), id => `/player/${id}`)}
       {board('Top Crews', top.crews, n => `${num(n)} blocks`, id => `/crew/${id}`)}
+    </>
+  )
+}
+
+/** The counter wheel, every combo and what it takes, and what the city runs. */
+function Combos() {
+  const me = useMe()
+  const { catalog, toast } = useGame()
+  const [meta, setMeta] = useState<ComboMeta | null>(null)
+  useEffect(() => { api.comboMeta().then(setMeta).catch(e => toast(e.message, 'bad')) }, [toast])
+  if (!catalog?.combo_styles || !catalog.combos) return <Card><Empty><span className="spin" /></Empty></Card>
+  const styles = catalog.combo_styles
+  const cfg = catalog.config
+  const owns = (part: number[]) => part.some(id => me.inventory.some(i => i.item_id === id && i.qty > 0))
+  const runs = (code: string) => (['offense', 'defense', 'jail'] as const).filter(s => me.combos?.[s]?.active === code)
+  const byStyle = (counts: Record<string, number> | undefined, st: StyleCode) =>
+    Object.entries(counts ?? {}).reduce((n, [code, k]) => n + (comboDef(catalog, code)?.style === st ? k : 0), 0)
+  const totalOff = Object.values(meta?.offense ?? {}).reduce((a, b) => a + b, 0)
+  const totalDef = Object.values(meta?.defense ?? {}).reduce((a, b) => a + b, 0)
+  const setupName = { offense: 'Offense', defense: 'Defense', jail: 'Jail' }
+  return (
+    <>
+      <Card title="The counter wheel">
+        <div className="bd stack">
+          <div className="small">Every combo has a style, and every style beats two others and loses to the other two. In a fight, a combo that <b className="green">counters</b> the other side's rolls 0–{cfg.combo_counter ?? 10} on top of your score; an <b className="gold">even</b> matchup (same style, no counter, or they run none) rolls 0–{cfg.combo_neutral ?? 5}; a combo that's <b className="red">countered</b> rolls nothing.</div>
+          <div className="small muted">Which combo someone defends with is hidden until you hit them — then your fight preview remembers it. You see what hit you in My Fights, so you can switch to whatever beats it.</div>
+        </div>
+        {styles.map(st => (
+          <div key={st.code} className="row wheel-row">
+            <div className="grow">
+              <div className="t"><StyleLine style={st.code} /></div>
+              <div className="s">{st.blurb}</div>
+            </div>
+          </div>
+        ))}
+      </Card>
+
+      <Card title="What the city runs" right={meta && <small>{num(meta.players)} active this week</small>}>
+        {!meta && <Empty><span className="spin" /></Empty>}
+        {meta && styles.map(st => {
+          const o = byStyle(meta.offense, st.code), d = byStyle(meta.defense, st.code)
+          const att = Object.entries(meta.attacks).filter(([code]) => comboDef(catalog, code)?.style === st.code)
+          const n = att.reduce((a, [, v]) => a + v.n, 0), won = att.reduce((a, [, v]) => a + v.won, 0)
+          return (
+            <div key={st.code} className="row meta-row">
+              <span className="ico">{st.icon}</span>
+              <div className="grow">
+                <div className="t">{st.name}</div>
+                <div className="meta-bars">
+                  <span className="k">offense</span><div className="bar"><div className="fill off" style={{ width: `${totalOff ? (100 * o) / totalOff : 0}%` }} /></div><b className="tabular">{o}</b>
+                  <span className="k">defense</span><div className="bar"><div className="fill def" style={{ width: `${totalDef ? (100 * d) / totalDef : 0}%` }} /></div><b className="tabular">{d}</b>
+                </div>
+                {n > 0 && <div className="s">{num(n)} attack{n === 1 ? '' : 's'} this week · won {Math.round((100 * won) / n)}%</div>}
+              </div>
+            </div>
+          )
+        })}
+        {meta && totalOff + totalDef === 0 && <div className="row small muted">Nobody's running a combo yet.</div>}
+      </Card>
+
+      {styles.map(st => (
+        <Card key={st.code} title={<>{st.icon} {st.name} combos</>}>
+          {catalog.combos!.filter(c => c.style === st.code).map(c => {
+            const mine = runs(c.code)
+            return (
+              <div key={c.code} className="row combo-row">
+                <div className="grow">
+                  <div className="t">{c.name} <span className="muted small">{tierName[c.tier]}{!comboFits(catalog, c, 'offense') ? ' · jail only' : comboFits(catalog, c, 'jail') ? ' · works in jail too' : ''}</span>{mine.map(s => <span key={s} className="pill gold nowrap">{setupName[s]}</span>)}</div>
+                  <div className="s combo-parts">
+                    {c.parts.map((part, i) => <span key={i} className={owns(part) ? 'have' : ''}>{i > 0 && ' + '}{owns(part) ? '✓ ' : ''}{partLabel(catalog, part)}</span>)}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </Card>
+      ))}
     </>
   )
 }

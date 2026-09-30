@@ -67,7 +67,9 @@ lists *(wiki: profile avatar)*.
 ## Fighting
 
 Attack from any player's profile (**One On One**). Requirements: attacker
-Stamina ≥2 (not consumed), both players' Health >19, target not in Hospital.
+Stamina ≥2 (not consumed — intended), both players' Health >19, target not in
+Hospital, and both on the same side of the bars: jailed players only fight
+jailed players, and nobody outside can attack someone inside *(Zack)*.
 No new-player immunity: new accounts can be attacked right away *(ours)*.
 
 Fights are **head-to-head**: both sides score the same way, and the higher score
@@ -79,7 +81,8 @@ wins (max 80 *(wiki)*; a tie goes to the defender):
 - **Situational 0–10**: a 0–6 roll plus **+1 edges** *(Zack, from the original)*:
   the defender always gets +1; whoever has more cash on hand gets +1; whoever has
   more heat gets +1. Ties give nobody the edge.
-- **Combo 0–10**: a weapon + matching protection in the same setup adds a 0–10 roll.
+- **Combo 0–10**: see Combos below. Countering the other side's combo rolls 0–10,
+  an even matchup 0–5, being countered nothing.
 
 Gear decides lopsided fights and the edges decide close ones (each +1 is worth
 roughly 10% win chance in an even fight). The winner's hit lands in full; the
@@ -96,8 +99,72 @@ Hospital. Attacking adds Heat.
 Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
-Slot count = Inventory slots (base 6 *(ours)*, upgradable with Diamonds).
+Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
+*(Zack)*: the k-th extra slot (k = 1 for the 7th) is 10 + 5k Diamonds **and**
+$100,000 × k² cash on hand — 7th 15💎 + $100k, 12th 40💎 + $3.6M, 18th 70💎 +
+$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay. Slots top out
+at **130** *(Zack, the original's cap)*.
+
+**Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
+Offensive setup or +50 Defense in the Defensive setup (never jail). The first
+boost picks the side for good: a player boosts attack or defense, never both.
+One boost at a time; buying again while it runs adds another 24 hours. It counts
+everywhere that setup does (fights, the preview, crew fights).
 Only the single best Transport's att/def counts *(wiki)*.
+
+### Combos *(Zack: "our own combos, max +10, that counter popular combos")*
+
+A combo is a set of items in one setup. Every combo has a **style**, and the
+styles sit on a counter wheel — each beats two and loses to two:
+
+| Style | Beats | Loses to |
+|---|---|---|
+| 🚙 Armored | Infantry, Blitz | Anti-Tank, Blackout |
+| 🚀 Anti-Tank | Armored, Blitz | Infantry, Blackout |
+| 🪖 Infantry | Anti-Tank, Blackout | Armored, Blitz |
+| 💣 Blitz | Infantry, Blackout | Armored, Anti-Tank |
+| 🔦 Blackout | Anti-Tank, Armored | Blitz, Infantry |
+
+| Combo | Style | Tier | Items (one from each part) |
+|---|---|---|---|
+| Back Alley | Blackout | Street | any melee weapon + Leather Jacket or Helmet |
+| Street Soldier | Infantry | Street | Glock 18 or Desert Eagle + Kevlar Vest or Cartel Plate Carrier |
+| Riot Squad | Armored | Street | Sawed-off Shotgun + Riot Shield |
+| Spray and Pray | Blitz | Street | Uzi or MAC-10 + Tactical Vest |
+| Fireteam | Infantry | Pro | AK-47, M4, Sniper, MIL-Spec Rifle or LMG + Body Armor or Kevlar Jacket |
+| Heavy Weapons | Anti-Tank | Pro | RPG, Minigun or TOW + Bulletproof Plate or EOD Bomb Suit |
+| Armored Escort | Armored | Pro | Armored SUV, Limousine or MRAP + Body Armor, Plate or EOD |
+| Blackout | Blackout | Elite | Dazzler Gun + Flashbang + Smoke Grenade |
+| Kevlar Squad | Infantry | Elite | Kevlar Vest + Shorts + Pads + Jacket (works in jail too) |
+| HUMVEE Convoy | Armored | Elite | HUMVEE Armour + Bullbar + HUMVEE Stinger or 50mm Cannon |
+| Grenadier | Blitz | Elite | Grenade + Grenade Launcher + Striker GMG |
+| Tank Hunters | Anti-Tank | Elite | Stinger + Rocket Launcher + Metal Storm or TOW |
+| Yard Muscle | Armored | Jail | any shiv + Prison Yard Muscle |
+| Lights Out | Blackout | Jail | Sock of Batteries or Cell Block Pipe + Leather Jacket or Helmet |
+
+- A setup that completes several combos runs the one the player picks (Items →
+  Setups), else the highest tier.
+- In a fight, a combo that counters the other side's rolls 0–10; one that's
+  countered rolls nothing; otherwise (mirror, no counter, other side has none)
+  0–5. At even gear that's ~35% for the attacker in a mirror, ~78% countering,
+  ~6% countered; a 20% gear edge that's countered drops to a coin flip.
+- Which combo someone defends with is hidden (whether they run one isn't). The
+  fight preview uses what they ran the last time you hit them; the defender sees
+  the attacker's combo in My Fights and Activity. Thugs' combos are public.
+- Fight → **Combos** shows the wheel, every combo (✓ for parts you own) and what
+  the city runs (active players' offense and defense combos, the week's attacks).
+- Jail has its own triangle: Yard Muscle (Armored) beats Kevlar Squad (Infantry),
+  which beats Lights Out (Blackout), which beats Yard Muscle.
+
+**The military tier** — the items from the original game's top setups: Striker
+GMG, Grenade Launcher, LMG, MIL-Spec Rifle, Dazzler Gun, HUMVEE 50mm Cannon,
+Rocket Launcher, Stinger, HUMVEE Stinger, Metal Storm; Kevlar Shorts, Pads and
+Jacket, Smoke Grenade, Flashbang, HUMVEE Bullbar, HUMVEE Armour; and the Grenade
+(was "Grenades", 20/10). Each slot is worth about a Minigun (att + def 90–170);
+the att/def split is fitted to ten of the original's top setups, which come out
+at about twice their original totals here with the same balance. $6,000 per
+point. The EOD Bomb Suit went to 140 defense so the rare finds stay the best
+per slot.
 
 ### Crew fights
 
@@ -172,7 +239,7 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
   `P(bust) = (heat − 74) / 40` *(ours)*. Busted = jailed for 2 hours *(ours)*
   and Heat resets to 40.
 - In jail: only Jail Actions; you can still sell commodities, use bank and
-  inventory, and attack / be attacked using your Jail setup with Jail Weapons.
+  inventory, and fight other inmates (only) using your Jail setup with Jail Weapons.
 - Leave jail early: Bail = $2,000 + $50/minute remaining *(ours)*.
 
 ## Economy

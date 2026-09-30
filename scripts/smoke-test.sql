@@ -137,6 +137,7 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
   update profiles set diamonds = 100 where id = auth.uid();
   r := refill('stamina', 'diamonds');
   perform expect_error('select refill(''stamina'', ''diamonds'')', 'Already full');
+  update profiles set cash = cash + 100000 where id = auth.uid();   -- the 7th slot: 15💎 + $100k
   perform upgrade_stat('health'); perform upgrade_stat('slots');
   me := get_me(); assert (me->>'health_max')::int = 125 and (me->>'inventory_slots')::int = 7;
 

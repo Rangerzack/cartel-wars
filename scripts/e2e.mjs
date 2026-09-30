@@ -54,7 +54,7 @@ try {
   await toast(p, /Bought Leather Jacket and equipped it in your Offensive and Defensive setups/)
   await p.getByRole('button', { name: 'Setups' }).click()
   await p.getByText(/Attack 24 · Defense 25/).waitFor()
-  await p.locator('.gold', { hasText: 'combo bonus' }).waitFor()
+  await p.locator('.combo-pill', { hasText: 'Back Alley' }).first().waitFor()   // knuckles + jacket: a street combo
   await snap(p, 'setups')
 
   // Economy: build grow house, hustlers tab, market tab

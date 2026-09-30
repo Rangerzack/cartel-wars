@@ -16,7 +16,7 @@ export default function Services() {
   const nav = useNavigate()
   const [sp] = useSearchParams()
   const focus = sp.get('focus')
-  // /services?focus=bank|refills|hoodlums|police|hospital scrolls straight to that card
+  // /services?focus=bank|refills|hoodlums|police|hospital|upgrades|boost scrolls straight to that card
   useEffect(() => {
     if (!focus) return
     const t = setTimeout(() => {
@@ -50,6 +50,8 @@ export default function Services() {
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
   const outN = Math.max(0, outAt - me.health)
+  const maxSlots = cfg.max_slots ?? 130
+  const slotsMaxed = me.inventory_slots >= maxSlots
 
   return (
     <div className="page">
@@ -132,19 +134,25 @@ export default function Services() {
         <div className="row small muted">After three product refills in a day, the next ones only restore half. All three come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}.</div>
       </Card>
 
-      <Card title="💎 Upgrades" right={<small>{num(me.diamonds)} diamonds</small>}>
+      <Card id="upgrades" title="💎 Upgrades" right={<small>{num(me.diamonds)} diamonds</small>}>
         {[
-          { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, dis: me.stamina_max >= 150 },
-          { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, dis: me.health_max >= 500 },
-          { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots} slots`, c: 15, dis: false },
+          { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
+          { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },
+          { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots}/${maxSlots} slots · each one past ${cfg.base_slots ?? 6} costs more`, c: me.slot_cost?.diamonds ?? 15, cash: me.slot_cost?.cash ?? 0, dis: slotsMaxed },
         ].map(u => (
           <div key={u.k} className="row">
             <div className="grow"><div className="t">{u.t}</div><div className="s">{u.s}</div></div>
-            <Btn className="sm" disabled={u.dis || me.diamonds < u.c} onClick={() => run(() => api.upgradeStat(u.k), { ok: () => 'Upgraded' })}>💎 {u.c}</Btn>
+            {u.k === 'slots' && slotsMaxed ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={u.dis || me.diamonds < u.c || me.cash < u.cash}
+              onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : 'Upgraded' })}>
+              💎 {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
+            </Btn>}
           </div>
         ))}
+        {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
         <div className="row small muted">Diamonds are earned through achievements — 50, 100, 500, 1,000 and 5,000 actions; 10, 100 and 1,000 fight wins.</div>
       </Card>
+
+      <BoostCard />
 
       <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
         <div className="bd stack">
@@ -160,5 +168,48 @@ export default function Services() {
         </div>
       </Card>
     </div>
+  )
+}
+
+/** 24-hour +50: attack in the Offense setup or defense in the Defense setup. The first buy picks the side for good. */
+function BoostCard() {
+  const me = useMe()
+  const { catalog, run } = useGame()
+  const now = useNow()
+  const b = me.boost
+  if (!b || !catalog) return null
+  const cost = catalog.config.boost_diamonds ?? 50
+  const hours = catalog.config.boost_hours ?? 24
+  const label = (side: 'attack' | 'defense') => side === 'attack' ? `+${b.amount} Attack` : `+${b.amount} Defense`
+  const where = (side: 'attack' | 'defense') => side === 'attack' ? 'your Offense setup' : 'your Defense setup'
+  const buy = (side: 'attack' | 'defense') => {
+    if (!b.side && !confirm(`Boost ${side}? Your first boost picks your side for good — you'll never be able to boost ${side === 'attack' ? 'defense' : 'attack'}.`)) return
+    return run(() => api.buyBoost(side), { ok: () => b.active ? `Boost extended another ${hours}h` : `${label(side)} for ${hours}h` })
+  }
+  return (
+    <Card id="boost" title="⚡ Boost" right={b.active && b.until ? <small className="gold">{timeLeft(b.until, now)} left</small> : <small>💎 {cost} · {hours}h</small>}>
+      <div className="bd stack">
+        {b.side ? (
+          <>
+            <div className="spread">
+              <div>
+                <div className="t">{label(b.side)} <span className="muted small">in {where(b.side)}</span></div>
+                <div className="small muted">{b.active ? `Running — ${timeLeft(b.until, now)} left. Buying again adds another ${hours} hours.` : 'Not running.'}</div>
+              </div>
+              <Btn className={b.active ? 'sm' : 'sm gold'} disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>{b.active ? 'Extend' : 'Boost'} · 💎 {cost}</Btn>
+            </div>
+            <div className="small muted">You picked {b.side} — {b.side === 'attack' ? 'defense' : 'attack'} boosts are off the table for good.</div>
+          </>
+        ) : (
+          <>
+            <div className="small">{cost} diamonds buys {label('attack')} in your Offense setup <b>or</b> {label('defense')} in your Defense setup for {hours} hours. <b>Your first boost picks your side for good</b> — attackers or defenders, never both.</div>
+            <div className="grid2">
+              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · 💎 {cost}</Btn>
+              <Btn className="blue" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
+            </div>
+          </>
+        )}
+      </div>
+    </Card>
   )
 }

@@ -7,6 +7,8 @@ import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
 import { BackBar } from '../components/BackBar'
+import { ComboPill } from '../components/Combo'
+import { matchup, matchupText } from '../lib/combos'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -27,7 +29,9 @@ export default function Player() {
 
   if (!p) return <Empty><span className="spin" /></Empty>
   const isMe = p.id === me.id
-  const cantFight = isMe || me.hospital || p.hospital || me.stamina < 2
+  // jail is its own room: inmates only fight inmates
+  const jailWall = me.jailed !== p.jailed
+  const cantFight = isMe || me.hospital || p.hospital || me.stamina < 2 || jailWall
 
   async function fight() {
     const r = await run(() => api.attack(p!.id), { silent: true })
@@ -53,7 +57,8 @@ export default function Player() {
             <Stat k="Actions" v={num(p.actions)} />
             <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
           </div>
-          {!isMe && pv && !p.hospital && !me.hospital && <Odds pv={pv} name={p.name} />}
+          {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
+          {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
           {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}.</div>}
           {!isMe && (
             <div className="hstack">
@@ -97,6 +102,12 @@ export default function Player() {
               </div>
             )}
             {result.edges && <Edges edges={result.edges} />}
+            {result.my_combo !== undefined && (result.my_combo || result.their_combo) && (
+              <div className="small combo-result">
+                <div className="hstack"><ComboPill code={result.my_combo} />{result.my_combo && <b className="tabular">+{result.my_combo_bonus ?? 0}</b>}<span className="muted">vs</span><ComboPill code={result.their_combo} />{result.their_combo && <b className="tabular">+{result.their_combo_bonus ?? 0}</b>}</div>
+                <div className="muted">Combos: {matchupText(matchup(catalog, result.my_combo, result.their_combo) ?? (result.their_combo ? 'even' : null), result.my_combo_max ?? 0, result.their_combo_max ?? 0)}.</div>
+              </div>
+            )}
             <div className="small muted">
               Your attack {result.my_att} vs their defense {result.their_def}{result.their_att != null && <> · their attack {result.their_att} vs your defense {result.my_def}</>}.
               {' '}{result.won ? 'You won, so your hit landed in full and theirs only glanced.' : result.my_score != null ? 'They won the exchange, so their hit landed in full and yours only glanced.' : ''}
@@ -122,14 +133,26 @@ function oddsLabel(pct: number): [string, string] {
 
 /** Fight preview: odds from a few hundred simulated fights, what it costs, and anything that makes it a bad idea. */
 function Odds({ pv, name }: { pv: FightPreview; name: string }) {
+  const { catalog } = useGame()
   const [label, cls] = oddsLabel(pv.win_pct)
+  const known = pv.their_combo_known !== false
   return (
     <div className="odds-box">
       <div className="spread"><span className="small muted">Your odds vs {name}</span><b className={cls}>{label} · {pv.win_pct >= 100 ? '>99' : pv.win_pct <= 0 ? '<1' : `~${pv.win_pct}`}%</b></div>
       <div className={`odds ${cls}`}><div className="fill" style={{ width: Math.max(3, pv.win_pct) + '%' }} /></div>
       {pv.edges && <Edges edges={pv.edges} />}
       {pv.base_you != null && pv.base_them != null && (
-        <div className="small muted tabular">Gear alone: your hit {pv.base_you.toFixed(1)} vs theirs {pv.base_them.toFixed(1)}. Each side adds a 0–6 roll plus its edges{pv.combo_you || pv.combo_them ? ', and a weapon combo adds 0–10' : ''}. Higher total wins; a tie goes to the defender.</div>
+        <div className="small muted tabular">Gear alone: your hit {pv.base_you.toFixed(1)} vs theirs {pv.base_them.toFixed(1)}. Each side adds a 0–6 roll plus its edges{pv.combo_you || pv.combo_them ? ', and its combo roll' : ''}. Higher total wins; a tie goes to the defender.</div>
+      )}
+      {pv.my_combo !== undefined && (pv.my_combo || pv.their_has_combo) && (
+        <div className="small odds-combo">
+          <div className="hstack"><ComboPill code={pv.my_combo} /><span className="muted">vs</span>{known ? <ComboPill code={pv.their_combo} /> : <ComboPill unknown />}</div>
+          <div className="muted">
+            {!known && 'They run a combo, but you won\'t know which until you hit them — these odds assume neither of you counters. '}
+            {known && pv.their_combo && pv.their_combo_seen_at && `That's what they ran when you hit them ${ago(pv.their_combo_seen_at)} — they may have switched. `}
+            Combos: {matchupText(known ? matchup(catalog, pv.my_combo, pv.their_combo) : pv.my_combo ? 'even' : null, pv.my_combo_max ?? 0, pv.their_combo_max ?? 0)}.
+          </div>
+        </div>
       )}
       <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs ⚡{pv.stamina_cost} · 🔥+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
       {pv.dry && <div className="warn">You've hit them {pv.hits_this_hour}× this hour — you can still fight, but no cash changes hands.</div>}
