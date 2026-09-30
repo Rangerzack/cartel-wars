@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type {
-  ActionResult, ActivityItem, RecentFind, DropResult, RecentDrop, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
+  ActionResult, ActivityItem, RecentFind, DropResult, RecentDrop, ComboMeta, SetupCombos, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -34,6 +34,8 @@ export const api = {
   attack: (target: string) => rpc<FightResult>('attack', { target }),
   fightPreview: (target: string) => rpc<FightPreview>('fight_preview', { target }),
   fights: (limit_n = 30) => rpc<FightLog[]>('get_fights', { limit_n }),
+  setCombo: (s: SetupKind, combo: string | null) => rpc<{ setup: SetupKind; active: SetupCombos['active'] }>('set_combo', { s, combo }),
+  comboMeta: () => rpc<ComboMeta>('combo_meta'),
   player: (pid: string) => rpc<PublicPlayer>('get_player', { pid }),
   findPlayers: (q = '', limit_n = 40) => rpc<PlayerSummary[]>('find_players', { q, limit_n }),
   topUsers: () => rpc<TopUsers>('top_users'),

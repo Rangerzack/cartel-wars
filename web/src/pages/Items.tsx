@@ -8,6 +8,8 @@ import type { ItemCategory, SetupKind } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { PerkTag } from '../components/Perk'
 import { discounted, perk } from '../lib/perks'
+import { itemCombos } from '../lib/combos'
+import { SetupCombo } from '../components/Combo'
 
 const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon']
 
@@ -57,17 +59,18 @@ export default function Items() {
       {tab === 'setups' && (
         <>
           <Seg value={setup} onChange={setSetup} options={[{ v: 'offense', l: 'Offensive' }, { v: 'defense', l: 'Defensive' }, { v: 'jail', l: 'Jail' }]} />
-          <Card title={<>Attack {power.att} · Defense {power.def} {power.combo && <span className="gold small">· combo bonus</span>}</>} right={<small>{used}/{me.inventory_slots} slots</small>}>
+          <Card title={<>Attack {power.att} · Defense {power.def}</>} right={<small>{used}/{me.inventory_slots} slots</small>}>
             <div className="bd stack">
               <div className="slots">{Array.from({ length: me.inventory_slots }, (_, i) => <span key={i} className={`slot ${i < used ? 'on' : ''}`} />)}</div>
               <div className="small muted">
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}
-                {setup === 'jail' && 'Used for all fights while you are in jail — regular weapons are confiscated, jail weapons only work here. '}
-                Both numbers matter: your attack goes against their defense, and their attack against your defense. Barehands baseline is 20/20. Only your single best vehicle counts. A weapon and protection with the same style give a combo bonus.
+                {setup === 'jail' && 'Used for fights while you are in jail — only against other inmates. Regular weapons are confiscated, jail weapons only work here. '}
+                Both numbers matter: your attack goes against their defense, and their attack against your defense. Barehands baseline is 20/20. Only your single best vehicle counts, but vehicles complete some combos.
               </div>
             </div>
           </Card>
+          <SetupCombo setup={setup} />
           <Card title="Owned items">
             {me.inventory.filter(i => allowed(i.category)).length === 0 && (
               <Empty>
@@ -82,7 +85,7 @@ export default function Items() {
                 <div key={i.item_id} className="row">
                   <div className="grow">
                     <div className="t">{catalog.items.find(d => d.id === i.item_id)?.drop_only && <span className="find-tag">🎁 </span>}{i.name} <span className="muted small">×{i.qty}</span></div>
-                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${i.capacity} ` : ''}{i.combo_tag ? `· ${i.combo_tag}` : ''}</div>
+                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${i.capacity} ` : ''}<ComboTags id={i.item_id} /></div>
                   </div>
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
                     <Btn className="sm" disabled={q === 0} onClick={() => run(() => api.equip(setup, i.item_id, q - 1), { silent: true })}>−</Btn>
@@ -110,7 +113,7 @@ export default function Items() {
                 <div key={i.id} className={`row ${drop ? 'drop-only' : ''}`}>
                   <div className="grow">
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
-                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}{i.combo_tag ? `· ${i.combo_tag}` : ''}</div>
+                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
                   {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(resale)}</Btn>}
                   {drop
@@ -127,4 +130,13 @@ export default function Items() {
       )}
     </div>
   )
+}
+
+/** The combos an item is part of, e.g. "· Grenadier". */
+function ComboTags({ id }: { id: number }) {
+  const { catalog } = useGame()
+  const list = itemCombos(catalog, id)
+  if (!list.length) return null
+  const icon = (st: string) => catalog?.combo_styles?.find(x => x.code === st)?.icon ?? ''
+  return <span className="combo-tags">· {list.map(c => `${icon(c.style)} ${c.name}`).join(', ')}</span>
 }

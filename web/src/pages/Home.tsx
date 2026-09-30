@@ -51,7 +51,7 @@ export default function Home() {
   return (
     <div className="page">
       {me.jailed && (
-        <div className="notice red">You're locked up until {timeLeft(me.jail_until, now)} from now. Only jail actions work, and fights use your jail setup. <Link to="/services">Post bail →</Link></div>
+        <div className="notice red">You're locked up until {timeLeft(me.jail_until, now)} from now. Only jail actions work, and you can only fight other inmates, with your jail setup. <Link to="/services">Post bail →</Link></div>
       )}
       {me.hospital && (
         <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services">Buy health →</Link></div>

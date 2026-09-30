@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { ActivityItem } from '../lib/types'
 import { ago, commodityIcon, money, num } from '../lib/format'
 import { CrewLink, PlayerLink } from './Linked'
+import { ComboPill } from './Combo'
 
 const icon: Record<ActivityItem['kind'], string> = {
   attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', applied: '📨', joined: '🤝', kicked: '🚪',
@@ -39,8 +40,8 @@ function Sentence({ a }: { a: ActivityItem }) {
     case 'attacked': {
       const n = d.n ?? 1, held = typeof d.held === 'number' ? d.held : d.held ? 1 : 0
       body = n === 1
-        ? <>{who} attacked you — {held ? <span className="green">you held them off</span> : <span className="red">you lost</span>}{d.hospital ? <> and ended up in the hospital</> : null}</>
-        : <>{who} attacked you {n}× — you held {held}, lost {n - held}{d.hospital ? <>, and ended up in the hospital</> : null}</>
+        ? <>{who} attacked you{d.combo ? <> with <ComboPill code={d.combo} /></> : null} — {held ? <span className="green">you held them off</span> : <span className="red">you lost</span>}{d.hospital ? <> and ended up in the hospital</> : null}</>
+        : <>{who} attacked you {n}×{d.combo ? <> (last with <ComboPill code={d.combo} />)</> : null} — you held {held}, lost {n - held}{d.hospital ? <>, and ended up in the hospital</> : null}</>
       break
     }
     case 'crew_fight': body = <>{crew} hit your crew{a.actor ? <> ({who} led it)</> : null} — {d.held ? <span className="green">you held the line</span> : <span className="red">they won</span>}</>; break
