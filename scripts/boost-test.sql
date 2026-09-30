@@ -1,4 +1,4 @@
--- Tests for scaling slot prices (diamonds + cash) and the 24-hour attack/defense boost.
+-- Tests for scaling slot prices (diamonds + cash), the milestone ladder that pays for them, and the 24-hour boost.
 -- Run after the other suites (reuses their helpers): scripts/local-db.sh test
 \set ON_ERROR_STOP on
 \set QUIET on
@@ -9,38 +9,43 @@ insert into auth.users (id, raw_user_meta_data) values
 
 -- Slot prices ---------------------------------------------------------------------------------------------------
 do $$ declare c record; begin
-  -- the k-th slot past six: 10 + 5k diamonds and $100,000 x k²
-  select * into c from _slot_cost(6);  assert c.diamonds = 15 and c.cash = 100000, '7th: ' || c::text;
-  select * into c from _slot_cost(7);  assert c.diamonds = 20 and c.cash = 400000, '8th: ' || c::text;
-  select * into c from _slot_cost(11); assert c.diamonds = 40 and c.cash = 3600000, '12th: ' || c::text;
-  select * into c from _slot_cost(17); assert c.diamonds = 70 and c.cash = 14400000, '18th: ' || c::text;
-  select * into c from _slot_cost(23); assert c.diamonds = 100 and c.cash = 32400000, '24th: ' || c::text;
-  select * into c from _slot_cost(29); assert c.diamonds = 130 and c.cash = 57600000, '30th: ' || c::text;
+  -- the k-th slot past six: 1 diamond (+1 every 25 slots) and $20,000 x k
+  select * into c from _slot_cost(6);   assert c.diamonds = 1 and c.cash = 20000, '7th: ' || c::text;
+  select * into c from _slot_cost(7);   assert c.diamonds = 1 and c.cash = 40000, '8th: ' || c::text;
+  select * into c from _slot_cost(30);  assert c.diamonds = 1 and c.cash = 500000, '31st: ' || c::text;
+  select * into c from _slot_cost(31);  assert c.diamonds = 2 and c.cash = 520000, '32nd: ' || c::text;
+  select * into c from _slot_cost(99);  assert c.diamonds = 4 and c.cash = 1880000, '100th: ' || c::text;
+  select * into c from _slot_cost(106); assert c.diamonds = 5 and c.cash = 2020000, '107th: ' || c::text;
+  select * into c from _slot_cost(129); assert c.diamonds = 5 and c.cash = 2480000, '130th: ' || c::text;
+  -- all 124 of them: 💎370 and $155M — reachable for a daily player in about six months
+  assert (select sum((_slot_cost(s)).diamonds) from generate_series(6, 129) s) = 370;
+  assert (select sum((_slot_cost(s)).cash) from generate_series(6, 129) s) = 155000000;
 end $$;
 
 select as_user('c8888888-8888-8888-8888-888888888888');
 do $$ declare u uuid := auth.uid(); m jsonb; r jsonb; begin
   m := get_me();
-  assert (m->>'inventory_slots')::int = 6 and (m->'slot_cost'->>'diamonds')::int = 15 and (m->'slot_cost'->>'cash')::int = 100000, m->'slot_cost'::text;
+  assert (m->>'inventory_slots')::int = 6 and (m->'slot_cost'->>'diamonds')::int = 1 and (m->'slot_cost'->>'cash')::int = 20000, m->'slot_cost'::text;
   -- needs both
-  update profiles set diamonds = 100, cash = 99999 where id = u;
-  perform expect_error('select upgrade_stat(''slots'')', 'Costs $100000 cash on hand');
-  update profiles set diamonds = 14, cash = 1000000 where id = u;
-  perform expect_error('select upgrade_stat(''slots'')', 'Costs 15 diamonds');
+  update profiles set diamonds = 100, cash = 19999 where id = u;
+  perform expect_error('select upgrade_stat(''slots'')', 'Costs $20000 cash on hand');
+  update profiles set diamonds = 0, cash = 1000000 where id = u;
+  perform expect_error('select upgrade_stat(''slots'')', 'Costs 1 diamond');
   update profiles set diamonds = 100, cash = 1000000, bank = 5000000 where id = u;
   r := upgrade_stat('slots');
-  assert (r->>'cost')::int = 15 and (r->>'cash')::int = 100000, r::text;
-  assert (select diamonds from profiles where id = u) = 85 and (select cash from profiles where id = u) = 900000, 'charged both';
+  assert (r->>'cost')::int = 1 and (r->>'cash')::int = 20000, r::text;
+  assert (select diamonds from profiles where id = u) = 99 and (select cash from profiles where id = u) = 980000, 'charged both';
   -- the next one costs more; banked cash doesn't count
   r := upgrade_stat('slots');
-  assert (r->>'cost')::int = 20 and (r->>'cash')::int = 400000 and (select inventory_slots from profiles where id = u) = 8;
+  assert (r->>'cost')::int = 1 and (r->>'cash')::int = 40000 and (select inventory_slots from profiles where id = u) = 8;
   m := get_me();
-  assert (m->'slot_cost'->>'diamonds')::int = 25 and (m->'slot_cost'->>'cash')::int = 900000;
+  assert (m->'slot_cost'->>'diamonds')::int = 1 and (m->'slot_cost'->>'cash')::int = 60000;
+  update profiles set cash = 59999 where id = u;
   perform expect_error('select upgrade_stat(''slots'')', 'cash on hand');
   -- slots top out at 130
   update profiles set inventory_slots = 129, diamonds = 1000, cash = 2000000000 where id = u;
   r := upgrade_stat('slots');
-  assert (r->>'cost')::int = 630 and (r->>'cash')::bigint = 1537600000 and (select inventory_slots from profiles where id = u) = 130, r::text;
+  assert (r->>'cost')::int = 5 and (r->>'cash')::bigint = 2480000 and (select inventory_slots from profiles where id = u) = 130, r::text;
   perform expect_error('select upgrade_stat(''slots'')', 'maxed at 130');
   assert (get_catalog()->'config'->>'max_slots')::int = 130;
   update profiles set inventory_slots = 8 where id = u;
@@ -48,6 +53,27 @@ do $$ declare u uuid := auth.uid(); m jsonb; r jsonb; begin
   update profiles set cash = 0 where id = u;
   r := upgrade_stat('health');
   assert (r->>'cost')::int = 10 and (r->>'cash')::int = 0;
+end $$;
+
+-- Milestones: a longer ladder, paid once each, and caught up for players already past a step ------------------------
+do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; d0 int; begin
+  perform as_user(u::text);
+  perform get_me();
+  delete from milestones where player_id = u;
+  update profiles set actions_done = 20000, fights_won = 5000, diamonds = 0 where id = u;
+  perform _award_milestones(u);
+  -- every action step up to 20,000 (💎580) and every win step up to 5,000 (💎280)
+  assert (select diamonds from profiles where id = u) = 580 + 280, 'ladder: ' || (select diamonds from profiles where id = u);
+  assert (select count(*) from milestones where player_id = u) = 10 + 7;
+  perform _award_milestones(u);
+  assert (select diamonds from profiles where id = u) = 860, 'paid once';
+  update profiles set actions_done = 100000 where id = u;
+  perform _award_milestones(u);
+  assert (select diamonds from profiles where id = u) = 860 + 150 + 200 + 250, 'the rest of the action ladder';
+  -- the page gets the ladder
+  assert jsonb_array_length(get_catalog()->'milestones') = 22;
+  assert (select count(*) from milestone_defs) = 22 and not has_function_privilege('authenticated', '_award_milestones(uuid)', 'execute');
+  perform as_user('c8888888-8888-8888-8888-888888888888');
 end $$;
 
 -- The boost ---------------------------------------------------------------------------------------------------

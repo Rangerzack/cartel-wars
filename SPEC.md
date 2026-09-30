@@ -20,7 +20,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
 | Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
-| Diamonds | starter grant | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses. Earned via achievements; no real-money purchase in this clone. |
+| Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop; no real-money purchase in this clone. |
 
 Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.
 Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
@@ -103,10 +103,24 @@ Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
 Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
-*(Zack)*: the k-th extra slot (k = 1 for the 7th) is 10 + 5k Diamonds **and**
-$100,000 × k² cash on hand — 7th 15💎 + $100k, 12th 40💎 + $3.6M, 18th 70💎 +
-$14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay. Slots top out
-at **130** *(Zack, the original's cap)*.
+*(Zack)*, and 130 should be reachable by a free daily player (1–2 hours a day) in
+about six months *(Zack, 2026-09-30)*: the k-th extra slot (k = 1 for the 7th) is
+1 Diamond, plus one more every 25 slots, **and** $20,000 × k cash on hand — 7th
+1💎 + $20k, 31st 1💎 + $500k, 56th 2💎 + $1M, 100th 4💎 + $1.88M, 130th 5💎 +
+$2.48M; 💎370 + $155M for all 124 (it was 10 + 5k 💎 and $100,000 × k², $64B in
+all). Slots already bought stay. Slots top out at **130** *(Zack, the original's cap)*.
+
+**Milestones** pay the diamonds, once each *(ours; the ladder was lengthened with
+the slot change so a daily player earns about 💎860 in six months — every slot plus
+maxed stamina and health)*:
+
+| Actions | 50 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 15k | 20k | 30k | 50k | 100k |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 10 | 15 | 25 | 50 | 50 | 100 | 100 | 100 | 125 | 150 | 200 | 250 |
+
+| Fight wins | 10 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 25k |
+|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 20 | 25 | 30 | 75 | 50 | 75 | 100 | 150 |
 
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
 Offensive setup or +50 Defense in the Defensive setup (never jail). One side at

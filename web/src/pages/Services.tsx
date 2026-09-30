@@ -8,7 +8,7 @@ import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
 import { perk } from '../lib/perks'
 import { refillShare, shareLabel } from '../lib/market'
-import type { BusinessCode } from '../lib/types'
+import type { BusinessCode, MilestoneDef } from '../lib/types'
 
 export default function Services() {
   const me = useMe()
@@ -152,7 +152,7 @@ export default function Services() {
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <div className="row small muted">Diamonds are earned through achievements — 50, 100, 500, 1,000 and 5,000 actions; 10, 100 and 1,000 fight wins.</div>
+        <Milestones />
       </Card>
 
       <BoostCard />
@@ -214,5 +214,38 @@ function BoostCard() {
         )}
       </div>
     </Card>
+  )
+}
+
+/** Diamonds come from milestones: the next action and fight-win steps, and the whole ladder on tap. */
+function Milestones() {
+  const me = useMe()
+  const { catalog } = useGame()
+  const ladder = catalog?.milestones ?? []
+  if (ladder.length === 0) return null
+  const have = (m: MilestoneDef) => (m.kind === 'actions' ? me.actions_done : me.fights_won)
+  const next = (kind: MilestoneDef['kind']) => ladder.filter(m => m.kind === kind && have(m) < m.n).sort((a, b) => a.n - b.n)[0]
+  const line = (m: MilestoneDef | undefined, label: string) => m
+    ? <span className="nowrap">{num(m.n)} {label} → 💎 {m.reward} <span className="muted">({num(have(m))}/{num(m.n)})</span></span>
+    : <span className="nowrap">every {label} milestone done</span>
+  return (
+    <div className="row small muted milestones">
+      <div className="grow stack" style={{ gap: 4 }}>
+        <div>Diamonds come from milestones. Next: {line(next('actions'), 'actions')} · {line(next('wins'), 'fight wins')}</div>
+        <details>
+          <summary>All milestones</summary>
+          <div className="grid2 milestone-ladder">
+            {(['actions', 'wins'] as const).map(kind => (
+              <div key={kind} className="stack" style={{ gap: 2 }}>
+                <b>{kind === 'actions' ? 'Actions' : 'Fight wins'}</b>
+                {ladder.filter(m => m.kind === kind).sort((a, b) => a.n - b.n).map(m => (
+                  <span key={m.key} className={have(m) >= m.n ? 'done' : ''}>{have(m) >= m.n ? '✓' : '·'} {num(m.n)} → 💎 {m.reward}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
+    </div>
   )
 }

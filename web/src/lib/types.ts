@@ -156,8 +156,11 @@ export interface Catalog {
   drop_prizes?: DropPrize[]
   combo_styles?: ComboStyle[]
   combos?: ComboDef[]
+  /** The diamond milestone ladder: n actions or fight wins pays reward diamonds, once. */
+  milestones?: MilestoneDef[]
   config: Record<string, number>
 }
+export interface MilestoneDef { key: string; kind: 'actions' | 'wins'; n: number; reward: number }
 
 export interface PlayerSummary {
   id: string; name: string; avatar: string; crew: { name: string; emblem: string } | null

@@ -831,3 +831,7 @@ textarea.input { resize: vertical; font: inherit; }
 .path-open { gap: 10px; }
 .path-open .btn { flex-shrink: 0; }
 .order-row .input.sm { width: 72px; }
+.milestones summary { cursor: pointer; }
+.milestone-ladder { margin-top: 6px; }
+.milestone-ladder .done { color: var(--green); }
+.milestones .nowrap { white-space: nowrap; }
