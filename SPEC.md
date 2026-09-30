@@ -429,6 +429,32 @@ admins can pin, lock, move and delete anything. Cooldowns: one new thread a
 minute, one reply every ten seconds (admins exempt). Admins are the emails in
 the `admins` table (flagged on `profiles.is_admin` at registration).
 
+## Moderation *(Zack, 2026-09-30)*
+
+- **Names**: 3–20 characters, no control characters, not taken (in any case), not
+  `player_…` (the placeholder) or `Thug N` (the NPCs), and nothing the word filter blocks.
+  The sign-up form checks the name before creating the account. A name that still fails
+  at sign-up becomes a `player_xxxxxxxx` placeholder, and the player gets a prompt to
+  pick a real one. Otherwise names can't be changed, except after an admin resets them.
+- **Word filter** (`banned_words`, editable by admins): new names, avatars and bios can't
+  contain a listed word. Matching undoes number and symbol swaps (0→o, 1→i, 3→e, 4→a,
+  5→s, 7→t, @→a, $→s) and stretched letters (fuuuck). Each word matches one of three ways:
+  - **anywhere**, even split up by spaces or dots: the worst slurs and swears;
+  - **inside a word**, where camelCase splits words;
+  - **whole word only**, so Assassin, Cocktail, Therapist and Dickens pass.
+  Existing names aren't touched. Zack left DickBickGus and Str8Gey as they are.
+- **Reports**: a 🚩 Report button on other players' profiles (not thugs). Players pick
+  name, avatar, bio or other and can add a note. Each player can have one open report
+  per person they've reported, and send 10 reports a day. A report keeps a snapshot of
+  the profile at the time.
+- **Admins** (`profiles.is_admin`) get:
+  - a Home notice and an Admin page (from Profile) with the open reports, grouped by player;
+  - four actions, also on any profile: reset the name (placeholder plus a free rename
+    prompt), reset the avatar (🕶️), clear the bio, or dismiss the reports.
+  Every action closes that player's open reports, goes in the moderation log (with the
+  old value) and leaves the player an activity line. Adding and removing filter words is
+  logged too.
+
 ## Economy at a glance (for tuning)
 
 With the original stamina regen (+12/hour) and the seeded numbers. (Regen is currently

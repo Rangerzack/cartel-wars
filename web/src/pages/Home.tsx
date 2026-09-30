@@ -56,6 +56,7 @@ export default function Home() {
       {me.hospital && (
         <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services">Buy health →</Link></div>
       )}
+      {me.is_admin && (me.reports_open ?? 0) > 0 && <div className="notice blue">🛡 {me.reports_open} player{me.reports_open === 1 ? ' has' : 's have'} open reports. <Link to="/admin">Review →</Link></div>}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
       {(me.drop?.crates ?? 0) > 0 && <div className="notice gold">📦 {me.drop!.crates === 1 ? 'A Daily Drop crate is' : `${me.drop!.crates} Daily Drop crates are`} waiting. <a onClick={() => document.getElementById('drop')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Open →</a></div>}
       {full > 0 && <div className="notice gold">{full} grow house{full > 1 ? 's are' : ' is'} full — collect to keep production going. <Link to="/economy">Collect →</Link></div>}

@@ -19,6 +19,7 @@ import Activity from './pages/Activity'
 import Casino from './pages/Casino'
 import PokerTable from './pages/PokerTable'
 import Forum from './pages/Forum'
+import Admin from './pages/Admin'
 import { features } from './lib/features'
 import { Toasts } from './components/ui'
 import { SetNewPassword } from './components/Account'
@@ -47,6 +48,7 @@ function Gate() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/chat/:channel" element={<Chat />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/accolades" element={<Accolades />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/casino" element={<Casino />} />

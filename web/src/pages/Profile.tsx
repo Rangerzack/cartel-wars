@@ -57,6 +57,11 @@ export default function Profile() {
         <div className="row link" onClick={() => nav(me.crew ? `/crew/${me.crew.id}` : '/crew')}><div className="grow t">{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'No crew'}</div><span className="chev">›</span></div>
         <div className="row link" onClick={() => nav(me.cartel ? `/cartel/${me.cartel.id}` : '/cartel')}><div className="grow t">{me.cartel ? `🕴 ${me.cartel.name}` : 'No cartel'}</div><span className="chev">›</span></div>
       </Card>
+      {me.is_admin && (
+        <Card title="🛡 Admin">
+          <div className="row link" onClick={() => nav('/admin')}><div className="grow t">Reports, moderation log and word filter</div>{(me.reports_open ?? 0) > 0 && <span className="pill red">{me.reports_open} open</span>}<span className="chev">›</span></div>
+        </Card>
+      )}
       <AccountCard onSignedOut={() => nav('/')} />
       <p className="muted small center">Cartel Wars is an unofficial fan reconstruction of SMLSD's <i>The Cartel</i> / <i>Cartel Wars</i> (2009–2010). Not affiliated with SMLSD, Webtouch or Roasted Brains.</p>
     </div>

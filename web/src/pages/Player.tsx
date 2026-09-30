@@ -9,6 +9,8 @@ import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/
 import { BackBar } from '../components/BackBar'
 import { ComboPill } from '../components/Combo'
 import { matchup, matchupText } from '../lib/combos'
+import { ReportModal } from '../components/Report'
+import { ModButtons } from './Admin'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -19,6 +21,7 @@ export default function Player() {
   const [result, setResult] = useState<FightResult | null>(null)
   const [amount, setAmount] = useState(0)
   const [dia, setDia] = useState(0)
+  const [reporting, setReporting] = useState(false)
 
   const load = useCallback(() => api.player(id).then(setP).catch(e => toast(e.message, 'bad')), [id, toast])
   useEffect(() => { load() }, [load])
@@ -65,11 +68,22 @@ export default function Player() {
               <Btn className="doit red" disabled={cantFight} onClick={fight}>⚔️ Attack</Btn>
               <Btn className="sm" onClick={async () => nav(`/chat/${await api.dmChannel(p.id)}`)}>💬 Chat</Btn>
               {p.crew && <Btn className="sm ghost" onClick={() => nav(`/crew/${p.crew!.id}`)}>{p.crew.emblem} Crew</Btn>}
+              {!p.is_bot && <Btn className="sm ghost" onClick={() => setReporting(true)}>🚩 Report</Btn>}
             </div>
           )}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
         </div>
       </Card>
+
+      {!isMe && !p.is_bot && me.is_admin && (
+        <Card title="🛡 Admin">
+          <div className="bd stack">
+            <div className="small muted">Every action is logged, and they get a note in their activity. A reset name makes them pick a new one.</div>
+            <ModButtons id={p.id} name={p.name} onDone={load} />
+          </div>
+        </Card>
+      )}
+      {reporting && <ReportModal id={p.id} name={p.name} onClose={() => setReporting(false)} />}
 
       {!isMe && (
         <Card title="Send Money / Diamonds">
