@@ -837,3 +837,13 @@ textarea.input { resize: vertical; font: inherit; }
 .milestones .nowrap { white-space: nowrap; }
 .turn-in { gap: 10px; }
 .turn-in .btn { flex-shrink: 0; }
+
+/* Moderation: name prompt, reports, admin */
+.name-prompt { padding: 12px 12px 0; }
+.mod-buttons { gap: 6px; }
+.mod-report { padding: 6px 0; border-top: 1px solid rgba(255,255,255,.055); }
+.mod-report:first-child { border-top: 0; }
+.word-list { gap: 6px; }
+.word-pill { display: inline-flex; align-items: center; gap: 4px; }
+.word-pill .x { background: none; border: 0; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px; cursor: pointer; }
+.word-pill .x:hover { color: var(--red); }

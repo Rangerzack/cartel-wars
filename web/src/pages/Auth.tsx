@@ -3,6 +3,7 @@ import { supabase, configured } from '../lib/supabase'
 import { Card, Toasts } from '../components/ui'
 import { useGame } from '../lib/game'
 import { resetRedirect } from '../components/Account'
+import { api } from '../lib/api'
 
 export default function Auth() {
   const { toast } = useGame()
@@ -23,6 +24,9 @@ export default function Auth() {
         setSent(true)
       } else if (mode === 'up') {
         if (name.trim().length < 3) throw new Error('Pick a name of at least 3 characters')
+        // ask before creating the account, so a taken or blocked name doesn't turn into a placeholder
+        const chk = await api.checkName(name.trim()).catch(() => null)
+        if (chk && !chk.ok) throw new Error(chk.why ?? 'Pick another name')
         const { error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } })
         if (error) throw error
       } else {

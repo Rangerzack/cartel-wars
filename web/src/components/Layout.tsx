@@ -5,6 +5,7 @@ import { money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Toasts } from './ui'
 import type { Me } from '../lib/types'
+import { NamePrompt } from './NamePrompt'
 
 type Badge = { n: number; tone?: 'red' | 'gold'; dot?: boolean; label: string } | null
 
@@ -80,6 +81,7 @@ export default function Layout() {
           {me.hospital && <span className="pill red">🏥 Hospitalized</span>}
         </div>
       )}
+      {me && <NamePrompt />}
       <Outlet />
       <nav className="tabbar">
         <div className="inner">

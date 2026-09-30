@@ -85,6 +85,8 @@ export interface Me {
   street?: Record<Commodity, StreetInfo>
   /** This player's yellow and red heat lines (heat upgrades move them up with max heat). */
   heat_yellow?: number; heat_red?: number
+  /** Moderation: admins see the open report count; a reset or placeholder name asks for a new one. */
+  is_admin?: boolean; rename_pending?: boolean; name_required?: boolean; reports_open?: number
   orders?: MyOrder[]
   refill_share?: number
   /** What the next setup slot costs (it climbs with every slot past the free six). */
@@ -172,7 +174,21 @@ export interface PublicPlayer {
   id: string; name: string; created_at: string; avatar: string; bio: string; reputation: number; fights: number; fights_won: number; actions: number
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
   last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
+  is_bot?: boolean
 }
+export type ReportReason = 'name' | 'avatar' | 'bio' | 'other'
+export type ModAction = 'reset_name' | 'reset_avatar' | 'clear_bio' | 'dismiss'
+export interface ModReport {
+  id: number; reason: ReportReason; note: string; snapshot: { name?: string; avatar?: string; bio?: string }
+  reporter: string | null; reporter_id: string | null; at: string
+}
+export interface ModQueueItem { id: string; name: string; avatar: string; bio: string; rename_pending: boolean; reports: ModReport[] }
+export interface ModLogEntry {
+  id: number; action: ModAction | 'add_word' | 'remove_word'; old: string | null; new: string | null; reports: number; at: string
+  admin: string | null; target: string | null; target_id: string | null
+}
+export type WordMatch = 'squash' | 'part' | 'word'
+export interface BannedWord { word: string; match: WordMatch }
 /** A +1 edge in a fight and who holds it, from the attacker's side. */
 export interface FightEdge { k: 'defender' | 'cash' | 'heat'; side: 'you' | 'them' }
 export interface FightResult {
@@ -288,10 +304,10 @@ export interface LedgerEntry {
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
-export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
+export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash' | 'moderated'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null

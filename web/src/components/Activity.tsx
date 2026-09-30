@@ -7,7 +7,7 @@ import { ComboPill } from './Combo'
 
 const icon: Record<ActivityItem['kind'], string> = {
   attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', filled: '📦', applied: '📨', joined: '🤝', kicked: '🚪',
-  daily_cash: '💰',
+  daily_cash: '💰', moderated: '🛡',
 }
 
 /** Where tapping an activity line takes you. */
@@ -18,6 +18,7 @@ export function activityLink(a: ActivityItem): string | null {
     case 'siege': case 'block_lost': case 'block_taken': return a.hood_id ? `/territory?hood=${a.hood_id}${a.block_id ? `&block=${a.block_id}` : ''}` : '/territory'
     case 'sold': case 'filled': return '/economy?tab=market'
     case 'daily_cash': return '/services?focus=bank'
+    case 'moderated': return '/profile'
     default: return null
   }
 }
@@ -58,6 +59,9 @@ function Sentence({ a }: { a: ActivityItem }) {
     case 'daily_cash': body = (d.days ?? 1) > 1
       ? <>Daily cash for {d.days} days landed on hand — bank it before someone takes it</>
       : <>Daily cash landed on hand — bank it before someone takes it</>; break
+    case 'moderated': body = d.action === 'reset_name' ? <>An admin reset your name for breaking the rules — pick a new one</>
+      : d.action === 'reset_avatar' ? <>An admin reset your avatar for breaking the rules</>
+      : <>An admin cleared your bio for breaking the rules</>; break
     default: body = null
   }
   return <>{body}</>
