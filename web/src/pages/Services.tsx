@@ -35,6 +35,7 @@ export default function Services() {
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
+  const heatRed = me.heat_red ?? cfg.heat_red
   const jailMins = me.jail_until ? Math.max(0, Math.ceil((new Date(me.jail_until).getTime() - now) / 60000)) : 0
   // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
   const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
@@ -101,7 +102,7 @@ export default function Services() {
           </div>
           <PerkTag code="bent_cop" />
           <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeCost(bribeN)} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeCost(bribeN))}</Btn>
-          <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({cfg.heat_red}+) risks a bust on every job and attack, so you only need to bribe it back under {cfg.heat_red}.</div>
+          <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (💎 {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
         </div>
       </Card>
 
@@ -141,12 +142,13 @@ export default function Services() {
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },
+          { k: 'heat' as const, t: `Max heat +${cfg.heat_upgrade_amount ?? 50}`, s: `${me.heat_max} max · red from ${heatRed} — ${cfg.heat_upgrade_amount ?? 50} more before a bust risk`, c: cfg.heat_upgrade_diamonds ?? 30, cash: 0, dis: false },
           { k: 'slots' as const, t: 'Setup slot +1', s: `${me.inventory_slots}/${maxSlots} slots · each one past ${cfg.base_slots ?? 6} costs more`, c: me.slot_cost?.diamonds ?? 15, cash: me.slot_cost?.cash ?? 0, dis: slotsMaxed },
         ].map(u => (
           <div key={u.k} className="row">
             <div className="grow"><div className="t">{u.t}</div><div className="s">{u.s}</div></div>
             {u.k === 'slots' && slotsMaxed ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={u.dis || me.diamonds < u.c || me.cash < u.cash}
-              onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : 'Upgraded' })}>
+              onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : u.k === 'heat' ? `+${cfg.heat_upgrade_amount ?? 50} max heat — red now starts at ${heatRed + (cfg.heat_upgrade_amount ?? 50)}` : 'Upgraded' })}>
               💎 {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
             </Btn>}
           </div>

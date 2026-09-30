@@ -18,7 +18,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 |---|---|---|---|---|
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
-| Heat | 0 | 100 | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+. Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
+| Heat | 0 | 100 (+50 per 💎30 upgrade, no cap *(Zack)*) | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+ at base; each heat upgrade moves both lines up 50 with the max (one upgrade: max 150, yellow 90, red 125). Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
 | Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop; no real-money purchase in this clone. |
 
@@ -253,8 +253,10 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
 
 - Police Station (Services): **Bribe** to lower Heat at $40 per point *(wiki)*.
 - Getting Busted: when Heat is Red, every action/attack rolls
-  `P(bust) = (heat − 74) / 40` *(ours)*. Busted = jailed for 2 hours *(ours)*
-  and Heat resets to 40.
+  `P(bust) = (heat − red + 1) / 40` *(ours; red is 75 plus any heat upgrades)*.
+  Busted = jailed for 2 hours *(ours)* and Heat drops to your yellow line (40 at base).
+- **Heat upgrades** *(Zack)*: 💎30 buys +50 max heat and moves the yellow and red lines
+  up 50 — 50 more heat before any bust risk. Flat price, no cap.
 - In jail: only Jail Actions; you can still sell commodities, use bank and
   inventory, and fight other inmates (only) using your Jail setup with Jail Weapons.
 - Leave jail early: Bail = $2,000 + $50/minute remaining *(ours)*.

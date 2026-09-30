@@ -145,4 +145,48 @@ do $$ declare u uuid := auth.uid(); a uuid := 'c8888888-8888-8888-8888-888888888
   assert not has_function_privilege('authenticated', '_slot_cost(integer)', 'execute');
 end $$;
 
+-- Heat upgrades: 💎30 for +50 max heat, the yellow and red lines move up with it, flat price, no cap ----------------
+do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb; t uuid; i int; h profiles; begin
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, false);
+  perform reset_fighter(u);
+  update profiles set diamonds = 29, heat = 0, heat_max = 100 where id = u;
+  m := get_me();
+  assert (m->>'heat_yellow')::int = 40 and (m->>'heat_red')::int = 75, 'base lines: ' || (m->>'heat_red');
+  perform expect_error('select upgrade_stat(''heat'')', 'Costs 30 diamonds');
+  update profiles set diamonds = 100 where id = u;
+  r := upgrade_stat('heat');
+  assert (r->>'cost')::int = 30 and (r->>'cash')::int = 0, r::text;
+  assert (select heat_max from profiles where id = u) = 150 and (select diamonds from profiles where id = u) = 70;
+  m := get_me();
+  assert (m->>'heat_max')::int = 150 and (m->>'heat_yellow')::int = 90 and (m->>'heat_red')::int = 125, 'lines moved: ' || m::text;
+  -- 100 heat used to be red; now it's yellow, for you and for anyone looking at you
+  update profiles set heat = 100 where id = u;
+  assert get_me()->>'heat_level' = 'yellow' and get_player(u)->>'heat_level' = 'yellow';
+  -- no bust below the new red line ...
+  select * into h from profiles where id = u;
+  h.heat := 124;
+  for i in 1..300 loop h := _bust_roll(h); end loop;
+  assert h.jail_until is null, 'no bust under 125';
+  -- ... and above it a bust drops you to your yellow line
+  h.heat := 150;
+  for i in 1..300 loop exit when h.jail_until is not null; h := _bust_roll(h); end loop;
+  assert h.jail_until is not null and h.heat = 90, 'bust at 150 → 90: ' || h.heat;
+  -- the fight preview's bust warning uses the moved line (an attack adds 4 heat)
+  t := (select id from profiles where is_bot order by bot_level limit 1);
+  update profiles set health = health_max, in_hospital = false, jail_until = null where id = t;
+  update profiles set heat = 120, last_tick = now() where id = u;
+  assert (fight_preview(t)->>'bust_pct')::int = 0, 'under the line';
+  update profiles set heat = 121, last_tick = now() where id = u;
+  assert (fight_preview(t)->>'bust_pct')::int = 3, 'one over: 1/40';
+  -- the same 30 every time, and no cap
+  r := upgrade_stat('heat');
+  assert (r->>'cost')::int = 30 and (select heat_max from profiles where id = u) = 200;
+  update profiles set heat_max = 10000, diamonds = 30 where id = u;
+  r := upgrade_stat('heat');
+  assert (select heat_max from profiles where id = u) = 10050 and (get_me()->>'heat_red')::int = 75 + 9950;
+  assert (get_catalog()->'config'->>'heat_upgrade_diamonds')::int = 30 and (get_catalog()->'config'->>'heat_upgrade_amount')::int = 50;
+  assert not has_function_privilege('authenticated', '_heat_red(profiles)', 'execute');
+  update profiles set heat = 0, heat_max = 100 where id = u;
+end $$;
+
 select 'BOOST TEST PASSED';

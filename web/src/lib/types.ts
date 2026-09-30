@@ -83,6 +83,8 @@ export interface Me {
   combos?: Record<SetupKind, SetupCombos>
   /** Street details per product, my open buy orders, and the share of missing stamina/health the next product refill restores. */
   street?: Record<Commodity, StreetInfo>
+  /** This player's yellow and red heat lines (heat upgrades move them up with max heat). */
+  heat_yellow?: number; heat_red?: number
   orders?: MyOrder[]
   refill_share?: number
   /** What the next setup slot costs (it climbs with every slot past the free six). */
