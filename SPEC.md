@@ -106,9 +106,9 @@ $14.4M, 24th 100💎 + $32.4M. Slots bought before the change stay. Slots top ou
 at **130** *(Zack, the original's cap)*.
 
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
-Offensive setup or +50 Defense in the Defensive setup (never jail). The first
-boost picks the side for good: a player boosts attack or defense, never both.
-One boost at a time; buying again while it runs adds another 24 hours. It counts
+Offensive setup or +50 Defense in the Defensive setup (never jail). One side at
+a time: while a boost runs the other side is locked out and buying the same side
+adds another 24 hours; once it runs out, either side can be bought again. It counts
 everywhere that setup does (fights, the preview, crew fights).
 Only the single best Transport's att/def counts *(wiki)*.
 
