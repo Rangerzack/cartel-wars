@@ -76,7 +76,7 @@ export default function Layout() {
       )}
       {me && (me.jailed || me.hospital) && (
         <div className="status-strip">
-          {me.jailed && <span className="pill red">🔒 In jail · {timeLeft(me.jail_until, now)}</span>}
+          {me.jailed && <span className="pill red">🔒 In jail{me.jail_until ? ` · ${timeLeft(me.jail_until, now)}` : ' · until bail'}</span>}
           {me.hospital && <span className="pill red">🏥 Hospitalized</span>}
         </div>
       )}

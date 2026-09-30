@@ -189,7 +189,7 @@ do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb
   update profiles set heat = 0, heat_max = 100 where id = u;
 end $$;
 
--- Going to jail for diamonds: 💎50, the usual two hours, no stamina or cash, not an action ----------------------------
+-- Going to jail for diamonds: 💎50, no stamina or cash, not an action — and you're in until you post bail -----------
 do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; r jsonb; n int; begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, false);
   perform reset_fighter(u);
@@ -198,11 +198,24 @@ do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; r jsonb; n int; 
   update profiles set diamonds = 60, stamina = 0, cash = 0 where id = u;
   select actions_done into n from profiles where id = u;
   r := go_to_jail();
-  assert (r->>'cost')::int = 50 and (select diamonds from profiles where id = u) = 10, r::text;
-  assert (get_me()->>'jailed')::boolean;
-  assert (select jail_until from profiles where id = u) between now() + interval '119 minutes' and now() + interval '121 minutes';
+  assert (r->>'cost')::int = 50 and (r->>'bail')::int = 8000 and (select diamonds from profiles where id = u) = 10, r::text;
+  assert (get_me()->>'jailed')::boolean and get_me()->>'jail_until' is null, 'inside, no end time';
+  assert (select jail_until from profiles where id = u) = 'infinity';
   assert (select actions_done from profiles where id = u) = n, 'not an action';
   perform expect_error('select go_to_jail()', 'already in jail');
+  -- time doesn't let you out; bail does: $8,000 flat, cash on hand
+  update profiles set last_tick = now() - interval '3 days', stamina_tick = now() - interval '3 days', health_tick = now() - interval '3 days' where id = u;
+  assert (get_me()->>'jailed')::boolean, 'still inside days later';
+  update profiles set cash = 7999 where id = u;
+  perform expect_error('select bail_out()', 'Bail costs $8000');
+  update profiles set cash = 10000 where id = u;
+  r := bail_out();
+  assert (r->>'cost')::int = 8000 and (select cash from profiles where id = u) = 2000 and not (get_me()->>'jailed')::boolean, r::text;
+  -- the Bribe Police job and a bust from red heat are open-ended too
+  update profiles set stamina = 25, cash = 5000 where id = u;
+  perform do_action((select id from action_defs where effect = 'go_to_jail'));
+  assert (select jail_until from profiles where id = u) = 'infinity', 'bribe job: until bail';
+  update profiles set jail_until = null where id = u;
   -- not from a hospital bed
   update profiles set jail_until = null, health = 5, in_hospital = true, health_tick = now(), diamonds = 60 where id = u;
   perform expect_error('select go_to_jail()', 'in the hospital');

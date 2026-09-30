@@ -36,10 +36,9 @@ export default function Services() {
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
   const heatRed = me.heat_red ?? cfg.heat_red
-  const jailMins = me.jail_until ? Math.max(0, Math.ceil((new Date(me.jail_until).getTime() - now) / 60000)) : 0
   // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
   const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
-  const bail = Math.ceil((cfg.bail_base + jailMins * cfg.bail_per_minute) * (1 - law))
+  const bail = Math.ceil(cfg.bail_base * (1 - law))   // jail has no timer: you're in until you post this
   const owned = me.hoodlums[hood.code] ?? 0
   const hdef = catalog.hoodlums.find(h => h.code === hood.code)!
   const hoodPerk: BusinessCode | null = hood.code === 'thug' ? 'gym' : hood.code === 'mercenary' || hood.code === 'enforcer' ? 'shooting_range' : null
@@ -85,9 +84,9 @@ export default function Services() {
         </div>
       </Card>
       {me.jailed && (
-        <Card title="🔒 County Jail" right={<small>{timeLeft(me.jail_until, now)} left</small>}>
+        <Card title="🔒 County Jail" right={<small>until you post bail</small>}>
           <div className="bd stack">
-            <div className="small muted">Bail is {money(cfg.bail_base)} plus {money(cfg.bail_per_minute)} per minute remaining.{law > 0 ? ' Your Law Office cuts bail, and busts cost you less time inside.' : ''}</div>
+            <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only.</div>
             <PerkTag code="law_office" />
             <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)}` })}>Post Bail · {money(bail)}</Btn>
           </div>
@@ -105,9 +104,9 @@ export default function Services() {
           <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (💎 {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
           {!me.jailed && (
             <div className="spread turn-in">
-              <div className="small">Want in? Turn yourself in: {Math.round((cfg.jail_minutes ?? 120) / 60)} hours inside to run jail jobs and fight other inmates — no stamina or cash needed.</div>
+              <div className="small">Want in? Turn yourself in to run jail jobs and fight other inmates — no stamina or cash needed. You stay until you post bail ({money(bail)}).</div>
               <Btn className="sm" disabled={me.hospital || me.diamonds < (cfg.jail_diamonds ?? 50)}
-                onClick={() => { if (confirm(`Spend ${cfg.jail_diamonds ?? 50} diamonds to go to jail for ${Math.round((cfg.jail_minutes ?? 120) / 60)} hours?`)) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
+                onClick={() => { if (confirm(`Spend ${cfg.jail_diamonds ?? 50} diamonds to go to jail? You stay until you post bail (${money(bail)}).`)) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
             </div>
           )}
         </div>

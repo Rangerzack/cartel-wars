@@ -208,7 +208,7 @@ business rotates hood to hood:
 | C | Nightlife | Strip Club: hustlers carry +7.5% (→ +30%) · Night Club: trips 7.5% sooner (→ 30%) · Dispensary: +3.75% over street (→ +15%) |
 | D | Muscle | Gym: thugs −7.5% (→ −30%) · Shooting Range: mercs and enforcers −7.5% (→ −30%) · Security Firm: crew garrisons +7.5% (→ +30%) |
 | E | Retail | Pawn Shop: weapons and protection −3.75% (→ −15%) · Pharmacy: product refills −7.5% (→ −30%) · Warehouse: storage +7.5% (→ +30%) |
-| F | Services | Clinic: hospital health −7.5% (→ −30%) · Law Office: bail and bust jail time −11.25% (→ −30%) · Bent Cop: bribes −7.5% (→ −30%) |
+| F | Services | Clinic: hospital health −7.5% (→ −30%) · Law Office: bail −11.25% (→ −30%) · Bent Cop: bribes −7.5% (→ −30%) |
 
 These are 75% of the launch values (cut 2026-10-01 along with block bonuses).
 
@@ -255,15 +255,19 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
 - Police Station (Services): **Bribe** to lower Heat at $40 per point *(wiki)*.
 - Getting Busted: when Heat is Red, every action/attack rolls
   `P(bust) = (heat − red + 1) / 40` *(ours; red is 75 plus any heat upgrades)*.
-  Busted = jailed for 2 hours *(ours)* and Heat drops to your yellow line (40 at base).
+  Busted = jailed until you post bail *(Zack)* and Heat drops to your yellow line (40 at base).
 - **Heat upgrades** *(Zack)*: 💎30 buys +50 max heat and moves the yellow and red lines
   up 50 — 50 more heat before any bust risk. Flat price, no cap.
 - **Going to jail on purpose**: the Bribe Police To Get In Jail job (10 stamina, $1,000),
-  or turn yourself in at the Police Station for 💎50 *(Zack)* — the same 2 hours, no
-  stamina or cash, and it isn't an action. Not while in the hospital.
+  or turn yourself in at the Police Station for 💎50 *(Zack)* — no stamina or cash, and
+  it isn't an action. Not while in the hospital. Either way you're in until you post bail.
 - In jail: only Jail Actions; you can still sell commodities, use bank and
   inventory, and fight other inmates (only) using your Jail setup with Jail Weapons.
-- Leave jail early: Bail = $2,000 + $50/minute remaining *(ours)*.
+- **No sentences** *(Zack, 2026-09-30: "stay in jail until you pay to get out")*: every way
+  in — busts, the job, the 💎50 turn-in — lasts until you post **bail: $8,000 flat**
+  from cash on hand, less the Law Office (up to 30% off). (It used to be 2 hours, with
+  bail at $2,000 + $50 a minute left.) Since only inmates can hit inmates, jail also
+  works as a hideout for anyone willing to sit in it.
 
 ## Economy
 
