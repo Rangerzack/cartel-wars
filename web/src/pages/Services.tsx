@@ -103,6 +103,13 @@ export default function Services() {
           <PerkTag code="bent_cop" />
           <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeCost(bribeN)} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeCost(bribeN))}</Btn>
           <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (💎 {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
+          {!me.jailed && (
+            <div className="spread turn-in">
+              <div className="small">Want in? Turn yourself in: {Math.round((cfg.jail_minutes ?? 120) / 60)} hours inside to run jail jobs and fight other inmates — no stamina or cash needed.</div>
+              <Btn className="sm" disabled={me.hospital || me.diamonds < (cfg.jail_diamonds ?? 50)}
+                onClick={() => { if (confirm(`Spend ${cfg.jail_diamonds ?? 50} diamonds to go to jail for ${Math.round((cfg.jail_minutes ?? 120) / 60)} hours?`)) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
+            </div>
+          )}
         </div>
       </Card>
 

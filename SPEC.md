@@ -103,16 +103,17 @@ Setups: every player keeps an **Offensive**, **Defensive** and **Jail** setup.
 Equipped items count only within the setup in use (offense when you attack,
 defense when attacked, jail for both while jailed). Items are never consumed.
 Slot count = Inventory slots (base 6 *(ours)*). Each slot past six costs more
-*(Zack)*, and 130 should be reachable by a free daily player (1–2 hours a day) in
-about six months *(Zack, 2026-09-30)*: the k-th extra slot (k = 1 for the 7th) is
-1 Diamond, plus one more every 25 slots, **and** $20,000 × k cash on hand — 7th
-1💎 + $20k, 31st 1💎 + $500k, 56th 2💎 + $1M, 100th 4💎 + $1.88M, 130th 5💎 +
-$2.48M; 💎370 + $155M for all 124 (it was 10 + 5k 💎 and $100,000 × k², $64B in
-all). Slots already bought stay. Slots top out at **130** *(Zack, the original's cap)*.
+*(Zack)*: the k-th extra slot (k = 1 for the 7th) is 1 Diamond, plus one more every
+4 slots *(Zack: "a total of 2k diamonds")*, **and** $20,000 × k cash on hand
+*(Zack: the cash reachable by a free daily player in about six months)* — 7th 1💎 +
+$20k, 11th 2💎 + $100k, 31st 7💎 + $500k, 100th 24💎 + $1.88M, 130th 31💎 + $2.48M;
+💎1,984 + $155M for all 124 (it was 10 + 5k 💎 and $100,000 × k², $64B in all).
+Slots already bought stay. Slots top out at **130** *(Zack, the original's cap)*.
 
 **Milestones** pay the diamonds, once each *(ours; the ladder was lengthened with
-the slot change so a daily player earns about 💎860 in six months — every slot plus
-maxed stamina and health)*:
+the slot change — a daily player earns about 💎860 in six months. Zack kept it there
+when slot diamonds went to ~2,000, so the diamonds for all 130 take a free player
+longer than the cash does)*:
 
 | Actions | 50 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 15k | 20k | 30k | 50k | 100k |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -257,6 +258,9 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
   Busted = jailed for 2 hours *(ours)* and Heat drops to your yellow line (40 at base).
 - **Heat upgrades** *(Zack)*: 💎30 buys +50 max heat and moves the yellow and red lines
   up 50 — 50 more heat before any bust risk. Flat price, no cap.
+- **Going to jail on purpose**: the Bribe Police To Get In Jail job (10 stamina, $1,000),
+  or turn yourself in at the Police Station for 💎50 *(Zack)* — the same 2 hours, no
+  stamina or cash, and it isn't an action. Not while in the hospital.
 - In jail: only Jail Actions; you can still sell commodities, use bank and
   inventory, and fight other inmates (only) using your Jail setup with Jail Weapons.
 - Leave jail early: Bail = $2,000 + $50/minute remaining *(ours)*.

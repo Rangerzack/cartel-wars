@@ -120,6 +120,19 @@ try {
   await boost.getByText('you can switch to attack once this one runs out').waitFor()
   if ((await one('select boost_side from profiles where id = $1', [aId])).boost_side !== 'defense') throw new Error('switched to defense')
 
+  // Go to jail for 💎50: no stamina, the usual two hours
+  await db.query('update profiles set diamonds = 100, stamina = 0 where id = $1', [aId])
+  await a.goto(`${BASE}/services?focus=police`)
+  const police = a.locator('#police')
+  await police.getByText('Want in? Turn yourself in: 2 hours inside').waitFor()
+  await police.getByRole('button', { name: 'Go to Jail · 💎 50' }).click()
+  await a.getByText("You're in County Jail — jail setup is active").waitFor()
+  await a.locator('.card', { has: a.locator('.hd', { hasText: 'County Jail' }) }).getByText(/1h 5\dm|2h 0m/).waitFor()
+  if (await police.getByRole('button', { name: /Go to Jail/ }).count()) throw new Error('no second trip while inside')
+  const pj = await one(`select diamonds, jail_until > now() + interval '119 minutes' as ok from profiles where id = $1`, [aId])
+  if (pj.diamonds !== 50 || !pj.ok) throw new Error('jailed for diamonds: ' + JSON.stringify(pj))
+  await snap(a, 'jail')
+
   console.log('E2E BOOST PASSED')
 } catch (e) {
   console.error('E2E BOOST FAILED:', e.message)
