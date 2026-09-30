@@ -171,7 +171,7 @@ export default function Services() {
   )
 }
 
-/** 24-hour +50: attack in the Offense setup or defense in the Defense setup. The first buy picks the side for good. */
+/** 24-hour +50: attack in the Offense setup or defense in the Defense setup — one side at a time while it runs. */
 function BoostCard() {
   const me = useMe()
   const { catalog, run } = useGame()
@@ -182,31 +182,31 @@ function BoostCard() {
   const hours = catalog.config.boost_hours ?? 24
   const label = (side: 'attack' | 'defense') => side === 'attack' ? `+${b.amount} Attack` : `+${b.amount} Defense`
   const where = (side: 'attack' | 'defense') => side === 'attack' ? 'your Offense setup' : 'your Defense setup'
-  const buy = (side: 'attack' | 'defense') => {
-    if (!b.side && !confirm(`Boost ${side}? Your first boost picks your side for good — you'll never be able to boost ${side === 'attack' ? 'defense' : 'attack'}.`)) return
-    return run(() => api.buyBoost(side), { ok: () => b.active ? `Boost extended another ${hours}h` : `${label(side)} for ${hours}h` })
-  }
+  const other = (side: 'attack' | 'defense') => side === 'attack' ? 'defense' : 'attack'
+  const buy = (side: 'attack' | 'defense') =>
+    run(() => api.buyBoost(side), { ok: () => b.active ? `Boost extended another ${hours}h` : `${label(side)} for ${hours}h` })
   return (
     <Card id="boost" title="⚡ Boost" right={b.active && b.until ? <small className="gold">{timeLeft(b.until, now)} left</small> : <small>💎 {cost} · {hours}h</small>}>
       <div className="bd stack">
-        {b.side ? (
+        {b.active && b.side ? (
           <>
             <div className="spread">
               <div>
                 <div className="t">{label(b.side)} <span className="muted small">in {where(b.side)}</span></div>
-                <div className="small muted">{b.active ? `Running — ${timeLeft(b.until, now)} left. Buying again adds another ${hours} hours.` : 'Not running.'}</div>
+                <div className="small muted">Running — {timeLeft(b.until, now)} left. Buying again adds another {hours} hours.</div>
               </div>
-              <Btn className={b.active ? 'sm' : 'sm gold'} disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>{b.active ? 'Extend' : 'Boost'} · 💎 {cost}</Btn>
+              <Btn className="sm" disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>Extend · 💎 {cost}</Btn>
             </div>
-            <div className="small muted">You picked {b.side} — {b.side === 'attack' ? 'defense' : 'attack'} boosts are off the table for good.</div>
+            <div className="small muted">One side at a time: you can switch to {other(b.side)} once this one runs out.</div>
           </>
         ) : (
           <>
-            <div className="small">{cost} diamonds buys {label('attack')} in your Offense setup <b>or</b> {label('defense')} in your Defense setup for {hours} hours. <b>Your first boost picks your side for good</b> — attackers or defenders, never both.</div>
+            <div className="small">{cost} diamonds buys {label('attack')} in your Offense setup <b>or</b> {label('defense')} in your Defense setup for {hours} hours. One side at a time — while a boost runs you can extend it, and when it runs out you can pick either side again.</div>
             <div className="grid2">
               <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · 💎 {cost}</Btn>
               <Btn className="blue" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
             </div>
+            {b.side && <div className="small muted">Your last boost was {b.side}.</div>}
           </>
         )}
       </div>

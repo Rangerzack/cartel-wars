@@ -1,5 +1,5 @@
 // Browser walkthrough for scaling slot prices and the 24-hour boost: the slot button's diamonds + cash price
-// and how it climbs, the full-setup hint on Items, picking a boost side (locked for good), the boost in the
+// and how it climbs, the full-setup hint on Items, picking a boost side (locked while it runs), the boost in the
 // Offense setup's numbers, and extending it.
 // Usage (local stack running): node scripts/e2e-boost.mjs [--shots dir]
 import { chromium } from 'playwright'
@@ -70,14 +70,15 @@ try {
   await a.goto(`${BASE}/items?setup=offense`)
   await a.getByText('Setup full. The next slot costs 💎 20 + $400,000').waitFor()
 
-  // Boost: pick a side (a confirm says it's for good), then the Offense setup shows +50
+  // Boost: pick a side, then the Offense setup shows +50
   await a.goto(`${BASE}/services?focus=boost`)
   const boost = a.locator('#boost')
-  await boost.getByText('Your first boost picks your side for good').waitFor()
+  await boost.getByText(/One side at a time/).waitFor()
   await boost.getByRole('button', { name: '+50 Attack · 💎 50' }).click()
   await a.getByText('+50 Attack for 24h').waitFor()
   await boost.getByText(/left/).first().waitFor()
-  await boost.getByText('defense boosts are off the table for good').waitFor()
+  await boost.getByText('you can switch to defense once this one runs out').waitFor()
+  if (await boost.getByRole('button', { name: /Defense/ }).count()) throw new Error('no defense button while attack runs')
   const p2 = await one('select boost_side, boost_until > now() + interval \'23 hours\' as ok, diamonds from profiles where id = $1', [aId])
   if (p2.boost_side !== 'attack' || !p2.ok || p2.diamonds !== 135) throw new Error('boost: ' + JSON.stringify(p2))
   await snap(a, 'boost')
@@ -93,6 +94,15 @@ try {
   await a.getByText('Boost extended another 24h').waitFor()
   const p3 = await one('select boost_until > now() + interval \'47 hours\' as ok from profiles where id = $1', [aId])
   if (!p3.ok) throw new Error('extended by 24h')
+
+  // once it runs out, either side is open again
+  await db.query(`update profiles set boost_until = now() - interval '1 second' where id = $1`, [aId])
+  await a.reload()
+  await boost.getByText('Your last boost was attack.').waitFor()
+  await boost.getByRole('button', { name: '+50 Defense · 💎 50' }).click()
+  await a.getByText('+50 Defense for 24h').waitFor()
+  await boost.getByText('you can switch to attack once this one runs out').waitFor()
+  if ((await one('select boost_side from profiles where id = $1', [aId])).boost_side !== 'defense') throw new Error('switched to defense')
 
   console.log('E2E BOOST PASSED')
 } catch (e) {

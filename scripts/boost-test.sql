@@ -70,8 +70,8 @@ do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb
   -- about 24 hours
   t0 := (m->'boost'->>'until')::timestamptz;
   assert t0 between now() + interval '23 hours 59 minutes' and now() + interval '24 hours 1 minute', t0::text;
-  -- the other side is locked out, for good
-  perform expect_error('select buy_boost(''defense'')', 'one or the other');
+  -- the other side is locked out while it runs
+  perform expect_error('select buy_boost(''defense'')', 'still running');
   -- buying again while it runs adds 24 hours; still +50, not +100
   perform buy_boost('attack');
   assert (select boost_until from profiles where id = u) = t0 + interval '24 hours', 'extended';
@@ -80,10 +80,16 @@ do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb
   update profiles set boost_until = now() - interval '1 second' where id = u;
   m := get_me();
   assert not (m->'boost'->>'active')::boolean and (m->'power'->'offense'->>'att')::int = 20, 'expired';
-  perform expect_error('select buy_boost(''defense'')', 'one or the other');
-  -- renewing after it ran out starts a fresh 24 hours
+  -- once it runs out, either side is open again: switch to defense for a fresh 24 hours
+  r := buy_boost('defense');
+  assert r->>'side' = 'defense' and (select boost_until from profiles where id = u) > now() + interval '23 hours 59 minutes', r::text;
+  m := get_me();
+  assert (m->'power'->'defense'->>'def')::int = 70 and (m->'power'->'offense'->>'att')::int = 20, 'switched: ' || (m->'power')::text;
+  perform expect_error('select buy_boost(''attack'')', 'still running');
+  -- and back to attack after that one runs out
+  update profiles set boost_until = now() - interval '1 second' where id = u;
   perform buy_boost('attack');
-  assert (select boost_until from profiles where id = u) > now() + interval '23 hours 59 minutes';
+  assert (select boost_side from profiles where id = u) = 'attack';
   update profiles set diamonds = 49 where id = u;
   perform expect_error('select buy_boost(''attack'')', 'Costs 50 diamonds');
 end $$;
@@ -103,7 +109,7 @@ do $$ declare u uuid := auth.uid(); a uuid := 'c8888888-8888-8888-8888-888888888
   perform buy_boost('defense');
   m := get_me();
   assert (m->'power'->'defense'->>'def')::int = 70 and (m->'power'->'offense'->>'def')::int = 20, (m->'power')::text;
-  perform expect_error('select buy_boost(''attack'')', 'one or the other');
+  perform expect_error('select buy_boost(''attack'')', 'still running');
   perform set_config('request.jwt.claims', json_build_object('sub', a)::text, false);
   p := fight_preview(u);
   assert (p->>'their_def')::int = 70 and (p->>'base_you')::numeric < before, 'her boost blunts his: ' || p::text;
