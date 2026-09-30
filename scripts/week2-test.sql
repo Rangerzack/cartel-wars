@@ -92,13 +92,13 @@ do $$ declare l uuid := current_setting('test.listing')::uuid; begin
   perform get_me();
   update profiles set cash = 1000000 where id = auth.uid();
   perform buy_listing(l, 30);
-  perform buy_listing(l, 70);                     -- sells out
+  perform buy_listing(l, 70);                     -- sells out (the seller keeps $4,000 less the 5% fee)
 end $$;
 select as_user('b1111111-1111-1111-1111-111111111111');
 do $$ declare f jsonb; l uuid := current_setting('test.listing')::uuid; begin
   f := get_activity();
   assert jsonb_array_length(f) = 1 and f->0->>'kind' = 'sold' and f->0->>'actor' = 'Mike', 'one sale line: ' || f::text;
-  assert (f->0->'data'->>'units')::int = 100 and (f->0->'data'->>'cash')::bigint = 4000 and f->0->'data'->>'commodity' = 'herb', 'both buys fold: ' || f::text;
+  assert (f->0->'data'->>'units')::int = 100 and (f->0->'data'->>'cash')::bigint = 3800 and f->0->'data'->>'commodity' = 'herb', 'both buys fold: ' || f::text;
   -- cancelling your own listing isn't a sale
   perform list_product('herb', 50, 40);
   perform cancel_listing((select id from listings where seller_id = auth.uid() and status = 'open'));

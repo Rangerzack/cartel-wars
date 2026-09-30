@@ -825,3 +825,9 @@ textarea.input { resize: vertical; font: inherit; }
 .combo-row .t .pill { margin-left: 6px; font-size: 10.5px; }
 .combo-parts span { color: #9a9aa6; }
 .combo-parts span.have { color: #c9f0d4; }
+
+/* Market: street tag, path prompt, orders */
+.price-stats { text-align: right; white-space: nowrap; flex-shrink: 0; }
+.path-open { gap: 10px; }
+.path-open .btn { flex-shrink: 0; }
+.order-row .input.sm { width: 72px; }

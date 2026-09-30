@@ -146,7 +146,7 @@ function Prize({ r, onOpen, onGo }: { r: DropResult; onOpen: () => void; onGo: (
       case 'cash': return banked ? <>Banked. It's safe.</> : <>It's on hand — bank it so nobody takes it off you in a fight.</>
       case 'refills': return <>A full stamina refill each, on top of your three a day. You have {me.free_refills ?? r.amount}.</>
       case 'thugs': return <>They're with you now — {hoodlumIcon.thug} {num(me.hoodlums.thug ?? 0)} thugs.</>
-      case 'hustlers': return <>Each one skips the hustler fee on your next hires. You have {num(me.free_hustlers ?? r.amount)}.</>
+      case 'hustlers': return <>Each one skips the hustler fee on your next hires (for a Trader, that hustler's cut). You have {num(me.free_hustlers ?? r.amount)}.</>
     }
   })()
   const go = r.kind === 'refills' ? { to: '/services?focus=refills', l: 'Use a Refill' }

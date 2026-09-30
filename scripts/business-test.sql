@@ -183,7 +183,8 @@ do $$ declare u uuid := auth.uid(); r jsonb; mg item_defs; ct item_defs; c bigin
   -- Strip Club: hustlers carry more. Night Club: back sooner. Dispensary: over street
   r := hire_hustlers('herb', 10);
   assert (r->>'units')::int = floor(16 * 10 * (1 + top_of('strip_club'))), 'strip club: ' || r::text;
-  assert (r->>'cash_due')::bigint = floor((r->>'units')::int * (select price from street_prices where commodity = 'herb') * (1 + top_of('dispensary'))), 'dispensary: ' || r::text;
+  -- (unit_price is the batch's street price, rounded to the cent in the reply)
+  assert abs((r->>'cash_due')::bigint - (r->>'units')::int * (r->>'unit_price')::numeric * (1 + top_of('dispensary'))) <= (r->>'units')::int * 0.01 + 1, 'dispensary: ' || r::text;
   t := (select returns_at from hustlers where player_id = u order by returns_at desc limit 1);
   assert t between now() + make_interval(secs => _cfg('hustler_hours') * 3600 * (1 - top_of('night_club'))) - interval '5 seconds'
                and now() + make_interval(secs => _cfg('hustler_hours') * 3600 * (1 - top_of('night_club'))) + interval '5 seconds', 'night club: ' || t;

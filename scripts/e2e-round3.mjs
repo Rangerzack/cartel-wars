@@ -110,7 +110,7 @@ try {
   await db.query(`update profiles set refills_used = 3, refills_reset_at = now() where id = $1`, [aId])
   await a.goto(`${BASE}/services?focus=refills`)
   await a.getByText('3/3 full product refills today').waitFor()
-  await a.getByText(/All three come back at 00:00 UTC — in \d+h \d+m|All three come back at 00:00 UTC — in \d+m/).waitFor()
+  await a.getByText(/The full ones come back at 00:00 UTC — in \d+h \d+m|The full ones come back at 00:00 UTC — in \d+m/).waitFor()
   await a.locator('#bank').getByText(/Everyone gets \$50,000 on hand at 00:00 UTC/).waitFor()
   await snap(a, 'refills')
   await db.query(`update profiles set refills_reset_at = date_trunc('day', now() at time zone 'utc') at time zone 'utc' - interval '1 hour' where id = $1`, [aId])

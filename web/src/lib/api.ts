@@ -47,7 +47,7 @@ export const api = {
   choosePath: (p: Path) => rpc<{ path: Path; diamonds: number }>('choose_path', { p }),
   bribePolice: (points: number) => rpc<{ cost: number; heat: number }>('bribe_police', { points }),
   bailOut: () => rpc<{ cost: number }>('bail_out'),
-  refill: (kind: 'stamina' | 'health', method: string) => rpc<{ gain: number }>('refill', { kind, method }),
+  refill: (kind: 'stamina' | 'health', method: string) => rpc<{ gain: number; next_share?: number }>('refill', { kind, method }),
   upgradeStat: (kind: 'stamina' | 'health' | 'slots') => rpc<{ cost: number; cash?: number }>('upgrade_stat', { kind }),
   buyBoost: (side: 'attack' | 'defense') => rpc<{ side: 'attack' | 'defense'; until: string; cost: number }>('buy_boost', { side }),
   bankDeposit: (amount: number) => rpc<{ bank: number }>('bank_deposit', { amount }),
@@ -67,7 +67,7 @@ export const api = {
   growUpgrade: (house: string) => rpc<{ cost: number; level: number }>('grow_upgrade', { house }),
   growAbandon: (house: string) => rpc<{ ok: boolean }>('grow_abandon', { house }),
   storageUpgrade: () => rpc<{ cost: number; storage_cap: number }>('storage_upgrade'),
-  hireHustlers: (commodity: string, n: number) => rpc<{ units: number; cash_due: number; cost: number; free?: number }>('hire_hustlers', { commodity, n }),
+  hireHustlers: (commodity: string, n: number) => rpc<{ units: number; cash_due: number; cost: number; free?: number; unit_price?: number; street?: number; cut?: number }>('hire_hustlers', { commodity, n }),
   collectHustlers: () => rpc<{ cash: number; units: number }>('collect_hustlers'),
 
   // market
@@ -75,6 +75,9 @@ export const api = {
   listProduct: (commodity: string, n: number, unit_price: number) => rpc<{ id: string }>('list_product', { commodity, n, unit_price }),
   cancelListing: (listing: string) => rpc<{ returned: number; held: number }>('cancel_listing', { listing }),
   buyListing: (listing: string, n: number) => rpc<{ cost: number; units: number }>('buy_listing', { listing, n }),
+  postOrder: (commodity: string, n: number, unit_price: number) => rpc<{ id: string; held: number }>('post_order', { commodity, n, unit_price }),
+  cancelOrder: (buy_order: string) => rpc<{ returned: number; filled: number }>('cancel_order', { buy_order }),
+  fillOrder: (buy_order: string, n: number) => rpc<{ units: number; cash: number; fee: number; left: number }>('fill_order', { buy_order, n }),
 
   // crews
   crewCreate: (nm: string, emblem: string, description: string) => rpc<{ id: string }>('crew_create', { nm, emblem, description }),

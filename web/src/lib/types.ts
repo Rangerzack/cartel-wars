@@ -22,6 +22,10 @@ export interface HustlerTrip {
   id: string; commodity: Commodity; count: number; units: number; cash_due: number; returns_at: string; back: boolean
 }
 export interface MyListing { id: string; commodity: Commodity; qty: number; unit_price: number; expires_at: string; held: boolean }
+/** One of my open buy orders: qty is what's still wanted (its cash is held), filled what's come in. */
+export interface MyOrder { id: string; commodity: Commodity; qty: number; filled: number; unit_price: number; expires_at: string }
+/** Street price and what's behind it: pressure is the share hustler dumping has knocked off (fades by half every few hours). */
+export interface StreetInfo { price: number; base: number; wiggle: number; pressure: number; depth: number }
 
 export interface Me {
   id: string; name: string; created_at: string; avatar: string; bio: string; reputation: number
@@ -37,6 +41,8 @@ export interface Me {
   /** Next heat cool-down tick (next_tick is the stamina clock). */
   heat_next?: string
   rep_earned: number; path: Path | null; path_required: boolean
+  /** Why the path is required: 100 reputation, or a grow house past the level unpathed players can reach. */
+  path_due?: 'rep' | 'grow' | null
   immune: boolean; immune_until: string
   inventory_slots: number; storage_cap: number; refills_used: number
   actions_done: number; fights_won: number; fights_lost: number; market_volume: number; imports: number
@@ -75,6 +81,10 @@ export interface Me {
   free_hustlers?: number
   /** Per setup: the combos it completes, the one it runs, and the one the player picked (null = best). */
   combos?: Record<SetupKind, SetupCombos>
+  /** Street details per product, my open buy orders, and the share of missing stamina/health the next product refill restores. */
+  street?: Record<Commodity, StreetInfo>
+  orders?: MyOrder[]
+  refill_share?: number
   /** What the next setup slot costs (it climbs with every slot past the free six). */
   slot_cost?: { diamonds: number; cash: number }
   /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
@@ -122,6 +132,8 @@ export interface ActionResult { pay: number; rep: number; busted: boolean; heat:
 export interface CommodityDef {
   code: Commodity; name: string; base_price: number; hustler_units: number; refill_stamina: number
   refill_health: number; grow_rate: number; grow_cap: number; grow_price: number; sort: number
+  /** Units sold at once that would take the whole dumping discount off street. */
+  market_depth?: number
 }
 export interface HoodlumDef { code: string; name: string; att: number; def: number; intel: number; base_price: number }
 
@@ -180,7 +192,14 @@ export interface FightLog {
 export interface MarketListing {
   id: string; commodity: Commodity; qty: number; unit_price: number; seller: string; seller_id: string; mine: boolean; expires_at: string
 }
-export interface Market { prices: Record<Commodity, number>; listings: MarketListing[] }
+export interface MarketOrder {
+  id: string; commodity: Commodity; qty: number; filled: number; unit_price: number; buyer: string; buyer_id: string; mine: boolean; expires_at: string
+}
+export interface MarketStats { last: number | null; last_at: string | null; units_24h: number; avg_24h: number | null }
+export interface Market {
+  prices: Record<Commodity, number>; listings: MarketListing[]
+  orders?: MarketOrder[]; street?: Record<Commodity, StreetInfo>; stats?: Record<Commodity, MarketStats>
+}
 
 export interface CrewSummary {
   id: string; name: string; emblem: string; description: string; members: number; blocks: number; cartel: string | null
@@ -264,7 +283,7 @@ export interface LedgerEntry {
 export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
-export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
+export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
   data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null }

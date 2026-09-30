@@ -10,10 +10,14 @@ on conflict do nothing;
 create or replace function as_user(u text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', u)::text, false) $$;
 create or replace function expect_error(sql text, needle text) returns void language plpgsql as $$
+declare ran boolean := false;
 begin
-  execute sql; raise exception 'expected error containing "%" from: %', needle, sql;
-exception when others then
-  if sqlerrm not like '%' || needle || '%' then raise exception 'wrong error: % (wanted "%")', sqlerrm, needle; end if;
+  begin
+    execute sql; ran := true;
+  exception when others then
+    if sqlerrm not like '%' || needle || '%' then raise exception 'wrong error: % (wanted "%")', sqlerrm, needle; end if;
+  end;
+  if ran then raise exception 'expected an error (%) from: %', needle, sql; end if;
 end $$;
 
 do $$ declare A text := '66666666-6666-6666-6666-666666666666'; N text := '77777777-7777-7777-7777-777777777777'; r jsonb; tid bigint; pid bigint; c jsonb; begin

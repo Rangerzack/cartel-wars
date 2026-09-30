@@ -45,13 +45,23 @@ do $$ declare me jsonb; r jsonb; c1 bigint; c2 bigint; begin
 end $$;
 
 -- Paths ------------------------------------------------------------------------------------------
-do $$ declare r jsonb; h uuid; begin
+do $$ declare r jsonb; h uuid; i int; begin
   update profiles set cash = 1000000, diamonds = 100, reputation = 60 where id = auth.uid();
-  perform expect_error('select choose_path(''trader'')', 'unlock');
-  perform grow_build('herb');                                  -- below 100 rep both sides are open
+  perform grow_build('herb');                                  -- no path yet: both sides are open ...
+  h := (select id from grow_houses where player_id = auth.uid() and commodity = 'herb');
+  for i in 1..4 loop perform grow_upgrade(h); end loop;         -- ... with grow houses up to level 5
+  assert (select level from grow_houses where id = h) = 5 and not (get_me()->>'path_required')::boolean;
+  perform expect_error(format('select grow_upgrade(%L)', h), 'past level 5');
+  -- a house already past it (players from before the rule) makes the pick due
+  update grow_houses set level = 6 where id = h;
+  assert (get_me()->>'path_required')::boolean and get_me()->>'path_due' = 'grow', 'big house: pick due';
+  insert into storage (player_id, commodity, qty) values (auth.uid(), 'herb', 100)
+    on conflict (player_id, commodity) do update set qty = 100;
+  perform expect_error('select hire_hustlers(''herb'', 1)', 'past level 5 — choose Producer or Trader');
+  update grow_houses set level = 5 where id = h;
   update profiles set reputation = 20 where id = auth.uid();   -- spending rep doesn't lower rep_earned
   update profiles set reputation = 70 where id = auth.uid();   -- +50 → 110 earned
-  assert (get_me()->>'rep_earned')::int = 110 and (get_me()->>'path_required')::boolean, 'path now required';
+  assert (get_me()->>'rep_earned')::int = 110 and (get_me()->>'path_required')::boolean and get_me()->>'path_due' = 'rep', 'path now required';
   perform expect_error('select grow_build(''dust'')', 'choose Producer or Trader');
   insert into storage (player_id, commodity, qty) values (auth.uid(), 'herb', 100)
     on conflict (player_id, commodity) do update set qty = 100;

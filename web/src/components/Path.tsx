@@ -1,13 +1,18 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { num } from '../lib/format'
+import { money, num } from '../lib/format'
 import { Btn, Card } from './ui'
-import type { Me, Path } from '../lib/types'
+import type { Catalog, Me, Path } from '../lib/types'
 
-const pathInfo: Record<Path, { icon: string; name: string; does: string; gives_up: string }> = {
-  producer: { icon: '🏭', name: 'Producer', does: 'Build, run and upgrade grow houses', gives_up: "Can't send hustlers — sell on the Marketplace" },
-  trader: { icon: '🚚', name: 'Trader', does: 'Send hustlers to move product for cash', gives_up: "Can't run grow houses — buy product on the Marketplace" },
+function pathInfo(catalog: Catalog): Record<Path, { icon: string; name: string; does: string; gives_up: string }> {
+  const lvl = catalog.config.path_grow_level ?? 5
+  const cut = catalog.config.trader_cut_pct ?? 10, markup = catalog.config.trader_markup_pct ?? 10
+  return {
+    producer: { icon: '🏭', name: 'Producer', does: `Build, run and upgrade grow houses past level ${lvl}`, gives_up: "Can't send hustlers — sell on the Marketplace and into buy orders" },
+    trader: { icon: '🚚', name: 'Trader', does: `Send hustlers with no hire fee (they keep ${cut}%) and sell ${markup}% over street`, gives_up: "Can't run grow houses — buy product on the Marketplace" },
+  }
 }
 
 /** Can this player use grow houses / hustlers right now? null = yes, otherwise the reason. */
@@ -20,33 +25,45 @@ export function pathBlock(me: Me, want: Path): string | null {
 export function PathCard() {
   const me = useMe()
   const { catalog, run } = useGame()
+  const [open, setOpen] = useState(false)
   if (!catalog) return null
   const need = catalog.config.path_rep ?? 100
+  const lvl = catalog.config.path_grow_level ?? 5
   const fee = catalog.config.path_switch_diamonds ?? 50
-  if (!me.path && !me.path_required) {
-    return <div className="small muted">At {need} reputation you'll pick a path: Producer (grow houses) or Trader (hustlers). You've earned {num(me.rep_earned)}.</div>
+  const info = pathInfo(catalog)
+  if (!me.path && !me.path_required && !open) {
+    return (
+      <div className="notice blue spread path-open">
+        <span className="small">No path yet: you can run grow houses up to level {lvl} and send hustlers at {money(catalog.config.hustler_price ?? 400)} each. Pick Producer or Trader any time — you'll have to at {num(need)} reputation or to take a grow house past level {lvl}.</span>
+        <Btn className="sm" onClick={() => setOpen(true)}>Choose a path ›</Btn>
+      </div>
+    )
   }
   if (me.path) {
     const other: Path = me.path === 'producer' ? 'trader' : 'producer'
     return (
       <div className="notice gold spread">
-        <span>{pathInfo[me.path].icon} You're a <b>{pathInfo[me.path].name}</b> · {pathInfo[me.path].does.toLowerCase()}.</span>
-        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={() => { if (confirm(`Switch to ${pathInfo[other].name} for ${fee} diamonds?`)) return run(() => api.choosePath(other), { ok: () => `You're a ${pathInfo[other].name} now` }) }}>Switch · 💎 {fee}</Btn>
+        <span>{info[me.path].icon} You're a <b>{info[me.path].name}</b> · {info[me.path].does.charAt(0).toLowerCase() + info[me.path].does.slice(1)}.</span>
+        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={() => { if (confirm(`Switch to ${info[other].name} for ${fee} diamonds?`)) return run(() => api.choosePath(other), { ok: () => `You're a ${info[other].name} now` }) }}>Switch · 💎 {fee}</Btn>
       </div>
     )
   }
   return (
-    <Card title="Choose your path" right={<small>{num(me.rep_earned)} rep</small>}>
+    <Card title="Choose your path" right={me.path_required ? <small>{num(me.rep_earned)} rep</small> : <button className="btn sm ghost" onClick={() => setOpen(false)}>Not yet</button>}>
       <div className="bd stack">
-        <div className="small">You've made a name for yourself. Pick how you run product — you can switch later for 💎 {fee}.</div>
+        <div className="small">
+          {me.path_due === 'grow' ? <>Your grow houses are past level {lvl} — time to pick how you run product.</>
+            : me.path_required ? <>You've made a name for yourself. Pick how you run product.</>
+            : <>Pick how you run product.</>} The first pick is free; switching later costs 💎 {fee}.
+        </div>
         <div className="grid2">
           {(['producer', 'trader'] as const).map(p => (
             <div key={p} className="stat stack" style={{ gap: 6 }}>
-              <div style={{ fontSize: 26 }}>{pathInfo[p].icon}</div>
-              <b>{pathInfo[p].name}</b>
-              <div className="small">{pathInfo[p].does}</div>
-              <div className="small muted">{pathInfo[p].gives_up}</div>
-              <Btn className="doit" onClick={() => { if (confirm(`Become a ${pathInfo[p].name}?`)) return run(() => api.choosePath(p), { ok: () => `You're a ${pathInfo[p].name}` }) }}>Be a {pathInfo[p].name}</Btn>
+              <div style={{ fontSize: 26 }}>{info[p].icon}</div>
+              <b>{info[p].name}</b>
+              <div className="small">{info[p].does}</div>
+              <div className="small muted">{info[p].gives_up}</div>
+              <Btn className="doit" onClick={() => { if (confirm(`Become a ${info[p].name}?`)) return run(() => api.choosePath(p), { ok: () => `You're a ${info[p].name}` }) }}>Be a {info[p].name}</Btn>
             </div>
           ))}
         </div>
@@ -71,7 +88,7 @@ export function HomePath() {
       <div className="bd stack" style={{ gap: 6 }}>
         <div className="spread"><b>🔓 Pick a path at {num(need)} reputation</b><span className="small tabular">{num(me.rep_earned)}/{num(need)}</span></div>
         <div className="bar"><div className="track"><div className="fill" style={{ width: pct + '%' }} /></div></div>
-        <div className="small muted">Producer runs grow houses; Trader sends hustlers. Reputation jobs on the Actions page get you there.</div>
+        <div className="small muted">Producer runs grow houses; Trader sends hustlers on better terms. You can pick early on the Economy page.</div>
       </div>
     </div>
   )

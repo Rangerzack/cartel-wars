@@ -179,7 +179,7 @@ end $$;
 do $$ declare u uuid := 'c4444444-4444-4444-4444-444444444444'; r jsonb; begin
   insert into storage as st (player_id, commodity, qty) values (u, 'herb', 5000)
     on conflict (player_id, commodity) do update set qty = 5000;
-  update profiles set path = 'trader', cash = 0, free_hustlers = 100 where id = u;
+  update profiles set path = null, cash = 0, free_hustlers = 100 where id = u;   -- no path yet: hustlers cost the fee
   r := hire_hustlers('herb', 10);
   assert (r->>'cost')::int = 0 and (r->>'free')::int = 10, 'ten on the house: ' || r::text;
   assert (select free_hustlers from profiles where id = u) = 90 and (select cash from profiles where id = u) = 0;
@@ -194,6 +194,12 @@ do $$ declare u uuid := 'c4444444-4444-4444-4444-444444444444'; r jsonb; begin
   update profiles set cash = 400 where id = u;
   r := hire_hustlers('herb', 1);
   assert (r->>'cost')::int = 400 and (r->>'free')::int = 0;
+  -- a Trader pays no fee anyway: a credit waives that hustler's cut of the take instead
+  update profiles set path = 'trader', cash = 0, free_hustlers = 4 where id = u;
+  r := hire_hustlers('herb', 10);
+  assert (r->>'cost')::int = 0 and (r->>'free')::int = 4 and (select free_hustlers from profiles where id = u) = 0, 'trader credits: ' || r::text;
+  assert abs((r->>'cut')::numeric - (r->>'units')::int * (r->>'unit_price')::numeric * (1 + _cfg('trader_markup_pct') / 100.0) * _cfg('trader_cut_pct') / 100.0 * 6 / 10) <= 2,
+         'six of the ten pay the cut: ' || r::text;
   -- credits don't get round the path
   update profiles set path = 'producer', free_hustlers = 5 where id = u;
   perform expect_error('select hire_hustlers(''herb'', 1)', 'Only Traders');
