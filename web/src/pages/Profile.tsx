@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
@@ -7,6 +7,9 @@ import { Btn, Card, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { AccountCard } from '../components/Account'
 import { BackBar } from '../components/BackBar'
+import { PlayerLink } from '../components/Linked'
+import { HelpPolicies } from '../components/HelpPolicies'
+import type { BlockedPlayer } from '../lib/types'
 
 export default function Profile() {
   const me = useMe()
@@ -62,8 +65,31 @@ export default function Profile() {
           <div className="row link" onClick={() => nav('/admin')}><div className="grow t">Reports, moderation log and word filter</div>{(me.reports_open ?? 0) > 0 && <span className="pill red">{me.reports_open} open</span>}<span className="chev">›</span></div>
         </Card>
       )}
+      <BlockedPlayers />
       <AccountCard onSignedOut={() => nav('/')} />
+      <HelpPolicies />
       <p className="muted small center">Cartel Wars is an unofficial fan reconstruction of SMLSD's <i>The Cartel</i> / <i>Cartel Wars</i> (2009–2010). Not affiliated with SMLSD, Webtouch or Roasted Brains.</p>
     </div>
+  )
+}
+
+/** Players I've blocked (no DMs either way, their chat lines and posts hidden from me), each with a way back. */
+function BlockedPlayers() {
+  const { run, toast } = useGame()
+  const [list, setList] = useState<BlockedPlayer[] | null>(null)
+  const load = useCallback(() => api.blockedList().then(setList).catch(e => toast(e.message, 'bad')), [toast])
+  useEffect(() => { load() }, [load])
+  return (
+    <Card title="Blocked players" right={list?.length ? <small>{list.length}</small> : undefined}>
+      {!list && <div className="bd"><span className="spin" /></div>}
+      {list?.length === 0 && <div className="bd small muted">Nobody blocked.</div>}
+      {list?.map(b => (
+        <div key={b.id} className="row blocked">
+          <span style={{ fontSize: 20 }}>{b.avatar}</span>
+          <div className="grow"><PlayerLink id={b.id} className="t">{b.name}</PlayerLink><div className="s">blocked {ago(b.at)}</div></div>
+          <Btn className="sm ghost" onClick={async () => { if (await run(() => api.unblockPlayer(b.id), { ok: () => `${b.name} unblocked` })) load() }}>Unblock</Btn>
+        </div>
+      ))}
+    </Card>
   )
 }

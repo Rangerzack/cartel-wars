@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
-import { useGame } from '../lib/game'
+import { useGame, useMe } from '../lib/game'
 import { ago } from '../lib/format'
-import type { ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
+import type { ForumAuthor, ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
 import { Card, Empty, Modal } from '../components/ui'
 import { CrewLink, LinkedText, PlayerLink } from '../components/Linked'
 import { BackBar } from '../components/BackBar'
+import { ReportModal } from '../components/Report'
+import { useNow } from '../lib/useNow'
 
 export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
   { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
@@ -18,7 +20,19 @@ export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: st
   { key: 'suggestions', icon: '💡', name: 'Suggestions', blurb: 'Ideas and requests for the game.' },
 ]
 const board = (k: string) => BOARDS.find(b => b.key === k)
+// what shows in place of a blocked player's thread or reply (the server sends it without its text)
+const HIDDEN = 'Hidden — you blocked this player'
+// forum rows go with a deleted account today, but an author that comes back missing reads as this rather than crashing
+const DELETED = 'Deleted player'
 const isBoard = (k: string | undefined): k is ForumCategory => !!k && BOARDS.some(b => b.key === k)
+
+/** When an admin's mute ends, or null: the server refuses posts until then, so composers give way to this. */
+function useMutedUntil(): string | null {
+  const me = useMe()
+  const now = useNow(30_000)
+  return me.muted_until && new Date(me.muted_until).getTime() > now ? me.muted_until : null
+}
+const Muted = ({ until }: { until: string }) => <div className="notice gold">You're muted until {new Date(until).toLocaleString()}.</div>
 
 export default function Forum() {
   const { cat, id } = useParams()
@@ -65,6 +79,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
   const [compose, setCompose] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const muted = useMutedUntil()
   const b = board(cat)!
   const load = useCallback(() => api.forumList(cat, page).then(setData).catch(e => toast(e.message, 'bad')), [cat, page, toast])
   useEffect(() => { load() }, [load])
@@ -77,8 +92,9 @@ function BoardView({ cat }: { cat: ForumCategory }) {
     <div className="page">
       <div className="hstack" style={{ justifyContent: 'space-between' }}>
         <Link to="/forum" className="back">‹ All boards</Link>
-        {data?.can_post && <button className="btn sm gold" onClick={() => setCompose(true)}>New thread</button>}
+        {data?.can_post && !muted && <button className="btn sm gold" onClick={() => setCompose(true)}>New thread</button>}
       </div>
+      {data?.can_post && muted && <Muted until={muted} />}
       <Card title={<>{b.icon} {b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
         {!data && <Empty><span className="spin" /></Empty>}
         {data?.threads.length === 0 && <Empty>{cat === 'updates' && !data.can_post ? 'No updates posted yet.' : 'Nothing here yet — start the first thread.'}</Empty>}
@@ -86,8 +102,8 @@ function BoardView({ cat }: { cat: ForumCategory }) {
           <div key={t.id} className="row link" onClick={() => nav(`/forum/t/${t.id}`)}>
             <div className="grow">
               <div className="t">{t.pinned && <span title="Pinned">📌 </span>}{t.locked && <span title="Locked">🔒 </span>}<LinkedText text={t.title} /></div>
-              <div className="s"><PlayerLink id={t.author.id}>{t.author.avatar} {t.author.name}</PlayerLink>{t.author.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · <LinkedText text={t.snippet} /></div>
-              <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ? <LinkedText text={t.last_poster} /> : <PlayerLink id={t.author.id}>{t.author.name}</PlayerLink>}, {ago(t.last_post_at)}</div>
+              <div className="s">{t.author ? <PlayerLink id={t.author.id}>{t.author.avatar} {t.author.name}</PlayerLink> : DELETED}{t.author?.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · {t.hidden ? <i>{HIDDEN}</i> : <LinkedText text={t.snippet} />}</div>
+              <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ? <LinkedText text={t.last_poster} /> : t.author ? <PlayerLink id={t.author.id}>{t.author.name}</PlayerLink> : DELETED}, {ago(t.last_post_at)}</div>
             </div>
           </div>
         ))}
@@ -121,6 +137,8 @@ function ThreadView({ id }: { id: number }) {
   const [reply, setReply] = useState('')
   const [editing, setEditing] = useState<{ kind: 'thread' | 'post'; id: number; body: string; title?: string } | null>(null)
   const [gone, setGone] = useState(false)
+  const [reporting, setReporting] = useState<{ kind: 'forum_thread' | 'forum_post'; id: number; author: ForumAuthor; body: string } | null>(null)
+  const muted = useMutedUntil()
   const load = useCallback(() => api.forumThread(id, page).then(setData).catch(e => { setGone(true); toast(e.message, 'bad') }), [id, page, toast])
   useEffect(() => { load() }, [load])
 
@@ -161,22 +179,24 @@ function ThreadView({ id }: { id: number }) {
         <div className="bd stack post">
           <h3 style={{ margin: 0 }}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
           <PostMeta a={t.author} at={t.created_at} edited={t.edited_at} />
-          <div className="body"><LinkedText text={t.body} /></div>
-          {(t.mine || data.is_admin) && (
+          {t.hidden ? <div className="small muted">{HIDDEN}</div> : <div className="body"><LinkedText text={t.body} /></div>}
+          {(t.mine || data.is_admin || !t.hidden) && (
             <div className="hstack">
-              <button className="btn sm ghost" onClick={() => setEditing({ kind: 'thread', id: t.id, body: t.body, title: t.title })}>Edit</button>
-              <button className="btn sm ghost" onClick={() => del('thread', t.id)}>Delete</button>
+              {(t.mine || data.is_admin) && !t.hidden && <button className="btn sm ghost" onClick={() => setEditing({ kind: 'thread', id: t.id, body: t.body, title: t.title })}>Edit</button>}
+              {(t.mine || data.is_admin) && <button className="btn sm ghost" onClick={() => del('thread', t.id)}>Delete</button>}
+              {!t.mine && !t.hidden && t.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_thread', id: t.id, author: t.author, body: `${t.title}: ${t.body}` })}>🚩 Report</button>}
             </div>
           )}
         </div>
         {data.posts.map(p => (
           <div key={p.id} className="bd stack post reply">
             <PostMeta a={p.author} at={p.created_at} edited={p.edited_at} />
-            {p.deleted ? <div className="small muted"><i>[deleted]</i></div> : <div className="body"><LinkedText text={p.body} /></div>}
-            {!p.deleted && (p.mine || data.is_admin) && (
+            {p.deleted ? <div className="small muted"><i>[deleted]</i></div> : p.hidden ? <div className="small muted">{HIDDEN}</div> : <div className="body"><LinkedText text={p.body} /></div>}
+            {!p.deleted && (p.mine || data.is_admin || !p.hidden) && (
               <div className="hstack">
-                <button className="btn sm ghost" onClick={() => setEditing({ kind: 'post', id: p.id, body: p.body ?? '' })}>Edit</button>
-                <button className="btn sm ghost" onClick={() => del('post', p.id)}>Delete</button>
+                {(p.mine || data.is_admin) && !p.hidden && <button className="btn sm ghost" onClick={() => setEditing({ kind: 'post', id: p.id, body: p.body ?? '' })}>Edit</button>}
+                {(p.mine || data.is_admin) && <button className="btn sm ghost" onClick={() => del('post', p.id)}>Delete</button>}
+                {!p.mine && !p.hidden && p.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_post', id: p.id, author: p.author, body: p.body ?? '' })}>🚩 Report</button>}
               </div>
             )}
           </div>
@@ -189,7 +209,7 @@ function ThreadView({ id }: { id: number }) {
           <button className="btn sm" disabled={page + 1 >= data.pages} onClick={() => setParams({ p: String(page + 1) })}>Next ›</button>
         </div>
       )}
-      {data.can_reply ? (
+      {muted ? <Muted until={muted} /> : data.can_reply ? (
         <Card title="Reply">
           <div className="bd stack">
             <textarea className="input" rows={4} placeholder="Write a reply…" maxLength={4000} value={reply} onChange={e => setReply(e.target.value)} />
@@ -206,16 +226,17 @@ function ThreadView({ id }: { id: number }) {
           </div>
         </Modal>
       )}
+      {reporting && <ReportModal kind={reporting.kind} id={reporting.author.id} name={reporting.author.name} refId={reporting.id} quote={reporting.body} onClose={() => setReporting(null)} />}
     </div>
   )
 }
 
-function PostMeta({ a, at, edited }: { a: ForumThread['thread']['author']; at: string; edited: string | null }) {
+function PostMeta({ a, at, edited }: { a: ForumThread['thread']['author'] | null; at: string; edited: string | null }) {
   return (
     <div className="small muted hstack" style={{ gap: 6 }}>
-      <PlayerLink id={a.id} className="strong">{a.avatar} {a.name}</PlayerLink>
-      {a.is_admin && <span className="pill blue">admin</span>}
-      {a.crew && <CrewLink id={a.crew.id}>{a.crew.emblem} {a.crew.name}</CrewLink>}
+      {a ? <PlayerLink id={a.id} className="strong">{a.avatar} {a.name}</PlayerLink> : <span className="strong">{DELETED}</span>}
+      {a?.is_admin && <span className="pill blue">admin</span>}
+      {a?.crew && <CrewLink id={a.crew.id}>{a.crew.emblem} {a.crew.name}</CrewLink>}
       <span>· {ago(at)}{edited ? ' · edited' : ''}</span>
     </div>
   )

@@ -159,7 +159,7 @@ function LogRow({ l, showBlock, onOpen }: { l: TerritoryLog; showBlock?: boolean
     <div className={`row ${onOpen ? 'link' : ''}`} onClick={onOpen}>
       <span>{l.captured ? '🏴' : l.success ? '🎯' : '💥'}</span>
       <div className="grow">
-        <div className="t">{l.crew_emblem} {l.attacker ?? l.crew} {what}{showBlock ? <span className="muted"> · {l.block}</span> : null}</div>
+        <div className="t">{l.crew_emblem} {l.attacker ?? <span className="muted">Deleted player</span>} {what}{showBlock ? <span className="muted"> · {l.block}</span> : null}</div>
         <div className="s">{num(l.attack)} vs {num(l.resistance)} · {num(l.thugs)} thugs{l.mercs ? `, ${num(l.mercs)} mercs` : ''} · lost {num(l.lost_thugs + l.lost_mercs)}{l.garrison_lost ? ` · killed ${num(l.garrison_lost)} guards` : ''} · {ago(l.at)}</div>
       </div>
     </div>

@@ -4,11 +4,19 @@ import { Card, Toasts } from '../components/ui'
 import { useGame } from '../lib/game'
 import { resetRedirect } from '../components/Account'
 import { api } from '../lib/api'
+import { policyUrl, type PolicyPage } from '../lib/pages'
+import { openExternal } from '../lib/platform'
+
+/** A policy link: a real href for the web, an in-app Safari sheet in the iOS app. */
+const Policy = ({ page, children }: { page: PolicyPage; children: string }) => (
+  <a href={policyUrl(page)} target="_blank" rel="noopener" onClick={e => { e.preventDefault(); openExternal(policyUrl(page)) }}>{children}</a>
+)
 
 export default function Auth() {
   const { toast } = useGame()
   const [mode, setMode] = useState<'in' | 'up' | 'reset'>('in')
   const [sent, setSent] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -27,8 +35,10 @@ export default function Auth() {
         // ask before creating the account, so a taken or blocked name doesn't turn into a placeholder
         const chk = await api.checkName(name.trim()).catch(() => null)
         if (chk && !chk.ok) throw new Error(chk.why ?? 'Pick another name')
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } })
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name: name.trim() } } })
         if (error) throw error
+        // email confirmation is on: no session until they open the link, which lands in the browser, not this app
+        if (!data.session) { setMode('in'); setConfirming(true) }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -55,7 +65,7 @@ export default function Auth() {
           {mode === 'reset' ? (
             <div className="stack" style={{ marginBottom: 12 }}>
               <b>Reset your password</b>
-              <div className="small muted">{sent ? `If ${email} has an account, a reset link is on its way. Open it on this device.` : "Enter your account's email and we'll send you a link to set a new password."}</div>
+              <div className="small muted">{sent ? `Check your email. If ${email} has an account, a reset link is on its way. The link opens in your browser — set a new password there, then come back here and sign in.` : "Enter your account's email and we'll send you a link to set a new password."}</div>
             </div>
           ) : (
             <div className="seg" style={{ marginBottom: 12 }}>
@@ -63,6 +73,7 @@ export default function Auth() {
               <button className={mode === 'up' ? 'on' : ''} onClick={() => setMode('up')}>New Player</button>
             </div>
           )}
+          {mode === 'in' && confirming && <div className="notice gold" style={{ marginBottom: 12 }}>Check your email to confirm your account. The link opens in your browser — then come back here and sign in.</div>}
           <form onSubmit={submit} className="stack">
             {mode === 'up' && (
               <label className="f">Street name
@@ -82,6 +93,7 @@ export default function Auth() {
           <div className="center" style={{ marginTop: 10 }}>
             {mode === 'in' && <a className="small" onClick={() => { setMode('reset'); setSent(false) }}>Forgot your password?</a>}
             {mode === 'reset' && <a className="small" onClick={() => setMode('in')}>‹ Back to sign in</a>}
+            {mode === 'up' && <div className="small muted">By entering the city you agree to the <Policy page="terms">Terms of Service</Policy> and <Policy page="privacy">Privacy Policy</Policy>.</div>}
           </div>
         </div>
       </Card>

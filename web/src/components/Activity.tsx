@@ -32,7 +32,8 @@ function amount(a: ActivityItem): number | null {
 }
 
 function Sentence({ a }: { a: ActivityItem }) {
-  const who = a.actor ? <PlayerLink id={a.actor_id} className="strong">{a.actor}</PlayerLink> : <>Someone</>
+  // every line that names its actor had one when it was written, so no name now means they deleted their account
+  const who = a.actor ? <PlayerLink id={a.actor_id} className="strong">{a.actor}</PlayerLink> : <span className="muted">A deleted player</span>
   const crew = a.crew ? <CrewLink id={a.crew_id} className="strong">{a.crew_emblem ? `${a.crew_emblem} ` : ''}{a.crew}</CrewLink> : <>a crew</>
   const block = <b>{a.block ?? 'a block'}</b>
   const d = a.data
@@ -61,7 +62,13 @@ function Sentence({ a }: { a: ActivityItem }) {
       : <>Daily cash landed on hand — bank it before someone takes it</>; break
     case 'moderated': body = d.action === 'reset_name' ? <>An admin reset your name for breaking the rules — pick a new one</>
       : d.action === 'reset_avatar' ? <>An admin reset your avatar for breaking the rules</>
-      : <>An admin cleared your bio for breaking the rules</>; break
+      : d.action === 'clear_bio' ? <>An admin cleared your bio for breaking the rules</>
+      : d.action === 'delete_message' ? <>An admin removed one of your messages</>
+      : d.action === 'delete_post' ? <>An admin removed your post</>
+      : d.action === 'delete_thread' ? <>An admin removed your thread</>
+      : d.action === 'unmute' ? <>An admin lifted your mute</>
+      : d.action?.startsWith('mute_') ? <>An admin muted you until {d.until ? new Date(d.until).toLocaleString() : 'further notice'}</>
+      : <>An admin took action on your account</>; break
     default: body = null
   }
   return <>{body}</>

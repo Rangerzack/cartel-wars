@@ -87,6 +87,10 @@ export interface Me {
   heat_yellow?: number; heat_red?: number
   /** Moderation: admins see the open report count; a reset or placeholder name asks for a new one. */
   is_admin?: boolean; rename_pending?: boolean; name_required?: boolean; reports_open?: number
+  /** Ids of the players I've blocked: chat drops their lines as they arrive. */
+  blocked?: string[]
+  /** An admin muted me: no chat, forum posts or bio changes until then (null when not muted). */
+  muted_until?: string | null
   orders?: MyOrder[]
   refill_share?: number
   /** What the next setup slot costs (it climbs with every slot past the free six). */
@@ -175,20 +179,36 @@ export interface PublicPlayer {
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean
   last_seen: string; ribbons: Ribbon[]; crew: { id: string; name: string; emblem: string } | null; cartel: { id: string; name: string } | null
   is_bot?: boolean
+  /** I've blocked them / they've blocked me (either way, no DMs). */
+  blocked?: boolean; blocked_me?: boolean
+  /** Admins only: when their mute ends (null when not muted). */
+  muted_until?: string | null
 }
+export interface BlockedPlayer { id: string; name: string; avatar: string; at: string }
 export type ReportReason = 'name' | 'avatar' | 'bio' | 'other'
-export type ModAction = 'reset_name' | 'reset_avatar' | 'clear_bio' | 'dismiss'
+/** What's wrong with a chat message, forum thread or reply. */
+export type ContentReason = 'harassment' | 'hate' | 'spam' | 'threat' | 'other'
+export type ReportKind = 'profile' | 'message' | 'forum_thread' | 'forum_post'
+export type ModAction = 'reset_name' | 'reset_avatar' | 'clear_bio' | 'dismiss' | 'delete_message' | 'delete_post' | 'delete_thread'
+  | 'mute_1d' | 'mute_7d' | 'mute_30d' | 'unmute'
 export interface ModReport {
-  id: number; reason: ReportReason; note: string; snapshot: { name?: string; avatar?: string; bio?: string }
+  id: number; kind: ReportKind; reason: ReportReason | ContentReason; note: string
+  /** The message, thread or reply id (null for a profile report). */
+  ref_id: number | null
+  /** A profile report keeps name, avatar and bio; a content report the text, where it was and who wrote it. */
+  snapshot: { name?: string; avatar?: string; bio?: string; text?: string; title?: string; channel?: string; category?: string; author?: string; thread_id?: number }
+  /** The reported text, and whether it's still up (null for a profile report). */
+  text: string | null; live: boolean | null
   reporter: string | null; reporter_id: string | null; at: string
 }
-export interface ModQueueItem { id: string; name: string; avatar: string; bio: string; rename_pending: boolean; reports: ModReport[] }
+export interface ModQueueItem { id: string; name: string; avatar: string; bio: string; rename_pending: boolean; muted_until: string | null; reports: ModReport[] }
 export interface ModLogEntry {
-  id: number; action: ModAction | 'add_word' | 'remove_word'; old: string | null; new: string | null; reports: number; at: string
+  id: number; action: ModAction | 'add_word' | 'remove_word' | 'set_word'; old: string | null; new: string | null; reports: number; at: string
   admin: string | null; target: string | null; target_id: string | null
 }
 export type WordMatch = 'squash' | 'part' | 'word'
-export interface BannedWord { word: string; match: WordMatch }
+/** chat: the word also blocks chat messages and forum posts (each tier matched its own way). */
+export interface BannedWord { word: string; match: WordMatch; chat: boolean }
 /** A +1 edge in a fight and who holds it, from the attacker's side. */
 export interface FightEdge { k: 'defender' | 'cash' | 'heat'; side: 'you' | 'them' }
 export interface FightResult {
@@ -301,13 +321,14 @@ export interface LedgerEntry {
   note: string; at: string; player: string | null; player_id: string | null
 }
 
-export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string }
+/** deleted: an admin removed it (the body comes back empty); clients don't show it. */
+export interface Message { id: number; sender_id: string; sender_name: string; body: string; created_at: string; deleted?: boolean }
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
 export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash' | 'moderated'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string; until?: string }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null
@@ -409,9 +430,11 @@ export interface ForumCategories { is_admin: boolean; categories: ForumCategoryR
 export interface ForumThreadSummary {
   id: number; category: ForumCategory; title: string; snippet: string; author: ForumAuthor; pinned: boolean; locked: boolean
   reply_count: number; last_post_at: string; last_poster: string | null; created_at: string
+  /** By a player I've blocked: the snippet (and body) come back empty. */
+  hidden?: boolean
 }
 export interface ForumList { category: ForumCategory; page: number; pages: number; total: number; is_admin: boolean; can_post: boolean; threads: ForumThreadSummary[] }
-export interface ForumPost { id: number; author: ForumAuthor; body: string | null; deleted: boolean; created_at: string; edited_at: string | null; mine: boolean }
+export interface ForumPost { id: number; author: ForumAuthor; body: string | null; deleted: boolean; created_at: string; edited_at: string | null; mine: boolean; hidden?: boolean }
 export interface ForumThread {
   thread: ForumThreadSummary & { body: string; edited_at: string | null; mine: boolean }
   is_admin: boolean; can_reply: boolean; page: number; pages: number; posts: ForumPost[]

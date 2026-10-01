@@ -1,0 +1,2 @@
+# No Apple ID here: every Apple call authenticates with the App Store Connect API key (see the Fastfile).
+app_identifier('io.rangelab.cartelwars')

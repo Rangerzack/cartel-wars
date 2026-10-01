@@ -295,7 +295,9 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .msg.me .who { color: var(--blue); }
 .msg .when { color: #55555f; font-size: 11px; margin-left: 6px; }
 .chat form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); }
+.chat .chat-cut { padding: 12px; border-top: 1px solid var(--line); text-align: center; }
 
+.points { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 /* Auth ------------------------------------------------------------------- */
 .auth {
   min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 20px;
@@ -847,3 +849,30 @@ textarea.input { resize: vertical; font: inherit; }
 .word-pill { display: inline-flex; align-items: center; gap: 4px; }
 .word-pill .x { background: none; border: 0; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px; cursor: pointer; }
 .word-pill .x:hover { color: var(--red); }
+/* the chat switch on every word pill: lit when the word also blocks chat, struck through when it doesn't */
+.word-pill .chat-tag { background: none; border: 1px solid var(--gold-lo); border-radius: 4px; color: var(--gold-hi); font-size: 9.5px; line-height: 1; padding: 2px 3px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+.word-pill .chat-tag.off { border-color: var(--line-hi); color: var(--muted); opacity: .55; text-decoration: line-through; }
+/* reports of content (#10): the ⋯ on someone else's chat line, the reported text in the report sheet and the queue */
+.msg .more { background: none; border: 0; color: #55555f; font-size: 15px; line-height: 1; padding: 2px 6px; margin-left: 2px; cursor: pointer; }
+.msg .more:hover { color: var(--text); }
+.report-quote { font-style: italic; color: #c5c5d0; border-left: 2px solid var(--line-hi); padding: 2px 0 2px 8px; overflow-wrap: anywhere; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
+.mod-buttons .k { color: var(--muted); font-size: 12px; }
+
+/* Native feel (#20): the iOS app and the home-screen web app ---------------- */
+/* no rubber-band bounce past the page edge; .log and .modal still scroll on their own */
+html, body { overscroll-behavior: none; }
+/* a press on a control shouldn't start a text selection or pop the copy/link callout (tap highlight is already off on :root);
+   chat, forum bodies and inputs stay selectable */
+button, .btn, .row.link, .seg, .tabbar a { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* no double-tap-zoom wait: older WebKit holds every tap ~300 ms to see if a second one follows */
+button, .btn, .row.link, .seg button, .tabbar a { touch-action: manipulation; }
+/* sheets clear the notch and the home indicator; .auth also hosts the sign-in and "Can't reach the city" screens */
+.modal-bg { padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)); }
+.modal { max-height: min(90dvh, 100%); }
+.auth { padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)); }
+/* the sticky top bar is taller by the status bar height, so deep-linked cards stop below that too */
+.card[id] { scroll-margin-top: calc(112px + env(safe-area-inset-top)); }
+/* iOS app with the keyboard up (lib/native.ts sets .kb): the web view ends at the keyboard, so drop the tab bar and its space */
+.kb .tabbar { display: none; }
+.kb .app { padding-bottom: 6px; }
+.kb .chat:not(.compact) { height: calc(100dvh - 176px - env(safe-area-inset-top)); }

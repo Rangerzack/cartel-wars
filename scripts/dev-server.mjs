@@ -106,6 +106,8 @@ http.createServer(async (req, res) => {
         if (b.password) await pool.query(`update auth.users set password = $2 where id = $1`, [c.sub, b.password])
       }
       const { rows } = await pool.query(`select * from auth.users where id = $1`, [c.sub])
+      // a deleted account's token still verifies; GoTrue answers 403 user_not_found
+      if (!rows[0]) return json(res, 403, { msg: 'User from sub claim in JWT does not exist', error_code: 'user_not_found' })
       return json(res, 200, userObj(rows[0]))
     }
     // ---- rpc ----

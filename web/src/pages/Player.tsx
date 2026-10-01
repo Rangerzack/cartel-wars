@@ -40,6 +40,13 @@ export default function Player() {
     const r = await run(() => api.attack(p!.id), { silent: true })
     if (r) { setResult(r); load(); loadPreview() }
   }
+  async function block() {
+    if (!confirm(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`)) return
+    if (await run(() => api.blockPlayer(p!.id), { ok: () => `${p!.name} blocked` })) load()
+  }
+  async function unblock() {
+    if (await run(() => api.unblockPlayer(p!.id), { ok: () => `${p!.name} unblocked` })) load()
+  }
 
   return (
     <div className="page">
@@ -69,8 +76,10 @@ export default function Player() {
               <Btn className="sm" onClick={async () => nav(`/chat/${await api.dmChannel(p.id)}`)}>💬 Chat</Btn>
               {p.crew && <Btn className="sm ghost" onClick={() => nav(`/crew/${p.crew!.id}`)}>{p.crew.emblem} Crew</Btn>}
               {!p.is_bot && <Btn className="sm ghost" onClick={() => setReporting(true)}>🚩 Report</Btn>}
+              {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
             </div>
           )}
+          {!isMe && p.blocked && <div className="small muted">You've blocked them — no messages either way</div>}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
         </div>
       </Card>
@@ -78,12 +87,12 @@ export default function Player() {
       {!isMe && !p.is_bot && me.is_admin && (
         <Card title="🛡 Admin">
           <div className="bd stack">
-            <div className="small muted">Every action is logged, and they get a note in their activity. A reset name makes them pick a new one.</div>
-            <ModButtons id={p.id} name={p.name} onDone={load} />
+            <div className="small muted">Every action is logged, and they get a note in their activity. A reset name makes them pick a new one; a muted player can't chat, post in the forum or change their bio.</div>
+            <ModButtons id={p.id} name={p.name} onDone={load} mutedUntil={p.muted_until} />
           </div>
         </Card>
       )}
-      {reporting && <ReportModal id={p.id} name={p.name} onClose={() => setReporting(false)} />}
+      {reporting && <ReportModal kind="profile" id={p.id} name={p.name} onClose={() => setReporting(false)} />}
 
       {!isMe && (
         <Card title="Send Money / Diamonds">

@@ -436,24 +436,106 @@ the `admins` table (flagged on `profiles.is_admin` at registration).
   The sign-up form checks the name before creating the account. A name that still fails
   at sign-up becomes a `player_xxxxxxxx` placeholder, and the player gets a prompt to
   pick a real one. Otherwise names can't be changed, except after an admin resets them.
-- **Word filter** (`banned_words`, editable by admins): new names, avatars and bios can't
-  contain a listed word. Matching undoes number and symbol swaps (0→o, 1→i, 3→e, 4→a,
+- **Word filter** (`banned_words`, editable by admins): new player, crew and cartel names,
+  avatars, bios, crew emblems and descriptions, and forum thread titles can't contain a listed
+  word. Matching undoes number and symbol swaps (0→o, 1→i, 3→e, 4→a,
   5→s, 7→t, @→a, $→s) and stretched letters (fuuuck). Each word matches one of three ways:
   - **anywhere**, even split up by spaces or dots: the worst slurs and swears;
   - **inside a word**, where camelCase splits words;
   - **whole word only**, so Assassin, Cocktail, Therapist and Dickens pass.
   Existing names aren't touched. Zack left DickBickGus and Str8Gey as they are.
+- **Split-up words** *(Zack, 2026-10-01)*: before an "anywhere" word is matched, the text's words
+  are grouped. Two neighbours join when either has 1–2 letters or both have 1–3, which is what a
+  split-up word looks like: f.u.c.k, fu ck, fuc k, nig ger and nigg er each become one group. The
+  word has to sit inside one group (xNiGGeRx, FuckBoy), or be spelled by whole groups in a row
+  (white power, Sieg Heil). Two ordinary words stay apart, so "music until dawn", "panic until
+  the cops leave" and a player called Music Until pass instead of reading as musi**c unt**il.
+- **Chat and forum posts** *(Zack, 2026-10-01)*: chat messages, forum threads and replies are
+  checked against the words that have their **chat** switch on, each matched its own way (a
+  whole word only as a whole word of the message). Admins flip it per word on the Word Filter
+  tab, on every tier; new words start with it on. Slurs and hate have it on, whole words
+  included (coon, paki, spic, fag, dyke, homo, nazi, heil, rape, rapist, pedo), so "you fag" is
+  refused. Crude words that aren't hate have it off — shit, bitch, whore, slut, porn, penis,
+  vagina, asshole, jizz, dildo, blowjob, handjob, cumshot, and the whole words dick, cock, ass,
+  arse, cum, anal, anus, tits, boob, pussy, twat, wank, prick — so "bullshit", "kiss my ass" and
+  "son of a b1tch" go through in a crime game while names, avatars, bios, crew names and forum
+  titles stay strict. Old messages and posts aren't touched.
 - **Reports**: a 🚩 Report button on other players' profiles (not thugs). Players pick
   name, avatar, bio or other and can add a note. Each player can have one open report
   per person they've reported, and send 10 reports a day. A report keeps a snapshot of
   the profile at the time.
+- **Reports of content** *(Zack, 2026-10-01)*: Apple wants reporting to cover what players
+  post (guideline 1.2). Someone else's chat line has a ⋯ that opens Report and Block; forum
+  threads and replies have a 🚩 Report button. The reasons are harassment, hate, spam, threat
+  or other, plus an optional note. You can report only what you can read (a channel you're in,
+  a DM you're part of, a post that's still up), never your own, never a thug's. One open report
+  per message or post, and the 10 a day covers profiles and content together. The report keeps
+  the text, where it was and who wrote it, so the admin sees it even after it's gone.
 - **Admins** (`profiles.is_admin`) get:
-  - a Home notice and an Admin page (from Profile) with the open reports, grouped by player;
+  - a Home notice and an Admin page (from Profile) with the open reports, grouped by player,
+    each marked Profile, Message, Thread or Reply, with the reported text;
   - four actions, also on any profile: reset the name (placeholder plus a free rename
-    prompt), reset the avatar (🕶️), clear the bio, or dismiss the reports.
-  Every action closes that player's open reports, goes in the moderation log (with the
-  old value) and leaves the player an activity line. Adding and removing filter words is
-  logged too.
+    prompt), reset the avatar (🕶️), clear the bio, or dismiss the reports;
+  - **Delete** on a reported message, thread or reply that's still up. A deleted chat line
+    keeps its place but loses its text and is never shown again, in history or live. A deleted
+    thread or reply is the forum's own delete: the reply shows [deleted], the thread is gone;
+  - the **mute ladder** *(Zack, 2026-10-01)*: mute for 1 day, 7 days or 30 days, also on any
+    profile, and Unmute. A muted player can't chat (DMs included), start threads, reply, edit
+    posts, or rewrite their bio or crew description (clearing them is fine). The chat and reply
+    boxes say "You're muted until …"; the server refuses with the time in UTC. A new mute
+    replaces the old one. Everything else in the game works as usual.
+  A delete closes the reports on that message or post; every other action except Unmute closes
+  all of that player's open reports. Each goes in the moderation log (with the old text) and
+  leaves the player an activity line ("An admin removed one of your messages", "An admin muted
+  you until …", "An admin lifted your mute"). Adding and removing filter words and flipping
+  their chat switch are logged too.
+
+## Blocking *(Zack, 2026-10-01)*
+
+Apple wants a way to block abusive players (guideline 1.2). A 🚫 Block button sits next to
+🚩 Report on other players' profiles (not thugs) and in the ⋯ on their chat lines, with a
+confirm; Profile lists who you've blocked, each with Unblock. Blocking is about talking, and
+the server enforces all of it:
+- **DMs** stop both ways: neither side can send, and the conversation drops out of both
+  players' lists and unread counts. The old history stays readable if you open it.
+- **Group chat** (Live, Crew, Cartel, table): their lines are left out for you, old and new,
+  with no gap. One way only: they still see yours.
+- **Forum**: their threads and replies show "Hidden — you blocked this player" in place of the
+  text; titles and author lines stay so threads still make sense.
+- **Crews and cartels**: they can't apply to a crew whose Capo or Co-Capo blocked them, and as
+  Don they can't invite a crew whose Capo blocked them. Blocking declines anything of theirs
+  still pending with you.
+- Fights, trades, listings, sending cash and everything else work as before.
+
+## Moderation routine *(Zack, 2026-10-01)*
+
+Apple wants timely responses to reports (guideline 1.2), and the admin only saw the queue
+when he opened the game. Now a new report pings him: one Discord post (or email) saying how
+many players have open reports, how many reports that is, and what the latest one says, with
+a link to the Admin page. At most one ping every 10 minutes, so a burst of reports (or one
+player spamming them) sends one message, and the next ping carries the counts. The ping is
+best-effort: if it fails, the report still goes in. The admin checks the queue once a day
+regardless. Setup, the escalation ladder and adding a second admin are in `docs/ops.md`.
+
+## Account deletion *(Zack, 2026-10-01)*
+
+Apple wants an app that makes accounts to let people delete them in the app (guideline 5.1.1(v)). Profile → Account →
+**Delete account** opens a sheet that says what goes and what stays; typing your street name (any case) unlocks
+**Delete forever**, and the server checks the name again. It happens at once and signs you out. Thugs can't be deleted.
+- **Your crew** carries on without you, with the same succession as leaving: the Co-Capo takes over, else the
+  longest-standing member (oldest account). A crew of one disbands, freeing its blocks and dropping out of its cartel.
+  A Don's title goes to the crew's new Capo; if the Don's crew disbands, the Capo of the cartel's oldest remaining crew
+  becomes Don, and a cartel left with no crews dissolves. Crew and cartel banks stay with the crew and cartel.
+- **Loose ends** are settled first, the usual way: open listings and buy orders are cancelled, and a poker seat is given
+  up, folding a live hand so the table plays on (chips already in that pot go with the player).
+- **Gone**: the sign-in, the profile and everything in it (cash, bank, diamonds, gear, product, grow houses, hustlers,
+  hoodlums), chat lines, DMs (both sides of the conversation), forum threads (with their replies) and replies, fights
+  (from both players' logs), casino history, reports and blocks.
+- **Stays, without the name**: market trades, crew and cartel ledger entries, the territory log and other players'
+  activity lines ("A deleted player attacked you"). Threads that lost replies are recounted.
+- `deleted_accounts` keeps a tally — the date, days from sign-up, and whether the account ever paid (the Daily Drop's
+  paid plan) — and nothing that identifies the player.
+- Deleting doesn't cancel an Apple subscription; the sheet, Support and the Privacy Policy all say so.
 
 ## Economy at a glance (for tuning)
 
@@ -482,6 +564,33 @@ or raise `base_resistance`.
 Bottom bar: **Home · Actions · Economy · Fight · Services · Chat**.
 Home shows stats, Heat gauge, crew/cartel, and links to Profile, Inventory,
 Storage, Setups, Crew, Cartel, Territory, Top Users.
+
+## iOS app *(Zack, 2026-10-01)*
+
+The App Store build is the same React app inside a native shell (Capacitor 8,
+`web/ios`). It ships its own copy of the web build and never loads the GitHub
+Pages site (Apple guideline 4.2). It talks to the same Supabase project and has
+the same features as the web build. iPhone only, portrait only, iOS 15 and up.
+
+What differs from the web:
+- **Links out of the app open in Safari.** A password-reset email requested in
+  the app points at the live web app, because the app's own address
+  (`capacitor://localhost`) can't be a Supabase redirect. The player sets the new
+  password there and signs in to the app with it.
+- Coming back to the app refreshes the player state at once. The tab bar hides
+  while the keyboard is up.
+- **Purchases** (diamonds, if they're ever sold) will go through Apple's in-app
+  purchase inside the app (guideline 3.1.1). That comes later.
+
+Both builds: if the first load can't reach the server (offline, dead Wi-Fi), the
+game shows **Can't reach the city** with a Retry button instead of a spinner.
+Once the player is in, failed requests are toasts as before.
+
+**Versioning**: the version (`MARKETING_VERSION` in the Xcode project, 1.0.0 at
+launch) goes up for every App Store release: the last number for fixes, the
+middle one for new features. The build number is the GitHub Actions run number,
+set at build time, so every TestFlight upload is higher than the one before. Tag
+what ships `ios-v<version>`. Building, signing and the secrets are in `docs/ios.md`.
 
 ## Architecture
 

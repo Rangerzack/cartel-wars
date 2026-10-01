@@ -59,6 +59,7 @@ Design notes and every reconstructed number live in [SPEC.md](SPEC.md).
    Cloudflare Pages also work; it's a single-page app, so route all paths to
    `index.html` (`web/vercel.json` and `web/public/_redirects` are included;
    `web/public/404.html` does the same job on GitHub Pages).
+5. The privacy policy, terms and support pages are static files in `web/public/` (`privacy.html`, `terms.html`, `support.html`); if you fork the game, put your own name and contact email in them and in `web/src/components/HelpPolicies.tsx` in place of Range Lab and `support@rangelab.io`.
 
 ## Live vs staging
 

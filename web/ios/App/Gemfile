@@ -1,0 +1,4 @@
+# fastlane for .github/workflows/ios.yml (bundle exec fastlane ios beta, run from this folder).
+source 'https://rubygems.org'
+
+gem 'fastlane', '~> 2.228'

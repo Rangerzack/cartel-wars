@@ -1,6 +1,6 @@
 // Browser walkthrough for profile moderation: a blocked name at sign-up, reporting a profile, the admin queue (clear a
 // bio), resetting a name from the profile page, the reset player's rename prompt and activity line, the log, the word
-// filter, and the filter on bios.
+// filter (and its per-word chat switch), and the filter on bios.
 // Usage (local stack running): node scripts/e2e-moderation.mjs [--shots dir]
 import { chromium } from 'playwright'
 import fs from 'node:fs'
@@ -96,12 +96,24 @@ try {
   await a.getByText('(was “I sell cheap bricks”)').first().waitFor()
   await snap(a, 'log')
 
-  // The word filter: add one, remove it
+  // The word filter: add one (it blocks chat too, by default), switch chat off for it, remove it
   await a.goto(`${BASE}/admin?tab=words`)
   await a.getByPlaceholder('word').fill('snitchy')
   await a.getByRole('button', { name: 'Inside a word' }).click()
+  if (!(await a.getByRole('checkbox', { name: /^Chat/ }).isChecked())) throw new Error('Chat is checked by default')
   await a.getByRole('button', { name: 'Add Word' }).click()
   await a.getByText('“snitchy” added').waitFor()
+  await b.goto(`${BASE}/chat`)
+  await b.getByPlaceholder('Say something…').fill(`what a snitchy move ${RUN}`)
+  await b.getByRole('button', { name: 'Send' }).click()
+  await b.getByText("That message has a word that isn't allowed", { exact: true }).waitFor()
+  await a.getByRole('button', { name: 'Chat on for snitchy' }).click()
+  await a.getByText('“snitchy” no longer blocks chat').waitFor()
+  await a.getByRole('button', { name: 'Chat off for snitchy' }).waitFor()
+  if ((await one(`select new_value from mod_log where action = 'set_word' order by id desc limit 1`)).new_value !== 'snitchy (part, chat off)') throw new Error('set_word logged')
+  await b.getByPlaceholder('Say something…').fill(`what a snitchy move ${RUN}`)
+  await b.getByRole('button', { name: 'Send' }).click()
+  await b.locator('.msg', { hasText: `what a snitchy move ${RUN}` }).waitFor()
   const pillX = a.getByRole('button', { name: 'Remove snitchy' })
   await pillX.waitFor()
   await snap(a, 'words')

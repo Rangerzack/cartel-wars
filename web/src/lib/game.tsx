@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { api, GameError } from './api'
+import { RESUME_EVENT } from './platform'
 import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
@@ -25,6 +26,26 @@ interface GameState {
 
 const Ctx = createContext<GameState | null>(null)
 
+/** The request never reached the server (offline, dead Wi-Fi), as opposed to an error the server sent back.
+ *  supabase-js reports it as "TypeError: Failed to fetch" (Chrome), "Load failed" (Safari/iOS) or "NetworkError…" (Firefox). */
+const isNetworkError = (e: unknown) => !navigator.onLine || /Failed to fetch|Load failed|NetworkError|Network request failed/i.test((e as Error)?.message ?? '')
+
+/** Full-screen stop when the first load can't reach the server, instead of a spinner that never ends (#20). */
+function CantReach({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="auth">
+      <div className="logo"><h1>Cartel Wars</h1></div>
+      <div className="card">
+        <div className="hd"><span>Can't reach the city</span></div>
+        <div className="bd stack">
+          <div className="small muted">Check your connection and try again.</div>
+          <button className="btn gold block" onClick={onRetry}>Retry</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -36,9 +57,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [recovery, setRecovery] = useState(() => /(^|[#&])type=recovery(&|$)/.test(window.location.hash))
   const toastId = useRef(0)
   const gotAt = useRef(0)
+  // Start-up failed for want of a network; `boot` is bumped by Retry to run the start-up again.
+  const [offline, setOffline] = useState(false)
+  const [boot, setBoot] = useState(0)
+  const loaded = useRef({ me: false, catalog: false })
+  useEffect(() => { loaded.current = { me: !!me, catalog: !!catalog } }, [me, catalog])
+  const retry = useCallback(() => { setOffline(false); setBoot(b => b + 1) }, [])
+
+  // getSession refreshes an expired token; offline that fails, and it's the network to blame, not the account.
+  useEffect(() => {
+    if (authReady) return
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error && isNetworkError(error)) { setOffline(true); return }
+      setSession(data.session); setAuthReady(true)
+    })
+  }, [authReady, boot])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
       setSession(s)
       if (!s) setMe(null)
@@ -59,6 +94,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (why) { toast(why, 'bad'); history.replaceState(history.state, '', window.location.pathname + window.location.search) }
   }, [toast])
 
+  // Until `me` and the catalog have both arrived, a network failure shows CantReach; after that every failure is a toast.
+  const failed = useCallback((e: unknown, what: 'me' | 'catalog') => {
+    if (!loaded.current[what] && isNetworkError(e)) setOffline(true)
+    else toast((e as Error).message, 'bad')
+  }, [toast])
+
   const refresh = useCallback(async () => {
     try {
       const m = await api.me()
@@ -67,22 +108,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
-        try { const m = await api.ensureProfile(); gotAt.current = Date.now(); setMe(m) } catch (e2) { toast((e2 as Error).message, 'bad') }
+        try { const m = await api.ensureProfile(); gotAt.current = Date.now(); setMe(m) } catch (e2) { failed(e2, 'me') }
       } else {
-        toast((e as Error).message, 'bad')
+        failed(e, 'me')
       }
     }
-  }, [toast])
+  }, [failed])
 
   useEffect(() => {
     if (!session) return
     refresh()
-    api.catalog().then(setCatalog).catch(e => toast((e as Error).message, 'bad'))
+    api.catalog().then(setCatalog).catch(e => failed(e, 'catalog'))
     const t = setInterval(refresh, 60_000)
     const onVis = () => { if (document.visibilityState === 'visible') refresh() }
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
-  }, [session, refresh, toast])
+  }, [session, refresh, failed, boot])
+
+  // The iOS app coming back to the foreground (lib/native.ts): retry a failed start, otherwise refresh.
+  // The connection coming back retries a failed start too, so nobody has to find the button.
+  useEffect(() => {
+    const onResume = () => { if (offline) retry(); else if (session) refresh() }
+    const onOnline = () => { if (offline) retry() }
+    window.addEventListener(RESUME_EVENT, onResume)
+    window.addEventListener('online', onOnline)
+    return () => { window.removeEventListener(RESUME_EVENT, onResume); window.removeEventListener('online', onOnline) }
+  }, [offline, session, refresh, retry])
 
   // Refresh the moment a timer runs out — stamina/heat tick, health tick, jail release, hustlers home —
   // so nothing sits on 0:00 waiting for the minute poll. Deadlines are server times; we measure from
@@ -130,7 +181,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery }),
     [session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery])
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }
 
 export function useGame(): GameState {

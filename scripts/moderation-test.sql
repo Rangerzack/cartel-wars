@@ -20,6 +20,19 @@ do $$ declare t text; begin
                            'Classic', 'Torpedo', 'Pedometer', 'Mesmerized', '][LLUM][NAT][', '🕶️', 'Eating beets and smacking cheeks'] loop
     assert not _is_blocked(t), t || ' should be allowed';
   end loop;
+  -- split-up words join back into one group (either side ≤ 2 letters, or both ≤ 3), in names and chat alike
+  foreach t in array array['FuckBoy', 'f.u.c.k', 'fuuuuck', 'xNiGGeRx', 'f u c k', 'fu ck', 'fuc k', 'nig ger', 'nigg er', 'c.u.n.t', 'kkk',
+                           'the kkk rally', 'you f u c k', 'f.u.c.k this', 'white power', 'WhitePower', 'Sieg Heil', 'porch monkey'] loop
+    assert _is_blocked(t) and _is_blocked_hard(t), t || ' should be blocked everywhere';
+  end loop;
+  -- two ordinary words stay apart, so a listed word can't be read across them (musi[c unt]il)
+  foreach t in array array['music until dawn', 'panic until the cops leave', 'traffic until 5', 'doc until noon', 'Music Until',
+                           'Eating beets and smacking cheeks'] loop
+    assert not _is_blocked(t) and not _is_blocked_hard(t), t || ' should be allowed everywhere';
+  end loop;
+  assert _squash_groups('f u c k off') = array['fuckoff'] and _squash_groups('nigg er') = array['nigger'];
+  assert _squash_groups('music until dawn') = array['music', 'until', 'dawn'] and _squash_groups('xNiGGeRx') = array['xniggerx'];
+  assert (check_name('Music Until')->>'ok')::boolean;
 end $$;
 
 -- Names ----------------------------------------------------------------------------------------------------
@@ -86,6 +99,10 @@ do $$ declare q jsonb; r jsonb; target uuid := 'ab333333-3333-3333-3333-33333333
   assert exists (select 1 from jsonb_array_elements(q) e where e->>'id' = target::text
                    and e->'reports'->0->>'reason' = 'avatar' and e->'reports'->0->>'reporter' = 'Snitch'
                    and e->'reports'->0->>'note' = 'that face is rude'), q::text;
+  -- a profile report: no message or post behind it, so no ref, text or live flag
+  assert exists (select 1 from jsonb_array_elements(q) e where e->>'id' = target::text and e->'muted_until' = 'null'::jsonb
+                   and e->'reports'->0->>'kind' = 'profile' and e->'reports'->0->'ref_id' = 'null'::jsonb
+                   and e->'reports'->0->'text' = 'null'::jsonb and e->'reports'->0->'live' = 'null'::jsonb), q::text;
   -- reset the avatar: the report closes, it's logged, and they hear about it
   r := mod_action(target, 'reset_avatar');
   assert r->>'old' = '🤑' and (r->>'reports')::int = 1 and (select avatar from profiles where id = target) = '🕶️', r::text;
@@ -136,16 +153,119 @@ do $$ declare r jsonb; begin
   assert (select status from profile_reports where note = 'still rowdy') = 'dismissed';
 end $$;
 
+-- The filter on crews, cartels, the forum and chat (#11) ------------------------------------------------------------
+insert into auth.users (id, raw_user_meta_data) values ('ab555555-5555-5555-5555-555555555555', '{"name":"Potty Mouth"}');
+select as_user('ab555555-5555-5555-5555-555555555555');
+do $$ declare r jsonb; tid bigint; pid bigint; begin
+  perform get_me();
+  -- names, emblems, descriptions and titles: every tier, whole words included
+  perform expect_error('select crew_create(''Big Dick Crew'')', 'That name isn''t allowed');
+  perform expect_error('select crew_create(''Sh1theads'')', 'That name isn''t allowed');
+  perform expect_error('select crew_create(''Clean Crew'', ''ASS'')', 'That emblem isn''t allowed');
+  perform expect_error('select crew_create(''Clean Crew'', ''🏴'', ''we kick ass'')', 'That description has a word that isn''t allowed');
+  perform crew_create('Assassins', '🗡️', 'Quiet work.');
+  perform expect_error('select crew_update(''🗡️'', ''f.u.c.k the cops'')', 'That description has a word that isn''t allowed');
+  perform expect_error('select cartel_create(''Cock Cartel'')', 'That name isn''t allowed');
+  perform cartel_create('Cocktail Hour');
+  perform expect_error('select forum_create_thread(''general'', ''Pussy cats'', ''meow'')', 'That title has a word that isn''t allowed');
+  -- posts and chat: only the words marked chat, each tier matched its own way, so swearing goes through and slurs don't
+  perform expect_error('select forum_create_thread(''general'', ''Fair warning'', ''you r3tard'')', 'That message has a word that isn''t allowed');
+  tid := (forum_create_thread('general', 'Fair warning', 'Kiss my ass, Lalo.')->>'id')::bigint;
+  perform expect_error(format('select forum_edit(''thread'', %s, ''still fine'', ''Dick moves'')', tid), 'That title has a word that isn''t allowed');
+  perform expect_error(format('select forum_edit(''thread'', %s, ''you f u c k'')', tid), 'That message has a word that isn''t allowed');
+  perform forum_edit('thread', tid, 'Kiss my ass, Salamanca.', 'Final warning');
+  assert (select title from forum_threads where id = tid) = 'Final warning';
+  perform expect_error(format('select forum_reply(%s, ''nig ger'')', tid), 'That message has a word that isn''t allowed');
+  pid := (forum_reply(tid, 'son of a b1tch')->>'id')::bigint;
+  perform forum_edit('post', pid, 'What a dick.');
+  perform expect_error(format('select forum_edit(''post'', %s, ''what a cunt'')', pid), 'That message has a word that isn''t allowed');
+  perform send_message('global', 'kiss my ass');
+  perform send_message('global', 'eat sh1t');
+  perform send_message('global', 'bullshit');
+  perform send_message('global', 'music until dawn');
+  perform expect_error('select send_message(''global'', ''that''''s retarded'')', 'That message has a word that isn''t allowed');
+  perform expect_error('select send_message(''global'', ''f.u.c.k this'')', 'That message has a word that isn''t allowed');
+  perform expect_error('select send_message(''global'', ''white power'')', 'That message has a word that isn''t allowed');
+  -- whole-word slurs marked chat: refused in chat and posts, as whole words only
+  perform expect_error('select send_message(''global'', ''you fag'')', 'That message has a word that isn''t allowed');
+  perform expect_error('select send_message(''global'', ''Nazi scum'')', 'That message has a word that isn''t allowed');
+  perform expect_error(format('select forum_reply(%s, ''shut up homo'')', tid), 'That message has a word that isn''t allowed');
+  perform send_message('global', 'grapes and fagioli');
+  assert _is_blocked_hard('you f4g') and _is_blocked_hard('rapists') and not _is_blocked_hard('Therapist') and not _is_blocked_hard('a homogeneous crew');
+  assert _is_blocked('big ass') and not _is_blocked_hard('big ass') and not _is_blocked_hard('what a dick');
+  assert _is_blocked('BigShitHead') and not _is_blocked_hard('BigShitHead') and _is_blocked_hard('BigRetardHead');
+  -- names stay strict
+  assert check_name('Bullshit')->>'why' = 'That name isn''t allowed';
+  perform expect_error('select forum_create_thread(''general'', ''Son of a b1tch'', ''hi'')', 'That title has a word that isn''t allowed');
+  -- old messages are left alone
+  insert into messages (channel, sender_id, sender_name, body) values ('global', auth.uid(), 'Potty Mouth', 'old r3tard talk');
+  assert exists (select 1 from jsonb_array_elements(get_messages('global', 200)) e where e->>'body' = 'old r3tard talk');
+end $$;
+
+-- The chat switch: the admin flips "shit" on for chat and off again; each flip is logged ----------------------------
+do $$ declare f jsonb; admin text := 'ab111111-1111-1111-1111-111111111111'; potty text := 'ab555555-5555-5555-5555-555555555555'; begin
+  perform as_user(admin);
+  f := mod_words();
+  assert (select bool_and(jsonb_typeof(e->'chat') = 'boolean') from jsonb_array_elements(f) e), 'every word says whether it reaches chat';
+  assert exists (select 1 from jsonb_array_elements(f) e where e->>'word' = 'shit' and not (e->>'chat')::boolean);
+  assert exists (select 1 from jsonb_array_elements(f) e where e->>'word' = 'retard' and (e->>'chat')::boolean);
+  assert exists (select 1 from jsonb_array_elements(f) e where e->>'word' = 'nigger' and (e->>'chat')::boolean);
+  f := mod_words('chat', 'Shit');
+  assert exists (select 1 from jsonb_array_elements(f) e where e->>'word' = 'shit' and (e->>'chat')::boolean), f::text;
+  assert (select new_value from mod_log where action = 'set_word' order by id desc limit 1) = 'shit (part, chat on)';
+  perform as_user(potty);
+  perform expect_error('select send_message(''global'', ''bullshit'')', 'That message has a word that isn''t allowed');
+  perform as_user(admin);
+  perform mod_words('chat', 'shit');
+  assert (select new_value from mod_log where action = 'set_word' order by id desc limit 1) = 'shit (part, chat off)';
+  assert mod_log_list(1)->0->>'action' = 'set_word';
+  perform as_user(potty);
+  perform send_message('global', 'bullshit');
+  perform expect_error('select mod_words(''chat'', ''shit'')', 'Admins only');
+  -- whole-word entries carry the switch too: slurs on, crude words off, and the admin can flip either
+  perform as_user(admin);
+  f := mod_words();
+  assert (select bool_and((e->>'chat')::boolean) from jsonb_array_elements(f) e
+           where e->>'word' in ('coon', 'paki', 'spic', 'fag', 'dyke', 'homo', 'nazi', 'heil', 'rape', 'rapist', 'pedo')), 'whole-word slurs block chat';
+  assert not (select bool_or((e->>'chat')::boolean) from jsonb_array_elements(f) e
+               where e->>'word' in ('dick', 'cock', 'ass', 'arse', 'cum', 'anal', 'anus', 'tits', 'boob', 'pussy', 'twat', 'wank', 'prick')), 'crude whole words don''t';
+  f := mod_words('chat', 'dick');
+  assert exists (select 1 from jsonb_array_elements(f) e where e->>'word' = 'dick' and e->>'match' = 'word' and (e->>'chat')::boolean), f::text;
+  assert (select new_value from mod_log where action = 'set_word' order by id desc limit 1) = 'dick (word, chat on)';
+  perform as_user(potty);
+  perform expect_error('select send_message(''global'', ''what a dick'')', 'That message has a word that isn''t allowed');
+  perform send_message('global', 'Dickens on the shelf');
+  perform as_user(admin);
+  perform mod_words('chat', 'dick');
+  assert (select new_value from mod_log where action = 'set_word' order by id desc limit 1) = 'dick (word, chat off)';
+  perform as_user(potty);
+  perform send_message('global', 'what a dick');
+  perform as_user(admin);
+  perform expect_error('select mod_words(''chat'', ''nosuchword'')', 'Not on the list');
+  -- added words reach chat unless the admin says otherwise
+  perform mod_words('add', 'grassy', 'part');
+  perform mod_words('add', 'snitchy', 'part', false);
+  assert _is_blocked_hard('a grassy rat') and not _is_blocked_hard('a snitchy rat') and _is_blocked('a snitchy rat');
+  assert (select new_value from mod_log where action = 'add_word' order by id desc limit 1) = 'snitchy (part, chat off)';
+  perform mod_words('add', 'grub', 'word');
+  assert _is_blocked_hard('you grub') and not _is_blocked_hard('grubby');
+  assert (select new_value from mod_log where action = 'add_word' order by id desc limit 1) = 'grub (word, chat on)';
+  perform mod_words('remove', 'grassy'); perform mod_words('remove', 'snitchy'); perform mod_words('remove', 'grub');
+end $$;
+
 -- Grants: the sign-up check is open to everyone; the filter's insides aren't -------------------------------------
 do $$ declare f text; begin
   assert has_function_privilege('anon', 'check_name(text)', 'execute');
-  foreach f in array array['report_profile(uuid,text,text)', 'choose_name(text)', 'mod_queue()', 'mod_action(uuid,text)', 'mod_log_list(integer)',
-                           'mod_words(text,text,text)'] loop
+  foreach f in array array['report_profile(uuid,text,text)', 'choose_name(text)', 'mod_queue()', 'mod_action(uuid,text,bigint)', 'mod_log_list(integer)',
+                           'mod_words(text,text,text,boolean)'] loop
     assert has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute'), f;
   end loop;
-  foreach f in array array['_is_blocked(text)', '_name_problem(text,uuid)', '_leet(text)'] loop
-    assert not has_function_privilege('authenticated', f, 'execute'), f || ' should be private';
+  foreach f in array array['_is_blocked(text)', '_name_problem(text,uuid)', '_leet(text)', '_blocked_by(text,text[],boolean)', '_is_blocked_hard(text)',
+                           '_squash_groups(text)'] loop
+    assert not has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute'), f || ' should be private';
   end loop;
+  -- the old signatures are gone, so a call can't land on them
+  assert to_regprocedure('mod_words(text,text,text)') is null and to_regprocedure('_blocked_by(text,text[])') is null;
 end $$;
 
 select 'MODERATION TEST PASSED';
