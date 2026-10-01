@@ -1,0 +1,73 @@
+name: iOS to TestFlight
+# Builds the native iOS app (web/ios, a Capacitor shell around the same React build), signs it with fastlane match
+# and uploads it to TestFlight. Everything runs on GitHub's macOS runner; no Mac or Xcode on your side.
+# macOS runner minutes are free on a public repo (a private repo spends its Actions minutes at 10x the Linux rate).
+#
+# One-time setup, all in a browser:
+# 1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers → "+" → App IDs → App:
+#    bundle ID io.rangelab.cartelwars (explicit), description "Cartel Wars".
+# 2. appstoreconnect.apple.com → Apps → "+" → New App: iOS, name "Cartel Wars", that bundle ID, SKU cartel-wars.
+#    (The API key below can't create the app record; everything after this is automatic.)
+# 3. Create a new, empty, private GitHub repo for the signing files, e.g. Rangerzack/cartel-wars-certs.
+# 4. Repo Settings → Secrets and variables → Actions → New repository secret, one per line below:
+#    ASC_KEY_ID      App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys → "+"
+#                    (name "GitHub Actions", access Admin, so it can create the certificate). The new key's "Key ID".
+#    ASC_ISSUER_ID   Same page: the "Issuer ID" shown above the key list.
+#    ASC_KEY_P8      The AuthKey_<KEYID>.p8 file from "Download" (offered once), base64 on one line:
+#                    macOS `base64 -i AuthKey_XXXX.p8`, Linux `base64 -w0 AuthKey_XXXX.p8`,
+#                    Windows PowerShell `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXX.p8"))`.
+#    MATCH_GIT_URL   HTTPS clone URL of the repo from step 3, e.g. https://github.com/Rangerzack/cartel-wars-certs.git
+#    MATCH_GIT_AUTH  GitHub → Settings → Developer settings → Fine-grained tokens → Generate: only that repo,
+#                    Repository permissions → Contents: Read and write. Store base64 of "username:token":
+#                    `printf '%s' 'Rangerzack:github_pat_XXXX' | base64` (PowerShell: [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('Rangerzack:github_pat_XXXX'))).
+#    MATCH_PASSWORD  A long passphrase you make up. It encrypts the certificate inside that repo; keep a copy.
+# The first run creates the distribution certificate and App Store profile with the API key and commits them
+# (encrypted) to the match repo; later runs reuse them.
+#
+# Run it: Actions → "iOS to TestFlight" → Run workflow, or push a tag like ios-v1.0.0. The build number is this
+# workflow's run number; the version is MARKETING_VERSION in web/ios/App/App.xcodeproj (see docs/ios.md).
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: fastlane lane (web/ios/App/fastlane/Fastfile)
+        type: choice
+        options: [beta]
+        default: beta
+  push:
+    tags: ['ios-v*']
+permissions:
+  contents: read
+concurrency:
+  group: ios
+  cancel-in-progress: false            # never cut an upload off halfway
+env:
+  # Same publishable (anon) key as pages.yml; the app talks to the same Supabase project.
+  VITE_SUPABASE_URL: https://bghoornhtsgzlebrbdoh.supabase.co
+  VITE_SUPABASE_ANON_KEY: sb_publishable_PaWcx58uSEkv3dTaNpk8aA_B_HNRcl-
+jobs:
+  testflight:
+    runs-on: macos-26                  # Xcode 26: App Store Connect rejects uploads from older Xcode since 2026-04-28
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: Build the web app into the iOS project
+        working-directory: web
+        run: npm ci && npm run build:ios   # BASE_PATH=/ vite build, then cap sync ios
+      - name: Resolve Swift packages
+        working-directory: web/ios/App
+        run: xcodebuild -version && xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3', bundler-cache: true, working-directory: web/ios/App }
+      - name: Sign, build and upload to TestFlight
+        working-directory: web/ios/App
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_AUTH: ${{ secrets.MATCH_GIT_AUTH }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane ios ${{ inputs.lane || 'beta' }}

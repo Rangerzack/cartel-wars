@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import type {
   ActionResult, ActivityItem, RecentFind, DropResult, RecentDrop, ComboMeta, SetupCombos, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
   Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
-  BannedWord, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
+  BannedWord, BlockedPlayer, ContentReason, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
 } from './types'
@@ -24,10 +24,17 @@ export const api = {
 
   // moderation
   reportProfile: (target: string, reason: ReportReason, note: string) => rpc<{ id: number }>('report_profile', { target, reason, note }),
+  deleteAccount: (confirm: string) => rpc<{ deleted: true }>('delete_account', { confirm }),
+  reportMessage: (mid: number, reason: ContentReason, note: string) => rpc<{ id: number }>('report_message', { mid, reason, note }),
+  reportForum: (kind: 'thread' | 'post', id: number, reason: ContentReason, note: string) => rpc<{ id: number }>('report_forum', { kind, id, reason, note }),
   modQueue: () => rpc<ModQueueItem[]>('mod_queue'),
-  modAction: (target: string, action: ModAction) => rpc<{ action: ModAction; old: string | null; new: string | null; reports: number }>('mod_action', { target, action }),
+  /** ref: the message, reply or thread id for delete_message / delete_post / delete_thread. */
+  modAction: (target: string, action: ModAction, ref?: number) => rpc<{ action: ModAction; old: string | null; new: string | null; reports: number }>('mod_action', { target, action, ref: ref ?? null }),
   modLog: (limit_n = 50) => rpc<ModLogEntry[]>('mod_log_list', { limit_n }),
-  modWords: (action: 'list' | 'add' | 'remove' = 'list', word?: string, how: WordMatch = 'word') => rpc<BannedWord[]>('mod_words', { action, word: word ?? null, how }),
+  modWords: (action: 'list' | 'add' | 'remove' | 'chat' = 'list', word?: string, how: WordMatch = 'word', chat = true) => rpc<BannedWord[]>('mod_words', { action, word: word ?? null, how, chat }),
+  blockPlayer: (target: string) => rpc<{ blocked: true }>('block_player', { target }),
+  unblockPlayer: (target: string) => rpc<{ blocked: false }>('unblock_player', { target }),
+  blockedList: () => rpc<BlockedPlayer[]>('blocked_list'),
   catalog: () => rpc<Catalog>('get_catalog'),
   updateProfile: (avatar: string | null, bio: string | null) => rpc<{ ok: boolean }>('update_profile', { avatar, bio }),
 

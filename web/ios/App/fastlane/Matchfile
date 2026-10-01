@@ -1,0 +1,8 @@
+# The App Store distribution certificate and profile live encrypted in a private git repo. The repo URL, its token and
+# the passphrase come from the MATCH_GIT_URL, MATCH_GIT_AUTH and MATCH_PASSWORD secrets (see .github/workflows/ios.yml).
+storage_mode('git')
+type('appstore')
+app_identifier(['io.rangelab.cartelwars'])
+# The runner has no git identity, and match commits the certificate it creates on the first run.
+git_full_name('fastlane match')
+git_user_email('match@users.noreply.github.com')

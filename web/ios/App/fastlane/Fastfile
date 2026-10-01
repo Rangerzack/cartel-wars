@@ -1,0 +1,59 @@
+# Signs and uploads the iOS app to TestFlight from a GitHub macOS runner: .github/workflows/ios.yml runs
+# `bundle exec fastlane ios beta` from web/ios/App after `npm run build:ios`. Nothing here needs a Mac or an Apple ID login.
+default_platform(:ios)
+
+APP_ID = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
+
+platform :ios do
+  # Named beta, not testflight: fastlane already has an action called testflight and warns about the clash on every run.
+  desc 'Build with match signing, number the build with the GitHub run number, upload to TestFlight'
+  lane :beta do
+    setup_ci # throwaway keychain on the runner for match to install the certificate into
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_KEY_P8'),
+      is_key_content_base64: true,
+      duration: 1200 # the maximum; build and upload share the token
+    )
+
+    # readonly: false lets the first run create the distribution certificate and App Store profile with the API key;
+    # later runs download them. setup_ci turns readonly on through the environment, and an explicit option wins.
+    # The encryption passphrase is read from MATCH_PASSWORD; match has no option for it.
+    match(
+      type: 'appstore',
+      readonly: false,
+      api_key: api_key,
+      git_url: ENV.fetch('MATCH_GIT_URL'),
+      git_basic_authorization: ENV.fetch('MATCH_GIT_AUTH')
+    )
+
+    # The project signs automatically for local Xcode runs. The runner has no Apple ID for that, so Release
+    # switches to match's certificate and profile here (the change is never committed).
+    update_code_signing_settings(
+      path: 'App.xcodeproj',
+      targets: ['App'],
+      build_configurations: ['Release'],
+      use_automatic_signing: false,
+      team_id: ENV["sigh_#{APP_ID}_appstore_team-id"],
+      code_sign_identity: 'Apple Distribution',
+      profile_name: ENV["sigh_#{APP_ID}_appstore_profile-name"]
+    )
+
+    # Build number = run number, so every upload is higher than the last. MARKETING_VERSION in the project is the version.
+    increment_build_number(xcodeproj: 'App.xcodeproj', build_number: ENV.fetch('GITHUB_RUN_NUMBER'), skip_info_plist: true)
+
+    # Swift Package Manager project (no CocoaPods); packages were resolved in the workflow step before this.
+    build_app(
+      project: 'App.xcodeproj',
+      scheme: 'App',
+      configuration: 'Release',
+      export_method: 'app-store',
+      xcargs: '-allowProvisioningUpdates',
+      output_directory: 'build'
+    )
+
+    upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)
+  end
+end

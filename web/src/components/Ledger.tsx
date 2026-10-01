@@ -36,7 +36,7 @@ export function Ledger({ scope, version = 0 }: { scope: 'crew' | 'cartel'; versi
         <div key={r.id} className="row">
           <span>{kindLabel[r.kind].icon}</span>
           <div className="grow">
-            <div className="t">{kindLabel[r.kind].label}{r.player ? <span className="muted"> · {r.player}</span> : null}</div>
+            <div className="t">{kindLabel[r.kind].label}{r.player ? <span className="muted"> · {r.player}</span> : r.kind !== 'bonus' ? <span className="muted"> · Deleted player</span> : null}</div>
             <div className="s">{r.note ? `${r.note} · ` : ''}{ago(r.at)} · balance {money(r.balance)}</div>
           </div>
           <b className={`tabular ${r.amount >= 0 ? 'gold' : 'red'}`}>{r.amount >= 0 ? '+' : '−'}{money(Math.abs(r.amount))}</b>
