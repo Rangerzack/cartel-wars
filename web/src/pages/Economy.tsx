@@ -50,7 +50,7 @@ function StreetTag({ s, price }: { s?: StreetInfo; price: number }) {
 
 function Grow() {
   const me = useMe()
-  const { catalog, run } = useGame()
+  const { catalog, run, ask } = useGame()
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const have = new Set(me.grow_houses.map(g => g.commodity))
   const extraDia = catalog.config.extra_grow_diamonds ?? 20
@@ -90,9 +90,9 @@ function Grow() {
         ))}
         <div className="row">
           <div className="grow s">Expand storage by 250 units</div>
-          <Btn className="sm gold" onClick={() => {
+          <Btn className="sm gold" onClick={async () => {
             // a new player's first expansion is all the cash they start with: ask before it goes
-            if (expandCost > me.cash / 2 && !confirm(`Spend ${money(expandCost)} of your ${money(me.cash)} on hand to expand storage by 250 units?`)) return
+            if (expandCost > me.cash / 2 && !await ask(`That's ${money(expandCost)} of your ${money(me.cash)} on hand, for 250 more units of storage.`, { title: 'Expand storage?', yes: `Expand · ${money(expandCost)}`, tone: 'gold' })) return
             return run(api.storageUpgrade, { ok: () => 'Storage expanded by 250 units' })
           }}>Expand · {money(expandCost)}</Btn>
         </div>
@@ -122,7 +122,7 @@ function Grow() {
               </div>
               <div className="hstack">
                 <Btn className="sm ghost" disabled={!g.running && !!blocked} onClick={() => run(() => api.growToggle(g.id), { ok: r => (r.running ? 'Production started' : 'Production stopped') })}>{g.running ? 'Stop' : 'Start'}</Btn>
-                <span className="push-right"><Btn className="sm ghost red" onClick={() => { if (confirm(`Abandon your ${c.name} grow house?`)) return run(() => api.growAbandon(g.id), { ok: () => 'Abandoned' }) }}>Abandon</Btn></span>
+                <span className="push-right"><Btn className="sm ghost red" onClick={async () => { if (await ask(`Its level and anything it has produced are gone for good.`, { title: `Abandon your ${c.name} grow house?`, yes: 'Abandon', tone: 'red' })) return run(() => api.growAbandon(g.id), { ok: () => 'Abandoned' }) }}>Abandon</Btn></span>
               </div>
               {capped && !blocked && <div className="why">Level {lvlCap} is as far as you go without a path — pick Producer above to keep upgrading.</div>}
             </div>

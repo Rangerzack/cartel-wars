@@ -44,7 +44,7 @@ export default function Chat() {
 
 export function Channel({ channel, compact }: { channel: string; compact?: boolean }) {
   const me = useMe()
-  const { toast, refresh, run } = useGame()
+  const { toast, refresh, run, ask } = useGame()
   const [msgs, setMsgs] = useState<Message[] | null>(null)
   // the ⋯ sheet on someone else's line, and the report it opens
   const [menu, setMenu] = useState<Message | null>(null)
@@ -101,7 +101,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   }
   async function block(m: Message) {
     setMenu(null)
-    if (!confirm(`Block ${m.sender_name}? They can't message you and their posts are hidden. You can undo this from your Profile.`)) return
+    if (!await ask(`Block ${m.sender_name}? They can't message you and their posts are hidden. You can undo this from your Profile.`, { title: `Block ${m.sender_name}?`, yes: 'Block', tone: 'red' })) return
     if (await run(() => api.blockPlayer(m.sender_id), { ok: () => `${m.sender_name} blocked` }) && other) api.player(other.id).then(setOther).catch(() => {})
   }
 

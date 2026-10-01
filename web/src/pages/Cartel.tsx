@@ -68,7 +68,7 @@ function CartelHub() {
 
 function CartelPage({ id }: { id: string }) {
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run, toast, ask } = useGame()
   const nav = useNavigate()
   const [c, setC] = useState<CartelDetail | null>(null)
   const [amount, setAmount] = useState(0)
@@ -96,7 +96,7 @@ function CartelPage({ id }: { id: string }) {
           {c.member && (
             <div className="hstack">
               <Btn className="sm" onClick={() => nav(`/chat/cartel:${c.id}`)}>💬 Cartel Chat</Btn>
-              {me.crew?.is_capo && <Btn className="sm ghost red" onClick={() => { if (confirm('Pull your crew out of the cartel?')) return act(api.cartelLeave, () => 'Your crew left the cartel') }}>Leave Cartel</Btn>}
+              {me.crew?.is_capo && <Btn className="sm ghost red" onClick={async () => { if (await ask('Your crew stops sharing the cartel\'s bonuses, and its crews can fight yours again.', { title: 'Pull your crew out of the cartel?', yes: 'Leave cartel', tone: 'red' })) return act(api.cartelLeave, () => 'Your crew left the cartel') }}>Leave Cartel</Btn>}
             </div>
           )}
           <div className="small muted">Every block pays its bonus once a day: 80% to the crew holding it, 20% to its cartel's bank.</div>

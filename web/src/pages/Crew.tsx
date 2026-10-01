@@ -80,7 +80,7 @@ function CrewHub() {
 
 function CrewPage({ id }: { id: string }) {
   const me = useMe()
-  const { run, toast, catalog } = useGame()
+  const { run, toast, catalog, ask } = useGame()
   const nav = useNavigate()
   const [c, setC] = useState<CrewDetail | null>(null)
   const [amount, setAmount] = useState(0)
@@ -133,7 +133,7 @@ function CrewPage({ id }: { id: string }) {
               <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}>💬 Crew Chat</Btn>
               <Btn className="sm" onClick={() => nav('/territory')}>🗺 Territory</Btn>
               {boss && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
-              <Btn className="sm ghost red" onClick={() => { if (confirm(c.is_capo ? `Leave? ${c.co_capo_id ? 'Your Co-Capo takes over.' : 'Leadership passes to your longest-standing member, or the crew disbands.'}` : 'Leave the crew?')) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew') }) }}>Leave</Btn>
+              <Btn className="sm ghost red" onClick={async () => { if (await ask(c.is_capo ? (c.co_capo_id ? 'Your Co-Capo takes over as Capo.' : 'Leadership passes to your longest-standing member, or the crew disbands if you are the last one.') : c.co_capo_id === me.id ? 'The Co-Capo seat opens up for the Capo to fill.' : 'You can apply to another crew, or found your own.', { title: `Leave ${c.name}?`, yes: 'Leave', tone: 'red' })) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew') }) }}>Leave</Btn>
             </div>
           )}
           {edit && (
@@ -181,8 +181,8 @@ function CrewPage({ id }: { id: string }) {
             </div>
             {c.is_capo && !m.is_capo && (m.is_co_capo
               ? <Btn className="sm ghost" onClick={() => act(() => api.crewSetCoCapo(null), () => `${m.name} is no longer Co-Capo`)}>Demote</Btn>
-              : <Btn className="sm ghost" onClick={() => { if (confirm(`Make ${m.name} Co-Capo?${c.co_capo_id ? ' This replaces your current Co-Capo.' : ''}`)) return act(() => api.crewSetCoCapo(m.id), () => `${m.name} is Co-Capo`) }}>Co-Capo</Btn>)}
-            {boss && !m.is_capo && m.id !== me.id && <Btn className="sm ghost red" onClick={() => { if (confirm(`Kick ${m.name}?`)) return act(() => api.crewKick(m.id), () => `${m.name} is out`) }}>Kick</Btn>}
+              : <Btn className="sm ghost" onClick={async () => { if (await ask(c.co_capo_id ? 'This replaces your current Co-Capo.' : 'They can accept applications, kick members and edit the crew.', { title: `Make ${m.name} Co-Capo?`, yes: 'Make Co-Capo' })) return act(() => api.crewSetCoCapo(m.id), () => `${m.name} is Co-Capo`) }}>Co-Capo</Btn>)}
+            {boss && !m.is_capo && m.id !== me.id && <Btn className="sm ghost red" onClick={async () => { if (await ask('They leave the crew right away. They can apply again later.', { title: `Kick ${m.name}?`, yes: 'Kick', tone: 'red' })) return act(() => api.crewKick(m.id), () => `${m.name} is out`) }}>Kick</Btn>}
           </div>
         ))}
       </Card>

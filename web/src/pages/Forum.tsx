@@ -127,7 +127,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
 }
 
 function ThreadView({ id }: { id: number }) {
-  const { toast, run } = useGame()
+  const { toast, run, ask } = useGame()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
   const page = Number(params.get('p') ?? 0)
@@ -147,7 +147,7 @@ function ThreadView({ id }: { id: number }) {
   async function mod(action: 'pin' | 'unpin' | 'lock' | 'unlock') { if (await run(() => api.forumModerate(id, action), { silent: true })) load() }
   async function move(cat: ForumCategory) { if (await run(() => api.forumModerate(id, 'move', cat), { ok: () => `Moved to ${board(cat)!.name}` })) nav(`/forum/${cat}`) }
   async function del(kind: 'thread' | 'post', pid: number) {
-    if (!confirm(kind === 'thread' ? 'Delete this whole thread?' : 'Delete this reply?')) return
+    if (!await ask(kind === 'thread' ? 'Every reply goes with it. This can\'t be undone.' : 'This can\'t be undone.', { title: kind === 'thread' ? 'Delete this whole thread?' : 'Delete this reply?', yes: 'Delete', tone: 'red' })) return
     if (await run(() => api.forumDelete(kind, pid), { silent: true })) { if (kind === 'thread') nav(`/forum/${data?.thread.category ?? ''}`); else load() }
   }
   async function saveEdit() {

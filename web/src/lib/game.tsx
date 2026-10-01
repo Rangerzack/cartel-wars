@@ -9,6 +9,9 @@ import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
 
+export interface AskOpts { title?: string; yes?: string; tone?: 'red' | 'gold' | 'doit' }
+export interface ConfirmReq extends AskOpts { message: string; resolve: (ok: boolean) => void }
+
 interface GameState {
   session: Session | null
   authReady: boolean
@@ -26,6 +29,16 @@ interface GameState {
   /** True after the player opens a password-reset link; the app asks for a new password before anything else. */
   recovery: boolean
   endRecovery: () => void
+  /** The stamina refill sheet: `need` is what the action takes (null = closed); pages open it instead of a dead button,
+   *  and `run` opens it when the server refuses for stamina. */
+  refillNeed: number | null
+  askRefill: (need?: number) => void
+  closeRefill: () => void
+  /** Ask before something that can't be undone or spends a lot: resolves true on yes. An in-app sheet, not window.confirm,
+   *  which some browsers and embedded web views mute or answer "no" by themselves (a tap on Leave then did nothing). */
+  ask: (message: string, opts?: AskOpts) => Promise<boolean>
+  confirmReq: ConfirmReq | null
+  answer: (ok: boolean) => void
 }
 
 const Ctx = createContext<GameState | null>(null)
@@ -54,6 +67,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
   const [netDown, setNetDown] = useState(false)
+  const [refillNeed, setRefillNeed] = useState<number | null>(null)
+  const askRefill = useCallback((need = 0) => setRefillNeed(need), [])
+  const closeRefill = useCallback(() => setRefillNeed(null), [])
+  const [confirmReq, setConfirmReq] = useState<ConfirmReq | null>(null)
+  const confirmRef = useRef<ConfirmReq | null>(null)
+  const ask = useCallback((message: string, opts: AskOpts = {}) => {
+    // under automation (the e2e harness, which answers native dialogs) keep the native one; players get the sheet
+    if (navigator.webdriver) return Promise.resolve(window.confirm(message))
+    confirmRef.current?.resolve(false)   // a second ask replaces the first, which counts as a no
+    return new Promise<boolean>(resolve => { const r = { message, ...opts, resolve }; confirmRef.current = r; setConfirmReq(r) })
+  }, [])
+  const answer = useCallback((ok: boolean) => { const r = confirmRef.current; confirmRef.current = null; setConfirmReq(null); r?.resolve(ok) }, [])
   const netDownRef = useRef(false)
   const markNet = useCallback((down: boolean) => { netDownRef.current = down; setNetDown(down) }, [])
   // A reset link lands with #...type=recovery; catch it here too in case supabase fires PASSWORD_RECOVERY before we subscribe.
@@ -191,6 +216,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await refresh()
       return r
     } catch (e) {
+      // "Not enough stamina", "You need at least 2 stamina to fight", "A turf war takes 3 stamina": offer a refill
+      const m = /(?:^|\s)(?:(\d+) )?stamina\b/i.exec(errorText(e))
+      if (m && !/free refills/i.test(errorText(e))) { setRefillNeed(m[1] ? Number(m[1]) : 0); await refresh(); return undefined }
       toast(errorText(e), 'bad')
       if (isNetworkError(e) && loaded.current.me) markNet(true)
       return undefined
@@ -202,8 +230,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
+    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }

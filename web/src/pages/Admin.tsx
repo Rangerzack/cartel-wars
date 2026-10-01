@@ -56,9 +56,9 @@ export default function Admin() {
 
 /** The three resets and the mute ladder, each with a confirm — shared by the queue and a player's profile. */
 export function ModButtons({ id, name, onDone, dismiss, mutedUntil }: { id: string; name: string; onDone: () => void; dismiss?: boolean; mutedUntil?: string | null }) {
-  const { run } = useGame()
-  const act = (action: ModAction, ask: string, ok: string) => async () => {
-    if (!confirm(ask)) return
+  const { run, ask } = useGame()
+  const act = (action: ModAction, question: string, ok: string) => async () => {
+    if (!await ask(question, { title: `${name}: are you sure?`, yes: 'Do it', tone: 'red' })) return
     const r = await run(() => api.modAction(id, action), { ok: () => ok })
     if (r) onDone()
   }
@@ -98,13 +98,13 @@ function Where({ r }: { r: ModReport }) {
 }
 
 function Reports() {
-  const { toast, run } = useGame()
+  const { toast, run, ask } = useGame()
   const [q, setQ] = useState<ModQueueItem[] | null>(null)
   const load = useCallback(() => api.modQueue().then(setQ).catch(e => toast(e.message, 'bad')), [toast])
   useEffect(() => { load() }, [load])
   const remove = (t: ModQueueItem, r: ModReport) => async () => {
-    const [action, ask, ok] = deleteAction[r.kind as Exclude<ReportKind, 'profile'>]
-    if (!confirm(ask)) return
+    const [action, question, ok] = deleteAction[r.kind as Exclude<ReportKind, 'profile'>]
+    if (!await ask(question, { title: 'Delete it?', yes: 'Delete', tone: 'red' })) return
     if (await run(() => api.modAction(t.id, action, r.ref_id!), { ok: () => ok })) load()
   }
   if (!q) return <Empty><span className="spin" /></Empty>
@@ -173,7 +173,7 @@ function Log() {
 }
 
 function Words() {
-  const { run, toast } = useGame()
+  const { run, toast, ask } = useGame()
   const [words, setWords] = useState<BannedWord[] | null>(null)
   const [word, setWord] = useState('')
   const [how, setHow] = useState<WordMatch>('word')
@@ -182,7 +182,7 @@ function Words() {
   if (!words) return <Empty><span className="spin" /></Empty>
   // Every word carries the chat switch: on, it also blocks chat messages and forum posts (matched the word's own way).
   const flipChat = (w: BannedWord) => async () => {
-    if (!confirm(w.chat ? `Let “${w.word}” through in chat and forum posts? It still guards names, bios and titles.` : `Block “${w.word}” in chat and forum posts too?`)) return
+    if (!await ask(w.chat ? `Let “${w.word}” through in chat and forum posts? It still guards names, bios and titles.` : `Block “${w.word}” in chat and forum posts too?`, { title: 'Change the chat filter?', yes: w.chat ? 'Let it through' : 'Block it' })) return
     const r = await run(() => api.modWords('chat', w.word), { ok: () => (w.chat ? `“${w.word}” no longer blocks chat` : `“${w.word}” now blocks chat`) })
     if (r) setWords(r)
   }
@@ -205,7 +205,7 @@ function Words() {
             {words.filter(w => w.match === m).map(w => (
               <span key={w.word} className="pill word-pill">{w.word}
                 <button className={`chat-tag${w.chat ? '' : ' off'}`} aria-pressed={w.chat} aria-label={`Chat ${w.chat ? 'on' : 'off'} for ${w.word}`} onClick={flipChat(w)}>chat</button>
-                <button className="x" aria-label={`Remove ${w.word}`} onClick={async () => { if (!confirm(`Remove “${w.word}” from the filter?`)) return; const r = await run(() => api.modWords('remove', w.word), { ok: () => `“${w.word}” removed` }); if (r) setWords(r) }}>×</button>
+                <button className="x" aria-label={`Remove ${w.word}`} onClick={async () => { if (!await ask(`Names, bios, titles and chat can use “${w.word}” again.`, { title: `Remove “${w.word}”?`, yes: 'Remove', tone: 'red' })) return; const r = await run(() => api.modWords('remove', w.word), { ok: () => `“${w.word}” removed` }); if (r) setWords(r) }}>×</button>
               </span>
             ))}
           </div>

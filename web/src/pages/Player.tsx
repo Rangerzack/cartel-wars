@@ -15,7 +15,7 @@ import { ModButtons } from './Admin'
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, toast, catalog } = useGame()
+  const { run, toast, catalog, askRefill, ask } = useGame()
   const nav = useNavigate()
   const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
@@ -34,16 +34,18 @@ export default function Player() {
   const isMe = p.id === me.id
   // jail is its own room: inmates only fight inmates
   const jailWall = me.jailed !== p.jailed
-  const cantFight = isMe || me.hospital || p.hospital || me.stamina < 2 || jailWall
+  const cantFight = isMe || me.hospital || p.hospital || jailWall
+  const tired = me.stamina < 2   // not a dead button: Attack offers a refill
 
   async function fight() {
+    if (me.stamina < 2) { askRefill(2); return }
     const r = await run(() => api.attack(p!.id), { silent: true })
     if (r) setResult(r)
     // reload either way: a refusal (they just went to the hospital, say) is what disables Attack again
     load(); loadPreview()
   }
   async function block() {
-    if (!confirm(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`)) return
+    if (!await ask(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`, { title: `Block ${p!.name}?`, yes: 'Block', tone: 'red' })) return
     if (await run(() => api.blockPlayer(p!.id), { ok: () => `${p!.name} blocked` })) load()
   }
   async function unblock() {
@@ -80,7 +82,7 @@ export default function Player() {
             </div>
           )}
           {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
-          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}.</div>}
+          {!isMe && !cantFight && tired && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}, or tap Attack to refill.</div>}
           {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
           {!isMe && p.blocked && <div className="small muted">You've blocked them — no messages either way</div>}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
@@ -147,12 +149,11 @@ export default function Player() {
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
             <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
-            {cantFight && <div className="why">{
+            {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
               : me.hospital ? "You're in the hospital. Check out at Services."
-              : jailWall ? (me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them.")
-              : `You need 2 stamina to fight — it comes back ${catalog?.config.stamina_regen_amount ?? 2} ${every(catalog?.config.stamina_regen_minutes ?? 10)}.`
-            }</div>}
+              : me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."
+            }</div> : tired && <div className="why">You're out of stamina — Attack again offers a refill.</div>}
           </div>
         </Modal>
       )}

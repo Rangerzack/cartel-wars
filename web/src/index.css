@@ -1059,3 +1059,11 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
   background: linear-gradient(#1c1c22, #141418); box-shadow: 0 -6px 18px rgba(0, 0, 0, .6);
 }
 .kb .table-bar { bottom: 6px; }
+
+/* the stamina refill sheet (components/Refill.tsx): one row per way to refill; a row you can't afford is dimmed, not hidden */
+.refill-sheet .row.dim .t, .refill-sheet .row.dim .s, .refill-sheet .row.dim .ico { opacity: .5; }
+
+/* the in-app confirm (components/Confirm.tsx): the question, then Cancel beside the action it names */
+.confirm-msg { margin: 0; line-height: 1.45; }
+.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+.confirm-actions .btn { min-height: 46px; }

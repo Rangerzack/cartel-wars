@@ -25,8 +25,8 @@ export function Toasts() {
 const openSheets: object[] = []
 
 /** A bottom sheet (P2-9): a dialog with its title and an × that stay at the top while the body scrolls, plus the Close
- *  at the end. Escape and a tap on the backdrop close it; focus moves into it and goes back where it was afterwards. */
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+ *  at the end (or `footer` in its place, e.g. a confirm's two buttons). Escape and a tap on the backdrop close it; focus moves into it and goes back where it was afterwards. */
+export function Modal({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   const sheet = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   const titleId = useId()
@@ -64,7 +64,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
           <button type="button" className="modal-x" aria-label="Close" onClick={onClose}>×</button>
         </div>
         {children}
-        <button className="btn block" style={{ marginTop: 14 }} onClick={onClose}>Close</button>
+        {footer ?? <button className="btn block" style={{ marginTop: 14 }} onClick={onClose}>Close</button>}
       </div>
     </div>
   )

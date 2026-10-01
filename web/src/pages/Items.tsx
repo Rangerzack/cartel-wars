@@ -15,7 +15,7 @@ const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon'
 
 export default function Items() {
   const me = useMe()
-  const { catalog, run, toast } = useGame()
+  const { catalog, run, toast, ask } = useGame()
   const [sp] = useSearchParams()
   const nav = useNavigate()
   // deep links: /items?tab=shop&cat=weapon, /items?setup=defense (and the old /items#shop)
@@ -119,9 +119,9 @@ export default function Items() {
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
-                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={() => {
+                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
                     // it sits next to the gold Buy and goes back at about half price: ask first
-                    if (!confirm(`Sell one ${i.name} for ${money(resale)}?`)) return
+                    if (!await ask(`It goes back for about half what it costs to buy.`, { title: `Sell one ${i.name} for ${money(resale)}?`, yes: `Sell · ${money(resale)}`, tone: 'gold' })) return
                     return run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })
                   }}>Sell {money(resale)}</Btn>}
                   {drop

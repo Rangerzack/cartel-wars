@@ -32,7 +32,7 @@ function NewPasswordFields({ onDone, submitLabel }: { onDone: () => void; submit
 
 /** Account card on the Profile page: email, change password, sign out, delete the account. */
 export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
-  const { session, signOut } = useGame()
+  const { session, signOut, ask } = useGame()
   const [changing, setChanging] = useState(false)
   const [deleting, setDeleting] = useState(false)
   return (
@@ -42,7 +42,7 @@ export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
           ? <><NewPasswordFields submitLabel="Save new password" onDone={() => setChanging(false)} /><button className="btn sm ghost" onClick={() => setChanging(false)}>Cancel</button></>
           : <div className="grid2">
               <button className="btn" onClick={() => setChanging(true)}>Change password</button>
-              <Btn className="ghost" onClick={async () => { if (confirm('Sign out of Cartel Wars on this device?')) { await signOut(); onSignedOut() } }}>Sign out</Btn>
+              <Btn className="ghost" onClick={async () => { if (await ask('You can sign back in any time with your email and password.', { title: 'Sign out on this device?', yes: 'Sign out' })) { await signOut(); onSignedOut() } }}>Sign out</Btn>
             </div>}
         <button className="btn sm ghost red" onClick={() => setDeleting(true)}>Delete account</button>
       </div>
