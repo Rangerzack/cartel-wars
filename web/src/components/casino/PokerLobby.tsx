@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
-import { chips, money } from '../../lib/format'
+import { money } from '../../lib/format'
 import type { PokerTableInfo } from '../../lib/types'
-import { Card, Empty, Modal } from '../ui'
+import { Btn, Card, Empty, Modal } from '../ui'
 import { BetPicker } from './shared'
 
 export default function PokerLobby() {
@@ -35,7 +35,7 @@ export default function PokerLobby() {
 
   return (
     <>
-      {mine && <div className="notice gold">You're seated at {mine.name}. <a onClick={() => nav(`/casino/table/${mine.id}`)} style={{ cursor: 'pointer' }}>Back to the table →</a></div>}
+      {mine && <div className="notice gold">You're seated at {mine.name}. <Link to={`/casino/table/${mine.id}`}>Back to the table →</Link></div>}
       <Card title="♠ No-Limit Hold'em" right={<small>6-max · live players · 30s clock</small>}>
         {!tables && <Empty><span className="spin" /></Empty>}
         {tables?.map(t => {
@@ -46,13 +46,13 @@ export default function PokerLobby() {
               <div className="grow">
                 <div className="t">{t.name}{rookie && <span className="pill gold" style={{ marginLeft: 6 }}>Rookies</span>}</div>
                 <div className="s">
-                  Blinds {chips(t.small_blind)}/{chips(t.big_blind)} · buy-in {chips(t.min_buyin)}–{chips(t.max_buyin)}{t.players.length ? ` · ${t.players.join(', ')}` : ''}
+                  Blinds {money(t.small_blind)}/{money(t.big_blind)} · buy-in {money(t.min_buyin)}–{money(t.max_buyin)}{t.players.length ? ` · ${t.players.join(', ')}` : ''}
                   {rookie && <><br />{barred ? `For players in their first ${t.rookie_days} days.` : `Just for players in their first ${t.rookie_days} days — learn the game without the sharks.`}</>}
                 </div>
               </div>
               <span className={`small tabular ${t.seated ? '' : 'muted'}`}>{t.seated}/{t.seats}</span>
-              {t.mine ? <button className="btn sm gold" onClick={() => nav(`/casino/table/${t.id}`)}>Sit</button>
-                : <button className="btn sm" disabled={!!mine || barred || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>{t.seated ? 'Join' : 'Open'}</button>}
+              {t.mine ? <Link className="btn sm gold" to={`/casino/table/${t.id}`}>Sit</Link>
+                : <button type="button" className="btn sm" disabled={!!mine || barred || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>{t.seated ? 'Join' : 'Open'}</button>}
             </div>
           )
         })}
@@ -63,9 +63,9 @@ export default function PokerLobby() {
           <div className="stack">
             <div className="small muted">Blinds {money(join.small_blind)}/{money(join.big_blind)}. Bring {money(join.min_buyin)} to {money(join.max_buyin)}. You have {money(me.cash)} on hand.</div>
             <BetPicker value={buyin} onChange={setBuyin} min={join.min_buyin} max={Math.min(join.max_buyin, me.cash)} label="Buy-in" />
-            <button className="btn gold block" disabled={buyin < join.min_buyin || buyin > join.max_buyin || buyin > me.cash} onClick={() => sit(join)}>
+            <Btn className="gold block" disabled={buyin < join.min_buyin || buyin > join.max_buyin || buyin > me.cash} onClick={() => sit(join)}>
               {me.cash < join.min_buyin ? `Need ${money(join.min_buyin)} cash on hand` : `Sit down with ${money(buyin)}`}
-            </button>
+            </Btn>
           </div>
         </Modal>
       )}

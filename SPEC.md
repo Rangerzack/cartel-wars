@@ -59,7 +59,7 @@ and spamming the 1-stamina job isn't a shortcut *(ours)*.
 ## Reputation (the 2011 "Reputation expansion")
 
 Five **reputation actions** pay no cash but add Reputation (⭐). Reputation
-buys six **rare items** (a gold-plated Desert Eagle, Escobar's Machete, an
+buys six **rare items** (a gold-plated Desert Eagle, Kingpin's Machete, an
 armored limousine, …) that can't be bought with cash or sold. *(wiki: "actions
 that pay reputation instead of cash, rewarded with traditional and Rare
 weapons"; the specific items and numbers are ours.)*
@@ -93,7 +93,8 @@ loser's lands at 35% *(ours)*. NPC thugs fight at half their gear at Thug 1,
 rising to full at Thug 200, so new players can farm the first forty or so. The
 Player page shows exact odds (every roll enumerated) and both sides' edges; the
 Fight page's **Thugs** tab ranks all 200 by what a hit is worth to you. Thugs don't
-appear on Top Users, the weekly boards or ribbons.
+appear on Top Users, the weekly boards or ribbons, and the **Players** tab lists them
+only when you search for one by name (an empty search is real players only).
 The winner takes 5–10% of the loser's cash on hand *(ours)*;
 after three hits on the same target within an hour the cash dries up (fights
 still happen, no money moves) *(ours, anti-farming)*. Anyone dropping to ≤19 Health lands in
@@ -613,8 +614,26 @@ or raise `base_resistance`.
 ## Screens (mobile-first, black "Do It" buttons)
 
 Bottom bar: **Home · Actions · Economy · Fight · Services · Chat**.
-Home shows stats, Heat gauge, crew/cartel, and links to Profile, Inventory,
-Storage, Setups, Crew, Cartel, Territory, Top Users.
+Home shows the notices, the stats (heat, bank, reputation, attack, defense,
+storage), then a 3×3 grid to everything with no tab: Items, Crew, Cartel,
+Territory, Casino, Forum, Activity, Accolades, Store. The top bar is tappable:
+cash opens the bank, diamonds the store, heat the police, stamina the refills,
+health the hospital, the name your profile.
+
+**Interface rules** *(Zack, 2026-10-01)*: the thing a screen is for sits on its
+first screen at 375 × 667 (Attack above the odds, the market offers above the
+sell form, crew applications above the ledger, a casino table's chips and Roll
+in a bar that stays in reach). Every tap target is at least 44 pt (small buttons
+and tabs carry an invisible hit area). Text is at least 11 px and passes 4.5:1
+on its background. Rows that navigate are real links or buttons, so they take
+focus and VoiceOver calls them that. Toasts sit above the tab bar, not over the
+cash they just changed; a lost connection says "Can't reach the city" once and
+then shows an Offline pill until a poll succeeds. Sheets have a sticky title
+with an ×, close on Escape and keep focus inside. Buttons: `doit` is the one
+primary verb on a screen (Title Case), `gold` spends or confirms, red `doit` is
+an attack, `red` deletes, `ghost` is secondary, `ghost red` leaves or kicks.
+Copy: short, second person, no exclamation marks, emoji only as icons. A spend
+that is irreversible or costs over half your cash asks first.
 
 ## iOS app *(Zack, 2026-10-01)*
 

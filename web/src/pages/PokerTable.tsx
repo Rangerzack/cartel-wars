@@ -5,12 +5,14 @@ import { useGame, useMe } from '../lib/game'
 import { chips, money } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import type { PokerSeat, PokerState } from '../lib/types'
-import { Empty, Modal } from '../components/ui'
+import { Btn, Empty, Modal } from '../components/ui'
+import { BackBar } from '../components/BackBar'
 import { BetPicker, Cards } from '../components/casino/shared'
 import { Channel } from './Chat'
 
-// seat slots around the felt, index 0 = bottom centre (always "me" when seated)
-const POS = [[50, 90], [13, 68], [13, 28], [50, 9], [87, 28], [87, 68]]
+// seat slots around the felt, index 0 = bottom centre (always "me" when seated); the side seats sit at 16 / 84 % so
+// their 84 px boxes stay inside the rail at 375 and 390 px
+const POS = [[50, 90], [16, 68], [16, 28], [50, 9], [84, 28], [84, 68]]
 
 export default function PokerTable() {
   const { id } = useParams()
@@ -77,15 +79,16 @@ export default function PokerTable() {
 
   return (
     <div className="page poker">
-      <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <b>{t.name}</b>
-          <div className="small muted">{chips(t.small_blind)}/{chips(t.big_blind)} · {hand ? `hand #${hand.no}` : 'waiting for players'}</div>
-        </div>
+      {/* Back keeps your seat (the clock checks or folds for you while you're away); Leave cashes you out */}
+      <BackBar fallback="/casino/poker" right={
         <div className="hstack">
-          <button className="btn sm ghost" onClick={() => setShowChat(v => !v)}>💬</button>
-          {mine ? <button className="btn sm red" onClick={leave}>Leave</button> : <button className="btn sm ghost" onClick={() => nav('/casino/poker')}>Lobby</button>}
+          <button type="button" className="btn sm ghost" aria-label={showChat ? 'Hide table talk' : 'Table talk'} aria-pressed={showChat} onClick={() => setShowChat(v => !v)}>💬</button>
+          {mine && <Btn className="sm ghost red" onClick={leave}>Leave</Btn>}
         </div>
+      } />
+      <div>
+        <b>{t.name}</b>
+        <div className="small muted">Blinds {money(t.small_blind)}/{money(t.big_blind)} · {hand ? `hand #${hand.no}` : 'waiting for players'}</div>
       </div>
 
       <div className="felt">
@@ -138,7 +141,7 @@ export default function PokerTable() {
       </div>
 
       {mine && mine.sitting_out && (
-        <div className="notice gold">You're sitting out. {stack > 0 ? <a style={{ cursor: 'pointer' }} onClick={sitIn}>Deal me in →</a> : 'Rebuy to keep playing.'}</div>
+        <div className="notice gold">You're sitting out. {stack > 0 ? <button type="button" className="linkbtn" onClick={sitIn}>Deal me in →</button> : 'Rebuy to keep playing.'}</div>
       )}
       {mine && (
         <div className="actions">
@@ -186,7 +189,7 @@ export default function PokerTable() {
           <div className="stack">
             <div className="small muted">{mine ? `Top up to at most ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.` : `Bring ${money(t.min_buyin)} to ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.`}</div>
             <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin)} label={mine ? 'Add' : 'Buy-in'} />
-            <button className="btn gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</button>
+            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
           </div>
         </Modal>
       )}

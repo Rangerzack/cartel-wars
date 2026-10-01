@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, hoodlumIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Btn, Card, Empty, Modal, Qty } from '../components/ui'
+import { Btn, Card, Empty, Modal, Qty, RowLink } from '../components/ui'
 import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
@@ -17,7 +17,6 @@ const slotName = (b: { slot: number }) => `Block ${String.fromCharCode(64 + b.sl
 export default function Territory() {
   const me = useMe()
   const { toast } = useGame()
-  const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
   const [data, setData] = useState<TerritoryData | null>(null)
   const [log, setLog] = useState<TerritoryLog[] | null>(null)
@@ -34,25 +33,30 @@ export default function Territory() {
   if (!data) return <Empty><span className="spin" /></Empty>
   const hood = hoodId ? data.hoods.find(h => h.id === hoodId) ?? null : null
   const thugs = me.hoodlums.thug ?? 0, mercs = me.hoodlums.mercenary ?? 0, spies = me.hoodlums.spy ?? 0
-  const openHood = (id: number | null) => setSp(id ? { hood: String(id), ...(biz ? { biz } : {}) } : biz ? { biz } : {})
+  const openHood = (id: number) => setSp({ hood: String(id), ...(biz ? { biz } : {}) })
   const setBiz = (b: string) => setSp(b ? { biz: b } : {})
   const bizList = catalog?.businesses ?? []
 
   return (
     <div className="page">
-      {!hood && <BackBar fallback="/" />}
-      {!me.crew && <div className="notice blue">Territory is held by crews. <a onClick={() => nav('/crew')}>Join or found a crew</a> to fight for blocks.</div>}
+      {/* opening a hood pushes ?hood=, so Back is a history step: to the city, or to the page that linked the hood (a
+          crew's perks or blocks). A hood opened from outside the app falls back to the city, keeping a business highlight. */}
+      {hood
+        ? <BackBar fallback={biz ? `/territory?biz=${biz}` : '/territory'} right={<span className="muted small">{hood.district} · {coord(hood)}</span>} />
+        : <BackBar fallback="/" />}
+      {!me.crew && <div className="notice blue">Territory is held by crews. <Link to="/crew">Join or found a crew</Link> to fight for blocks.</div>}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (
           <div key={k} className="stat"><div className="k">{hoodlumIcon[k]} {k === 'mercenary' ? 'Mercs' : k === 'spy' ? 'Spies' : 'Thugs'}</div><div className="v">{num(me.hoodlums[k] ?? 0)}</div></div>
         ))}
       </div>
+      <div className="small muted">Thugs and mercs attack blocks; spies size up a garrison. Hire them at <Link to="/services?focus=hoodlums">Services › Hoodlums</Link>.</div>
 
       {hood ? (
-        <HoodView hood={hood} onBack={() => openHood(null)} onBlock={setBlockId} biz={biz} />
+        <HoodView hood={hood} onBlock={setBlockId} biz={biz} />
       ) : (
         <>
-          <Card title="The City" right={<small>tap a hood</small>}>
+          <Card title="The City">
             <div className="bd">
               {bizList.length > 0 && (
                 <select className="input biz-filter" value={biz ?? ''} onChange={e => setBiz(e.target.value)} aria-label="Show a business">
@@ -67,6 +71,7 @@ export default function Territory() {
                   <Row key={y} y={y + 1} hoods={data.hoods.filter(h => h.gy === y + 1)} onOpen={openHood} biz={biz} />
                 ))}
               </div>
+              <div className="small muted city-hint">Tap a hood to see its six blocks.</div>
               <div className="legend small muted">
                 <span><i className="mine" /> your crew</span><span><i className="enemy" /> rival</span><span><i /> unclaimed</span><span><i className="siege" /> under your siege</span>
                 {biz && <span><i className="biz" /> {businessDef(catalog, biz)?.name}</span>}
@@ -116,11 +121,10 @@ function Row({ y, hoods, onOpen, biz }: { y: number; hoods: Hood[]; onOpen: (id:
   )
 }
 
-function HoodView({ hood, onBack, onBlock, biz }: { hood: Hood; onBack: () => void; onBlock: (id: number) => void; biz: BusinessCode | null }) {
+function HoodView({ hood, onBlock, biz }: { hood: Hood; onBlock: (id: number) => void; biz: BusinessCode | null }) {
   const now = useNow()
   return (
     <>
-      <div className="backbar"><button className="back" onClick={onBack}>‹ City</button><span className="muted small">{hood.district} · {coord(hood)}</span></div>
       <Card title={<>{hood.name} {hood.owner && <span className="small muted">· held by {hood.owner.emblem} {hood.owner.name}</span>}</>} right={<small className="gold">{money(hood.block_bonus)}/block</small>}>
         <div className="blocks6">
           {hood.blocks.map(b => <BlockTile key={b.id} b={b} hood={hood} now={now} onClick={() => onBlock(b.id)} hl={!!biz && b.business === biz} />)}
@@ -138,32 +142,34 @@ function BlockTile({ b, hood, now, onClick, hl }: { b: Block; hood: Hood; now: n
   const { catalog } = useGame()
   const d = businessDef(catalog, b.business)
   return (
-    <div className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${hl ? 'biz-hl' : ''}`} onClick={onClick}>
+    // a button, so the tile takes focus and VoiceOver reads it; drawn as the tile it was
+    <button type="button" className={`block ${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${hl ? 'biz-hl' : ''}`} onClick={onClick}>
       <div className="em">{b.owner ? b.owner.emblem : ' '}</div>
-      {d ? <div className="biz-name" title={d.perk}><span>{d.icon}</span> <b>{d.name}</b></div> : <div><b>{slotName(b)}</b></div>}
+      {d ? <div className="biz-name"><span>{d.icon}</span> <b>{d.name}</b></div> : <div><b>{slotName(b)}</b></div>}
+      {/* the perk on the tile itself, not in a tooltip a touch screen never shows */}
+      {d && <div className="small muted biz-perk">{d.perk}</div>}
       {b.owner ? (
         <>
           <div className="small tabular">⏱ {timeLeft(b.bonus_at, now)}</div>
-          <div className="muted" style={{ fontSize: 10 }}>{b.garrison_size !== null ? `${num(b.garrison_size)} guards` : b.garrisoned ? 'guarded' : 'unguarded'}</div>
-          {b.top_wins > 0 && <div className="siegebar" title={`siege ${b.top_wins}`}><div style={{ width: `${Math.min(100, b.top_wins * 2)}%` }} className={b.my_wins > 0 && b.my_wins === b.top_wins ? 'mine' : ''} /></div>}
-          {b.my_wins > 0 && <div className="gold" style={{ fontSize: 10 }}>your siege {b.my_wins}/50</div>}
+          <div className="small muted">{b.garrison_size !== null ? `${num(b.garrison_size)} guards` : b.garrisoned ? 'guarded' : 'unguarded'}</div>
+          {b.top_wins > 0 && <div className="siegebar"><div style={{ width: `${Math.min(100, b.top_wins * 2)}%` }} className={b.my_wins > 0 && b.my_wins === b.top_wins ? 'mine' : ''} /></div>}
+          {b.my_wins > 0 && <div className="small gold">your siege {b.my_wins}/50</div>}
         </>
-      ) : <div className="muted" style={{ fontSize: 10 }}>{money(hood.claim_price)}</div>}
-    </div>
+      ) : <div className="small muted">{money(hood.claim_price)}</div>}
+    </button>
   )
 }
 
 function LogRow({ l, showBlock, onOpen }: { l: TerritoryLog; showBlock?: boolean; onOpen?: () => void }) {
   const what = l.captured ? (l.defender_crew ? `took it from ${l.defender_crew}` : 'claimed it') : l.success ? `landed a hit${l.siege_wins ? ` (${l.siege_wins}/50)` : ''}` : 'was pushed back'
-  return (
-    <div className={`row ${onOpen ? 'link' : ''}`} onClick={onOpen}>
-      <span>{l.captured ? '🏴' : l.success ? '🎯' : '💥'}</span>
-      <div className="grow">
-        <div className="t">{l.crew_emblem} {l.attacker ?? <span className="muted">Deleted player</span>} {what}{showBlock ? <span className="muted"> · {l.block}</span> : null}</div>
-        <div className="s">{num(l.attack)} vs {num(l.resistance)} · {num(l.thugs)} thugs{l.mercs ? `, ${num(l.mercs)} mercs` : ''} · lost {num(l.lost_thugs + l.lost_mercs)}{l.garrison_lost ? ` · killed ${num(l.garrison_lost)} guards` : ''} · {ago(l.at)}</div>
-      </div>
+  const inner = <>
+    <span>{l.captured ? '🏴' : l.success ? '🎯' : '💥'}</span>
+    <div className="grow">
+      <div className="t">{l.crew_emblem} {l.attacker ?? <span className="muted">Deleted player</span>} {what}{showBlock ? <span className="muted"> · {l.block}</span> : null}</div>
+      <div className="s">{num(l.attack)} vs {num(l.resistance)} · {num(l.thugs)} thugs{l.mercs ? `, ${num(l.mercs)} mercs` : ''} · lost {num(l.lost_thugs + l.lost_mercs)}{l.garrison_lost ? ` · killed ${num(l.garrison_lost)} guards` : ''} · {ago(l.at)}</div>
     </div>
-  )
+  </>
+  return onOpen ? <RowLink onClick={onOpen}>{inner}</RowLink> : <div className="row">{inner}</div>
 }
 
 function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
@@ -171,7 +177,6 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
 }) {
   const me = useMe()
   const { run, toast } = useGame()
-  const nav = useNavigate()
   const now = useNow()
   const [b, setB] = useState<BlockDetail | null>(null)
   const [force, setForce] = useState({ thugs: Math.min(thugs, rules.min_thugs), mercs: 0 })
@@ -190,7 +195,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
   }
 
   if (result) {
-    const title = result.captured ? 'Block taken!' : result.success ? 'Hit landed' : 'Pushed back'
+    const title = result.captured ? 'Block taken' : result.success ? 'Hit landed' : 'Pushed back'
     return (
       <Modal title={title} onClose={() => setResult(null)}>
         <div className="stack">
@@ -269,7 +274,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
                 Attack ≈ <b>{num(attackPower)}</b> (±10%) · {rules.stamina} stamina. {b.owner ? `Every win counts toward your crew's ${rules.siege_wins} and restarts their bonus clock.` : 'One win claims it.'}
               </div>
               {(me.hospital || me.jailed) && <div className="notice red">{me.hospital ? "You're in the hospital — heal up before you attack." : "You can't run a turf war from jail."}</div>}
-              {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <a onClick={() => nav('/services?focus=hoodlums')}>Hire more →</a></div>}
+              {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <Link to="/services?focus=hoodlums">Hire more →</Link></div>}
               <div className="hstack">
                 <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || me.stamina < rules.stamina} onClick={attack}>Attack</Btn>
                 <Btn className="sm" disabled={spies < 1} onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>

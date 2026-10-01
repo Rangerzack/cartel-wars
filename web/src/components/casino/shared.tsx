@@ -77,27 +77,35 @@ export function Cards({ list, size, dim }: { list: (string | null | undefined)[]
 
 const PRESETS = [100, 500, 1000, 5000, 25000, 100000]
 
-/** Wager picker: chip presets plus a free-form amount, clamped to what the player can afford. */
-export function BetPicker({ value, onChange, max, min = 100, label = 'Bet' }: { value: number; onChange: (n: number) => void; max: number; min?: number; label?: string }) {
+/** Wager picker: chip presets plus a free-form amount, clamped to what the player can afford. At a table the chips ride
+ *  in the sticky bar with the Roll / Deal / Spin button (`part="chips"`) and the typed amount sits under it
+ *  (`part="amount"`), which keeps the bar short enough to leave most of a small screen to the felt. */
+export function BetPicker({ value, onChange, max, min = 100, label = 'Bet', part = 'all' }: {
+  value: number; onChange: (n: number) => void; max: number; min?: number; label?: string; part?: 'all' | 'chips' | 'amount'
+}) {
   const [text, setText] = useState<string | null>(null)
   const clamp = (n: number) => Math.max(min, Math.min(Math.max(min, max), Math.floor(n) || min))
   return (
     <div className="betpick">
-      <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <span className="small muted">{label}</span>
-        <span className="small muted">max {money(Math.max(min, max))}</span>
-      </div>
-      <div className="chipsrow">
-        {PRESETS.map(p => (
-          <button key={p} className={`chip c${p} ${value === p ? 'on' : ''}`} disabled={p > max} onClick={() => { setText(null); onChange(clamp(p)) }}>{chips(p)}</button>
-        ))}
-      </div>
-      <div className="hstack">
-        <input className="input" inputMode="numeric" value={text ?? value} onChange={e => { setText(e.target.value); const n = Number(e.target.value.replace(/[^0-9]/g, '')); if (n) onChange(clamp(n)) }} onBlur={() => setText(null)} />
-        <button className="btn sm" onClick={() => { setText(null); onChange(clamp(value * 2)) }}>×2</button>
-        <button className="btn sm" onClick={() => { setText(null); onChange(clamp(Math.floor(value / 2))) }}>½</button>
-        <button className="btn sm" onClick={() => { setText(null); onChange(clamp(max)) }}>Max</button>
-      </div>
+      {part !== 'amount' && <>
+        <div className="hstack" style={{ justifyContent: 'space-between' }}>
+          <span className="small muted">{label}</span>
+          <span className="small muted">max {money(Math.max(min, max))}</span>
+        </div>
+        <div className="chipsrow">
+          {PRESETS.map(p => (
+            <button key={p} type="button" className={`chip c${p} ${value === p ? 'on' : ''}`} disabled={p > max} onClick={() => { setText(null); onChange(clamp(p)) }}>{chips(p)}</button>
+          ))}
+        </div>
+      </>}
+      {part !== 'chips' && (
+        <div className="hstack" style={{ flexWrap: 'nowrap' }}>
+          <input className="input" style={{ flex: 1, minWidth: 0 }} inputMode="numeric" aria-label="Amount" value={text ?? value} onChange={e => { setText(e.target.value); const n = Number(e.target.value.replace(/[^0-9]/g, '')); if (n) onChange(clamp(n)) }} onBlur={() => setText(null)} />
+          <button type="button" className="btn sm" onClick={() => { setText(null); onChange(clamp(value * 2)) }}>×2</button>
+          <button type="button" className="btn sm" onClick={() => { setText(null); onChange(clamp(Math.floor(value / 2))) }}>½</button>
+          <button type="button" className="btn sm" onClick={() => { setText(null); onChange(clamp(max)) }}>Max</button>
+        </div>
+      )}
     </div>
   )
 }

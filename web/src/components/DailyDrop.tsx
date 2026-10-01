@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { ago, dropIcon, hoodlumIcon, money, nextRollover, num, timeLeft } from '../lib/format'
@@ -8,7 +8,7 @@ import { isNative, openExternal } from '../lib/platform'
 import { buyDrop, getOfferings, manageSubscriptions, storeReady, waitForDelivery, type StoreProduct } from '../lib/store'
 import { useNow } from '../lib/useNow'
 import type { DropPrize, DropResult, RecentDrop } from '../lib/types'
-import { Btn, Card, Modal } from './ui'
+import { Btn, Card, Modal, RowLink } from './ui'
 
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
@@ -18,8 +18,10 @@ const pct = (weight: number, total: number) => `${Math.round((weight / total) * 
  * above the subscribe button whenever it shows: Apple wants the odds of a paid random prize shown before purchase
  * (guideline 3.1.1). While drop_free is 1 everyone gets the free plan; in the iOS app, once drop_free is 0 or the
  * player has had a paid plan, Subscribe is an App Store purchase at StoreKit's price. The web never shows a price.
+ * `compact` (Home): a player who isn't subscribed gets one row to the Store's card instead of the pitch, odds and
+ * Subscribe, which were 1,000 px of a new player's Home. Crates still waiting and free credits still show here.
  */
-export function DailyDrop() {
+export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const me = useMe()
   const { catalog, run, toast, refresh } = useGame()
   const now = useNow()
@@ -46,6 +48,18 @@ export function DailyDrop() {
   const jack = prizes.filter(p => p.jackpot)
   const full = d.crates >= d.max
   const credits = (me.free_refills ?? 0) > 0 || (me.free_hustlers ?? 0) > 0
+  const pitch = !d.subscribed && !compact
+  if (compact && !d.subscribed && d.crates === 0 && !credits) {
+    return (
+      <Card id="drop" className="drop-card">
+        <RowLink to="/store#drop">
+          <span className="ico">🎁</span>
+          <div className="grow"><div className="t">Daily Drop</div><div className="s">{free ? 'Free · a crate every day' : 'A crate every day'}</div></div>
+          <span className="chev">›</span>
+        </RowLink>
+      </Card>
+    )
+  }
 
   const toggleOdds = () => {
     const next = !showOdds
@@ -86,7 +100,7 @@ export function DailyDrop() {
         right={d.subscribed ? <small className="tabular">{d.crates}/{d.max} crates</small>
           : viaStore ? <small className="drop-price tabular">{price ? `${price}/mo` : ''}</small>
           : free ? <small className="drop-price"><b>FREE</b></small> : undefined}>
-        <div className="bd stack">
+        {(d.crates > 0 || d.subscribed || pitch) && <div className="bd stack">
           {d.crates > 0 ? (
             <>
               <div className="crate-stack" aria-label={`${d.crates} crate${d.crates > 1 ? 's' : ''} waiting`}>
@@ -97,20 +111,20 @@ export function DailyDrop() {
             </>
           ) : d.subscribed ? (
             <div className="crate-empty"><span>📦</span><div><div className="t">Next crate in {timeLeft(nextRollover(now), now)}</div><div className="small muted">One lands every day at 00:00 UTC. Unopened crates stack up to {d.max}.</div></div></div>
-          ) : (
+          ) : pitch && (
             <div className="crate-pitch">
               <div className="crate-hero">📦</div>
               <div>A crate every day at 00:00 UTC — product, diamonds, cash, thugs, hustlers or free refills. Miss a day and it waits: unopened crates stack up to {d.max}.</div>
               <div className="small">Jackpots: {jack.map((p, i) => <span key={p.code}>{i ? ' or ' : ''}<b className="gold">{dropIcon[p.kind]} {p.label}</b></span>)}</div>
             </div>
           )}
-        </div>
-        {!d.subscribed && <>
+        </div>}
+        {pitch && <>
           <div className="row small muted">What can drop? See the odds below.</div>
-          <Odds prizes={prizes} total={total} jackpots={null} onPlayer={id => nav(`/player/${id}`)} />
+          <Odds prizes={prizes} total={total} jackpots={null} />
         </>}
-        {(!d.subscribed || d.last || credits) && <div className="bd stack">
-          {!d.subscribed && (
+        {(pitch || d.last || credits) && <div className="bd stack">
+          {pitch && (
             viaStore ? <>
                 <Btn className="gold block" disabled={!price || delivering} onClick={subscribePaid}>{delivering ? 'Starting your Daily Drop…' : 'Subscribe'}</Btn>
                 <div className="small muted center">{price ?? '—'} per month, renews until cancelled. Cancel any time in your device settings.</div>
@@ -131,11 +145,14 @@ export function DailyDrop() {
             </div>
           )}
         </div>}
+        {compact && !d.subscribed && (
+          <RowLink to="/store#drop"><div className="grow small muted">Subscribe for a crate every day</div><span className="chev">›</span></RowLink>
+        )}
         {d.subscribed && <>
-          <div className="row link" onClick={toggleOdds}>
+          <RowLink onClick={toggleOdds}>
             <div className="grow small muted">{showOdds ? 'Hide the odds' : 'What can drop? See the odds'}</div><span className="chev" style={showOdds ? { transform: 'rotate(90deg)' } : undefined}>›</span>
-          </div>
-          {showOdds && <Odds prizes={prizes} total={total} jackpots={jackpots} onPlayer={id => nav(`/player/${id}`)} />}
+          </RowLink>
+          {showOdds && <Odds prizes={prizes} total={total} jackpots={jackpots} />}
           <div className="row small muted">
             <div className="grow">Subscribed {d.since ? ago(d.since, now) : ''}{d.opened ? ` · ${num(d.opened)} crate${d.opened > 1 ? 's' : ''} opened` : ''}{d.drop_paid ? (d.until ? ` · paid through ${new Date(d.until).toLocaleDateString()}` : '') : ' · free plan'}</div>
             {d.drop_paid
@@ -145,7 +162,7 @@ export function DailyDrop() {
         </>}
       </Card>
       {reveal && (
-        <Modal title={reveal.r?.jackpot ? 'Jackpot!' : 'Daily Drop'} onClose={() => setReveal(null)}>
+        <Modal title={reveal.r?.jackpot ? 'Jackpot' : 'Daily Drop'} onClose={() => setReveal(null)}>
           {!reveal.r ? (
             <div className="crate-open"><div className="crate-shake">📦</div><div className="small muted">Cracking it open…</div></div>
           ) : (
@@ -171,7 +188,7 @@ function PolicyLinks() {
   )
 }
 
-function Odds({ prizes, total, jackpots, onPlayer }: { prizes: DropPrize[]; total: number; jackpots: RecentDrop[] | null; onPlayer: (id: string) => void }) {
+function Odds({ prizes, total, jackpots }: { prizes: DropPrize[]; total: number; jackpots: RecentDrop[] | null }) {
   return (
     <div className="drop-odds">
       {prizes.map(p => (
@@ -185,7 +202,7 @@ function Odds({ prizes, total, jackpots, onPlayer }: { prizes: DropPrize[]; tota
       {jackpots && jackpots.length > 0 && (
         <div className="row"><div className="grow finds-ticker">
           <div className="small muted">Latest jackpots</div>
-          {jackpots.map((j, i) => <div key={i} className="small"><a onClick={() => onPlayer(j.player_id)}>{j.player}</a> hit <b className="gold">{dropIcon[j.kind]} {j.label}</b> <span className="muted">· {ago(j.at)}</span></div>)}
+          {jackpots.map((j, i) => <div key={i} className="small"><Link to={`/player/${j.player_id}`}>{j.player}</Link> hit <b className="gold">{dropIcon[j.kind]} {j.label}</b> <span className="muted">· {ago(j.at)}</span></div>)}
         </div></div>
       )}
     </div>

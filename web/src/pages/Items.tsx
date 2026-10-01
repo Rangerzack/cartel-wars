@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { categoryLabel, money, num } from '../lib/format'
@@ -65,7 +65,7 @@ export default function Items() {
             {boosted && <div className="row small"><span className="gold">⚡ Includes your +{me.boost!.amount} {me.boost!.side} boost</span><span className="grow" /><button className="btn sm ghost" onClick={() => nav('/services?focus=boost')}>Boost ›</button></div>}
             <div className="bd stack">
               <div className="slots">{Array.from({ length: me.inventory_slots }, (_, i) => <span key={i} className={`slot ${i < used ? 'on' : ''}`} />)}</div>
-              {used >= me.inventory_slots && me.slot_cost && me.inventory_slots < (catalog.config.max_slots ?? 130) && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <a onClick={() => nav('/services?focus=upgrades')}>Services ›</a></div>}
+              {used >= me.inventory_slots && me.slot_cost && me.inventory_slots < (catalog.config.max_slots ?? 130) && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <Link to="/services?focus=upgrades">Services ›</Link></div>}
               <div className="small muted">
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}
@@ -119,7 +119,11 @@ export default function Items() {
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
-                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={() => run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })}>Sell {money(resale)}</Btn>}
+                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={() => {
+                    // it sits next to the gold Buy and goes back at about half price: ask first
+                    if (!confirm(`Sell one ${i.name} for ${money(resale)}?`)) return
+                    return run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })
+                  }}>Sell {money(resale)}</Btn>}
                   {drop
                     ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on jobs</Btn>
                     : i.rep_price > 0

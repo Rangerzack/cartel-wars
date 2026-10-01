@@ -32,7 +32,7 @@ export default function Slots() {
 
   return (
     <>
-      <Card title="🎰 One-Armed Bandit" right={<small>3 reels · up to 100×</small>}>
+      <Card title="🎰 One-Armed Bandit" className="table-card" right={<small>3 reels · up to 100×</small>}>
         <div className="bd stack">
           <div className={`reels ${last && last.mult >= 4 ? 'win' : ''}`}>
             {reels.map((s, i) => <div key={i} className={`reel ${spinning ? 'spinning' : ''}`}>{SYM[s]}</div>)}
@@ -40,8 +40,11 @@ export default function Slots() {
           <div className="center" style={{ minHeight: 24 }}>
             {last ? (last.payout > 0 ? <span className="gold">{last.mult}× — you win {money(last.payout)} (<Net n={last.net} />)</span> : <span className="muted">No luck. <Net n={last.net} /></span>) : spinning ? <span className="muted">Spinning…</span> : <span className="muted">Pull the lever.</span>}
           </div>
-          <BetPicker value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
-          <button className="btn gold block" disabled={spinning || me.cash < wager} onClick={spin}>{spinning ? <span className="spin" /> : `Spin for ${money(wager)}`}</button>
+          <div className="table-bar">
+            <BetPicker part="chips" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
+            <button type="button" className="btn gold block" disabled={spinning || me.cash < wager} onClick={spin}>{spinning ? <span className="spin" /> : `Spin for ${money(wager)}`}</button>
+          </div>
+          <BetPicker part="amount" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
         </div>
       </Card>
       <Card title="Paytable">

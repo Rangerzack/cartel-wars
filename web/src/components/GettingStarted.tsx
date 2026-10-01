@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Me } from '../lib/types'
-import { Card } from './ui'
+import { Card, RowLink } from './ui'
 
 const KEY = 'cw.gettingStarted.dismissed'
 
 export function GettingStarted({ me }: { me: Me }) {
-  const nav = useNavigate()
   const [dismissed, setDismissed] = useState(() => { try { return localStorage.getItem(KEY) === '1' } catch { return false } })
   const steps = [
     { done: me.actions_done >= 1, t: 'Run an Action', s: 'Stamina in, cash out. Watch your Heat.', to: '/actions' },
@@ -20,12 +18,17 @@ export function GettingStarted({ me }: { me: Me }) {
   if (dismissed || left === 0) return null
   return (
     <Card title="Getting started" right={<button className="btn sm ghost" onClick={() => { try { localStorage.setItem(KEY, '1') } catch { /* private mode */ } setDismissed(true) }}>Hide</button>}>
-      {steps.map(s => (
-        <div key={s.t} className={`row ${s.done ? '' : 'link'}`} onClick={() => !s.done && nav(s.to)} style={s.done ? { opacity: .5 } : undefined}>
-          <span style={{ width: 22, textAlign: 'center' }}>{s.done ? '✅' : '☐'}</span>
+      {steps.map(s => s.done ? (
+        <div key={s.t} className="row" style={{ opacity: .5 }}>
+          <span style={{ width: 22, textAlign: 'center' }}>✅</span>
           <div className="grow"><div className="t">{s.t}</div><div className="s">{s.s}</div></div>
-          {!s.done && <span className="chev">›</span>}
         </div>
+      ) : (
+        <RowLink key={s.t} to={s.to}>
+          <span style={{ width: 22, textAlign: 'center' }}>☐</span>
+          <div className="grow"><div className="t">{s.t}</div><div className="s">{s.s}</div></div>
+          <span className="chev">›</span>
+        </RowLink>
       ))}
     </Card>
   )

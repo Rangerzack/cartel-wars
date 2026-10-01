@@ -4,14 +4,14 @@ This folder is the 6.9" iPhone set, the one App Store Connect requires: 1320 × 
 
 | File | Screen | What it shows |
 |---|---|---|
-| `01-home.png` | Home | The top bar (cash, diamonds, heat, stamina, health). "While you were away": an attack held off, a marketplace sale, a block taken for the crew. Last week's stripes, the stats, and the Daily Drop with two crates waiting. |
+| `01-home.png` | Home | The top bar (cash, diamonds, heat, stamina, health), the Daily Drop notice, the stats (heat, bank, reputation, attack, defense, storage), the 3×3 grid to every part of the city, and "While you were away": an attack held off, a marketplace sale, a block taken for the crew. |
 | `02-actions.png` | Actions → Reputation | The session tally, a job just done with its result on the row, and each job's stamina, reputation, cost, heat and rare-find odds. |
 | `03-economy.png` | Economy → Production | The Producer path, storage with street prices and the Warehouse perk, and a level 8 herb grow house about 60% full with Collect and Upgrade. |
-| `04-market.png` | Economy → Marketplace | Scrolled to the market itself: buy orders from other players (Wanted) and listings (For Sale). |
+| `04-market.png` | Economy → Marketplace → Browse | Street prices with the product filter, then buy orders from other players (Wanted) and listings (For Sale). |
 | `05-fight.png` | A rival's profile | The fight preview before an attack: odds, both sides' edges, gear, combos, and Attack, Chat, Report and Block. |
 | `06-territory.png` | Territory | The 9×9 city map with your crew's hoods in green and a rival crew's in red, plus your thugs, mercs and spies. |
-| `07-crew.png` | Your crew | Members, blocks, crew bank, crew attack and defense, the crew fight record and the bank ledger. |
-| `08-profile.png` | Profile | Stripes, cash, bank, diamonds, reputation, actions, fight record, market volume and the three setups. |
+| `07-crew.png` | Your crew | Members, blocks, crew bank, crew attack and defense, the crew fight record, then the applications waiting for the Capo and the member list. |
+| `08-profile.png` | Profile | Stripes, cash, bank, diamonds, reputation, actions, fight record, product moved, market sales, storage and the three setups. |
 
 ## The 4+ rule
 

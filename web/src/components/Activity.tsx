@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { ActivityItem } from '../lib/types'
 import { ago, commodityIcon, money, num } from '../lib/format'
 import { CrewLink, PlayerLink } from './Linked'
@@ -78,6 +78,8 @@ function Sentence({ a }: { a: ActivityItem }) {
   return <>{body}</>
 }
 
+/** The sentence links its names, so the row can't be one link (no link inside a link): a tap anywhere opens the row's
+ *  page, and for the keyboard and VoiceOver the time line is that same link. */
 export function ActivityRow({ a, fresh }: { a: ActivityItem; fresh?: boolean }) {
   const nav = useNavigate()
   const to = activityLink(a)
@@ -87,7 +89,7 @@ export function ActivityRow({ a, fresh }: { a: ActivityItem; fresh?: boolean }) 
       <span className="ico">{icon[a.kind]}</span>
       <div className="grow">
         <div className="t2"><Sentence a={a} /></div>
-        <div className="s">{ago(a.at)}</div>
+        <div className="s">{to ? <Link to={to} className="when" onClick={e => e.stopPropagation()}>{ago(a.at)}</Link> : ago(a.at)}</div>
       </div>
       {amt != null && <b className={`tabular ${amt > 0 ? 'gold' : 'red'}`}>{amt > 0 ? '+' : '−'}{money(Math.abs(amt))}</b>}
     </div>

@@ -167,14 +167,8 @@ try {
           await p.locator('.action-result').waitFor()
         } },
       { file: '03-economy', path: '/economy', ready: '.card .fill' },
-      { file: '04-market', path: '/economy?tab=market', ready: '.order-row',
-        // scrolled to the listings: the heading just under the sticky top bar
-        prep: async () => {
-          await p.getByRole('heading', { name: 'Marketplace' }).evaluate(h => {
-            const bar = document.querySelector('.topbar').getBoundingClientRect().bottom
-            window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - bar - 10)
-          })
-        } },
+      // Browse opens on prices and the offers, so no scrolling needed any more
+      { file: '04-market', path: '/economy?tab=market', ready: '.order-row' },
       { file: '05-fight', path: `/player/${ids.rook}`, ready: '.odds-box' },
       { file: '06-territory', path: '/territory', ready: '.hoodgrid' },
       { file: '07-crew', path: `/crew/${ids.crew}`, ready: '.stat' },

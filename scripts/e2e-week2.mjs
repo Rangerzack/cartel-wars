@@ -47,7 +47,7 @@ try {
   await snap(b, 'fight-preview')
   await b.getByRole('button', { name: /Attack/ }).click()
   await b.locator('.modal', { hasText: /You (won|lost) the fight/ }).waitFor()
-  await b.getByRole('button', { name: 'Close' }).click()
+  await b.getByRole('button', { name: 'Close' }).last().click()
 
   // DM from Jesse
   await b.getByRole('button', { name: /Chat/ }).click()

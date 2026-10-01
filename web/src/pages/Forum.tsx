@@ -4,8 +4,8 @@ import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { ago } from '../lib/format'
 import type { ForumAuthor, ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
-import { Card, Empty, Modal } from '../components/ui'
-import { CrewLink, LinkedText, PlayerLink } from '../components/Linked'
+import { Btn, Card, Empty, Modal } from '../components/ui'
+import { CrewLink, LinkedText, PlayerLink, TitleLink } from '../components/Linked'
 import { BackBar } from '../components/BackBar'
 import { ReportModal } from '../components/Report'
 import { useNow } from '../lib/useNow'
@@ -57,7 +57,7 @@ function Boards() {
             <div key={c.key} className="row link" onClick={() => nav(`/forum/${c.key}`)}>
               <span className="ico">{b.icon}</span>
               <div className="grow">
-                <div className="t">{b.name}</div>
+                <div className="t"><TitleLink to={`/forum/${c.key}`}>{b.name}</TitleLink></div>
                 <div className="s">{c.last ? <><LinkedText text={c.last.title} /> · {c.last.last_poster ? <LinkedText text={c.last.last_poster} /> : '—'}, {ago(c.last_post_at!)}</> : b.blurb}</div>
               </div>
               <div className="small muted tabular" style={{ textAlign: 'right' }}>{c.threads}<br />{c.threads === 1 ? 'thread' : 'threads'}</div>
@@ -90,10 +90,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
   }
   return (
     <div className="page">
-      <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <Link to="/forum" className="back">‹ All boards</Link>
-        {data?.can_post && !muted && <button className="btn sm gold" onClick={() => setCompose(true)}>New thread</button>}
-      </div>
+      <BackBar fallback="/forum" right={data?.can_post && !muted && <button type="button" className="btn sm doit" onClick={() => setCompose(true)}>New Thread</button>} />
       {data?.can_post && muted && <Muted until={muted} />}
       <Card title={<>{b.icon} {b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
         {!data && <Empty><span className="spin" /></Empty>}
@@ -101,7 +98,8 @@ function BoardView({ cat }: { cat: ForumCategory }) {
         {data?.threads.map(t => (
           <div key={t.id} className="row link" onClick={() => nav(`/forum/t/${t.id}`)}>
             <div className="grow">
-              <div className="t">{t.pinned && <span title="Pinned">📌 </span>}{t.locked && <span title="Locked">🔒 </span>}<LinkedText text={t.title} /></div>
+              {/* the title is the row's link (names in it link inside the thread); pinned and locked say so in words */}
+              <div className="t">{t.pinned && <span className="pill gold xs">📌 Pinned</span>}{t.locked && <span className="pill xs">🔒 Locked</span>}<TitleLink to={`/forum/t/${t.id}`}>{t.title}</TitleLink></div>
               <div className="s">{t.author ? <PlayerLink id={t.author.id}>{t.author.avatar} {t.author.name}</PlayerLink> : DELETED}{t.author?.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · {t.hidden ? <i>{HIDDEN}</i> : <LinkedText text={t.snippet} />}</div>
               <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ? <LinkedText text={t.last_poster} /> : t.author ? <PlayerLink id={t.author.id}>{t.author.name}</PlayerLink> : DELETED}, {ago(t.last_post_at)}</div>
             </div>
@@ -120,7 +118,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
           <div className="stack">
             <input className="input" placeholder="Title" maxLength={120} value={title} onChange={e => setTitle(e.target.value)} />
             <textarea className="input" rows={6} placeholder="Say your piece…" maxLength={4000} value={body} onChange={e => setBody(e.target.value)} />
-            <button className="btn gold block" disabled={title.trim().length < 3 || !body.trim()} onClick={post}>Post thread</button>
+            <Btn className="doit block" disabled={title.trim().length < 3 || !body.trim()} onClick={post}>Post Thread</Btn>
           </div>
         </Modal>
       )}
@@ -162,19 +160,18 @@ function ThreadView({ id }: { id: number }) {
   const t = data.thread, b = board(t.category)!
   return (
     <div className="page">
-      <div className="hstack" style={{ justifyContent: 'space-between' }}>
-        <Link to={`/forum/${t.category}`} className="back">‹ {b.icon} {b.name}</Link>
-        {data.is_admin && (
-          <div className="hstack">
-            <button className="btn sm ghost" onClick={() => mod(t.pinned ? 'unpin' : 'pin')}>{t.pinned ? 'Unpin' : 'Pin'}</button>
-            <button className="btn sm ghost" onClick={() => mod(t.locked ? 'unlock' : 'lock')}>{t.locked ? 'Unlock' : 'Lock'}</button>
-            <select className="input sm" style={{ width: 'auto' }} value="" onChange={e => { if (e.target.value) move(e.target.value as ForumCategory) }}>
-              <option value="">Move…</option>
-              {BOARDS.filter(x => x.key !== t.category).map(x => <option key={x.key} value={x.key}>{x.name}</option>)}
-            </select>
-          </div>
-        )}
-      </div>
+      <BackBar fallback={`/forum/${t.category}`} right={data.is_admin && (
+        <div className="hstack">
+          <button className="btn sm ghost" onClick={() => mod(t.pinned ? 'unpin' : 'pin')}>{t.pinned ? 'Unpin' : 'Pin'}</button>
+          <button className="btn sm ghost" onClick={() => mod(t.locked ? 'unlock' : 'lock')}>{t.locked ? 'Unlock' : 'Lock'}</button>
+          <select className="input sm" style={{ width: 'auto' }} value="" onChange={e => { if (e.target.value) move(e.target.value as ForumCategory) }}>
+            <option value="">Move…</option>
+            {BOARDS.filter(x => x.key !== t.category).map(x => <option key={x.key} value={x.key}>{x.name}</option>)}
+          </select>
+        </div>
+      )} />
+      {/* Back follows history, so the board this thread lives in gets its own link */}
+      <div className="small muted">in <Link to={`/forum/${t.category}`}>{b.icon} {b.name}</Link></div>
       <Card>
         <div className="bd stack post">
           <h3 style={{ margin: 0 }}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
@@ -213,7 +210,7 @@ function ThreadView({ id }: { id: number }) {
         <Card title="Reply">
           <div className="bd stack">
             <textarea className="input" rows={4} placeholder="Write a reply…" maxLength={4000} value={reply} onChange={e => setReply(e.target.value)} />
-            <button className="btn doit" disabled={!reply.trim()} onClick={send}>Post reply</button>
+            <Btn className="doit" disabled={!reply.trim()} onClick={send}>Post Reply</Btn>
           </div>
         </Card>
       ) : <div className="notice gold">🔒 This thread is locked.</div>}
@@ -222,7 +219,7 @@ function ThreadView({ id }: { id: number }) {
           <div className="stack">
             {editing.kind === 'thread' && <input className="input" maxLength={120} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />}
             <textarea className="input" rows={6} maxLength={4000} value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} />
-            <button className="btn gold block" disabled={!editing.body.trim()} onClick={saveEdit}>Save</button>
+            <Btn className="gold block" disabled={!editing.body.trim()} onClick={saveEdit}>Save</Btn>
           </div>
         </Modal>
       )}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase, configured } from '../lib/supabase'
 import { Card, Toasts } from '../components/ui'
 import { useGame } from '../lib/game'
+import { errorText } from '../lib/errors'
 import { resetRedirect } from '../components/Account'
 import { api } from '../lib/api'
 import { policyUrl, type PolicyPage } from '../lib/pages'
@@ -21,10 +22,15 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  // the last error stays on the form above the button (the toast still pops, then goes) — P2-8
+  const [why, setWhy] = useState<string | null>(null)
+  const switchTo = (m: typeof mode) => { setMode(m); setWhy(null); if (m === 'reset') setSent(false) }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
+    setWhy(null)
     try {
       if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: resetRedirect() })
@@ -44,7 +50,9 @@ export default function Auth() {
         if (error) throw error
       }
     } catch (err) {
-      toast((err as Error).message, 'bad')
+      const msg = errorText(err)
+      setWhy(msg)
+      toast(msg, 'bad')
     } finally {
       setBusy(false)
     }
@@ -69,35 +77,43 @@ export default function Auth() {
             </div>
           ) : (
             <div className="seg" style={{ marginBottom: 12 }}>
-              <button className={mode === 'in' ? 'on' : ''} onClick={() => setMode('in')}>Existing Account</button>
-              <button className={mode === 'up' ? 'on' : ''} onClick={() => setMode('up')}>New Player</button>
+              <button type="button" className={mode === 'in' ? 'on' : ''} aria-pressed={mode === 'in'} onClick={() => switchTo('in')}>Existing Account</button>
+              <button type="button" className={mode === 'up' ? 'on' : ''} aria-pressed={mode === 'up'} onClick={() => switchTo('up')}>New Player</button>
             </div>
           )}
           {mode === 'in' && confirming && <div className="notice gold" style={{ marginBottom: 12 }}>Check your email to confirm your account. The link opens in your browser — then come back here and sign in.</div>}
           <form onSubmit={submit} className="stack">
             {mode === 'up' && (
-              <label className="f">Street name
-                <input className="input" value={name} onChange={e => setName(e.target.value)} maxLength={20} autoComplete="nickname" />
-              </label>
+              <div className="stack" style={{ gap: 4 }}>
+                <label className="f">Street name
+                  <input className="input" value={name} onChange={e => setName(e.target.value)} maxLength={20} autoComplete="nickname" aria-describedby="name-rule" />
+                </label>
+                {/* the rule in _name_problem() (20261004000006_moderation.sql): 3 to 20 characters, then not reserved, filtered or taken */}
+                <span id="name-rule" className="small muted">3–20 characters. Spaces and symbols are fine.</span>
+              </div>
             )}
             <label className="f">Email
               <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
             </label>
             {mode !== 'reset' && (
-              <label className="f">Password
-                <input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} minLength={6} required />
-              </label>
+              // the Show toggle sits over the field's right end but outside the label, so the field is still just "Password"
+              <div className="pw-field">
+                <label className="f">Password
+                  <input id="pw" className="input" type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} minLength={6} required />
+                </label>
+                <button type="button" className="pw-toggle" aria-pressed={showPw} aria-controls="pw" onClick={() => setShowPw(v => !v)}>Show</button>
+              </div>
             )}
+            {why && <div className="why">{why}</div>}
             <button className="btn doit block" disabled={busy || (mode === 'reset' && sent)} type="submit">{busy ? <span className="spin" /> : mode === 'up' ? 'Enter the City' : mode === 'reset' ? (sent ? 'Link sent' : 'Send reset link') : 'Sign In'}</button>
           </form>
           <div className="center" style={{ marginTop: 10 }}>
-            {mode === 'in' && <a className="small" onClick={() => { setMode('reset'); setSent(false) }}>Forgot your password?</a>}
-            {mode === 'reset' && <a className="small" onClick={() => setMode('in')}>‹ Back to sign in</a>}
+            {mode === 'in' && <button type="button" className="linkbtn small" onClick={() => switchTo('reset')}>Forgot your password?</button>}
+            {mode === 'reset' && <button type="button" className="linkbtn small" onClick={() => switchTo('in')}>‹ Back to sign in</button>}
             {mode === 'up' && <div className="small muted">By entering the city you agree to the <Policy page="terms">Terms of Service</Policy> and <Policy page="privacy">Privacy Policy</Policy>.</div>}
           </div>
         </div>
       </Card>
-      <p className="muted small center">An unofficial fan reconstruction of SMLSD's 2009–2010 iPhone MMO.</p>
     </div>
   )
 }

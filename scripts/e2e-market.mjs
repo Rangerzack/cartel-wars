@@ -99,6 +99,9 @@ try {
   await stock(aId, 'dust', 2000)
   await a.goto(`${BASE}/economy?tab=market`)
   await a.locator('.card', { has: a.locator('.hd', { hasText: 'Prices' }) }).locator('.row').nth(2).waitFor()
+  // the forms sit under their own tabs of the Marketplace seg
+  await a.getByRole('button', { name: 'Sell', exact: true }).click()
+  await a.waitForURL(/mtab=sell/)
   const sellCard = a.locator('.card', { has: a.locator('.hd', { hasText: /^Sell/ }) })
   await sellCard.getByRole('button', { name: /Dust/ }).click()
   await sellCard.getByText('Price / unit (up to $300)').waitFor()
@@ -115,7 +118,7 @@ try {
   const b = await newPlayer(N('Nacho'))
   const bId = (await one('select id from profiles where name = $1', [N('Nacho')])).id
   await db.query('update profiles set cash = 200000 where id = $1', [bId])
-  await b.goto(`${BASE}/economy?tab=market`)
+  await b.goto(`${BASE}/economy?tab=market&mtab=order`)
   const orderCard = b.locator('.card', { has: b.locator('.hd', { hasText: 'Buy Order' }) })
   await orderCard.getByRole('button', { name: /Dust/ }).click()
   await orderCard.getByLabel(/Units/).fill('500')
@@ -123,14 +126,15 @@ try {
   await orderCard.getByText('Holds $75,000 of your cash on hand.').waitFor()
   await orderCard.getByRole('button', { name: 'Post Order' }).click()
   await b.getByText('Posted: 500 Dust wanted at $150').waitFor()
+  await b.getByRole('button', { name: 'Mine (1)' }).click()
   const mine = b.locator('.card', { has: b.locator('.hd', { hasText: 'Mine' }) })
-  await mine.getByText('Wanted 500 @ $150').waitFor()
+  await mine.getByText('Wanted 500 Dust @ $150').waitFor()
   await mine.getByText('$75,000 held').waitFor()
   if (Number((await one('select cash from profiles where id = $1', [bId])).cash) !== 125000) throw new Error('cash held')
   await snap(b, 'order-posted')
 
-  // ... and the Trader sells 200 into it
-  await a.reload()
+  // ... and the Trader sells 200 into it (Browse, the Marketplace's first tab)
+  await a.goto(`${BASE}/economy?tab=market`)
   const wanted = a.locator('.card', { has: a.locator('.hd', { hasText: 'Wanted' }) })
   const row = wanted.locator('.order-row', { hasText: N('Nacho') })
   await row.locator('input').fill('200')
@@ -142,7 +146,7 @@ try {
   // the buyer's feed, then cancelling hands back what's left
   await b.goto(`${BASE}/activity`)
   await b.getByText(/filled your buy order: 200 .* dust for \$30,000/).waitFor()
-  await b.goto(`${BASE}/economy?tab=market`)
+  await b.goto(`${BASE}/economy?tab=market&mtab=mine`)
   await mine.getByText('200 in so far').waitFor()
   await mine.getByRole('button', { name: 'Cancel' }).click()
   await b.getByText('Order cancelled — $45,000 back on hand').waitFor()

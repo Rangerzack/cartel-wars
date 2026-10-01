@@ -1,5 +1,5 @@
-// Browser walkthrough for the Daily Drop: the pitch and odds, subscribing, opening a crate with the reveal, a jackpot
-// with the Bank button, the free refill and free hustler credits, and cancelling.
+// Browser walkthrough for the Daily Drop: Home's one-row teaser, the pitch and odds on the Store, subscribing, opening a
+// crate with the reveal, a jackpot with the Bank button, the free refill and free hustler credits, and cancelling.
 // Usage (local stack running): node scripts/e2e-drop.mjs [--shots dir]
 import { chromium } from 'playwright'
 import fs from 'node:fs'
@@ -41,10 +41,18 @@ try {
   const aId = (await one('select id from profiles where name = $1', [N('Saul')])).id
   const card = a.locator('#drop')
 
-  // The pitch: free for now, the jackpots, and the odds table
+  // Home, not subscribed: one row (no pitch, no odds) that opens the Store's card
+  await card.getByText('Free · a crate every day').waitFor()
+  if (await card.locator('.drop-odds').count() !== 0) throw new Error('no odds table on Home before subscribing')
+  const box = await card.boundingBox()
+  if (box.height > 90) throw new Error(`Home's Daily Drop is one row, not ${box.height}px`)
+  await card.getByRole('link', { name: /Daily Drop/ }).click()
+  await a.waitForURL(/\/store#drop$/)
+
+  // The pitch on the Store: free for now, the jackpots, and the odds table above Subscribe
   await card.getByText('FREE', { exact: true }).waitFor()
   await card.getByText(/Jackpots:/).waitFor()
-  await card.getByText('What can drop? See the odds').click()
+  await card.getByText('What can drop? See the odds below.').waitFor()
   const odds = card.locator('.drop-odds .row .ico')
   await odds.nth(10).waitFor()
   if (await odds.count() !== 11) throw new Error(`odds rows ${await odds.count()}`)
@@ -55,6 +63,7 @@ try {
   // Subscribe: today's crate lands straight away
   await card.getByRole('button', { name: 'Subscribe — Free for Now' }).click()
   await a.getByText('Subscribed — your first crate is here').waitFor()
+  await a.goto(BASE)
   await a.getByText('A Daily Drop crate is waiting').waitFor()
   await card.getByText('1/7 crates').waitFor()
   if (await card.locator('.crate-stack span.on').count() !== 1) throw new Error('one crate in the stack')
@@ -68,7 +77,7 @@ try {
   const got = await one(`select z.label from drop_opens o join drop_prizes z on z.code = o.prize where o.player_id = $1`, [aId])
   if (got?.label !== label) throw new Error(`modal shows ${label}, server gave ${got?.label}`)
   await snap(a, 'reveal')
-  await modal.getByRole('button', { name: 'Close' }).click()
+  await modal.getByRole('button', { name: 'Close' }).last().click()
   await card.getByText(/Next crate in/).waitFor()
   await card.getByText(`Last crate:`).waitFor()
   if (await a.getByText('crate is waiting').count() !== 0) throw new Error('notice gone once opened')
@@ -79,7 +88,7 @@ try {
   await db.query('update profiles set drop_crates = 2, cash = 0 where id = $1', [aId])
   await a.reload()
   await card.getByRole('button', { name: 'Open Crate · 2 waiting' }).click()
-  await modal.getByRole('heading', { name: 'Jackpot!' }).waitFor()
+  await modal.getByRole('heading', { name: 'Jackpot' }).waitFor()
   await modal.locator('.drop-prize .name', { hasText: '$1,000,000' }).waitFor()
   await modal.getByRole('button', { name: 'Open Another · 1 left' }).click()
   await modal.getByRole('button', { name: 'Bank $1,000,000' }).waitFor()
@@ -88,7 +97,7 @@ try {
   await modal.getByText("Banked. It's safe.").waitFor()
   const acct = await one('select cash, bank from profiles where id = $1', [aId])
   if (Number(acct.cash) !== 1000000 || Number(acct.bank) !== 1000000) throw new Error(`cash ${acct.cash} bank ${acct.bank}`)
-  await modal.getByRole('button', { name: 'Close' }).click()
+  await modal.getByRole('button', { name: 'Close' }).last().click()
   await card.getByText('See the odds').click()
   await card.getByText(`${N('Saul')} hit`).first().waitFor()
   await snap(a, 'latest-jackpots')
@@ -113,13 +122,15 @@ try {
   if ((await one('select free_hustlers from profiles where id = $1', [aId])).free_hustlers !== 99) throw new Error('one hustler credit used')
   await snap(a, 'free-hustlers')
 
-  // Cancel: crates already left stay openable, and the pitch comes back
+  // Cancel: crates already left stay openable on Home, with a row back to the Store's pitch
   await db.query('update profiles set drop_crates = 1 where id = $1', [aId])
   await a.goto(BASE)
   await card.getByRole('button', { name: 'Cancel' }).click()
   await a.getByText('Daily Drop cancelled').waitFor()
-  await card.getByRole('button', { name: 'Subscribe — Free for Now' }).waitFor()
   await card.getByRole('button', { name: 'Open Crate' }).waitFor()
+  await card.getByRole('link', { name: 'Subscribe for a crate every day' }).click()
+  await a.waitForURL(/\/store#drop$/)
+  await card.getByRole('button', { name: 'Subscribe — Free for Now' }).waitFor()
   await snap(a, 'cancelled')
 
   console.log('E2E DROP PASSED')

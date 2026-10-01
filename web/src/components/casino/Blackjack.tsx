@@ -95,7 +95,7 @@ export default function Blackjack() {
   const settleDelay = done ? Math.max(0, (dealerCards.length - 2)) * DEALER_GAP + 0.35 : 0
 
   return (
-    <Card title="🃏 Blackjack" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
+    <Card title="🃏 Blackjack" className="table-card" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
       <div className="bd stack">
         {!g ? <Empty><span className="spin" /></Empty> : (
           <div className={`bj-felt ${done && g.result ? (g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : 'push') : ''}`}>
@@ -157,21 +157,27 @@ export default function Blackjack() {
         {playing ? (
           <>
             {book && <div className="bj-hintline">📖 The book says: <b>{book === 'split' ? 'Split' : book[0].toUpperCase() + book.slice(1)}</b></div>}
-            <div className="bj-actions">
-              <button className={`btn ${book === 'hit' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('hit')}>Hit<small>H</small></button>
-              <button className={`btn doit ${book === 'stand' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('stand')}>Stand<small>S</small></button>
-              <button className={`btn gold ${book === 'double' ? 'hinted' : ''}`} disabled={busy || !canDouble} onClick={() => act('double')}>Double<small>+{money(extra)}</small></button>
-              <button className={`btn blue ${book === 'split' ? 'hinted' : ''}`} disabled={busy || !canSplit} onClick={() => act('split')}>Split<small>+{money(extra)}</small></button>
+            {/* the hand's buttons, and the chips and Deal between hands, ride above the tab bar under the felt */}
+            <div className="table-bar">
+              <div className="bj-actions">
+                <button type="button" className={`btn ${book === 'hit' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('hit')}>Hit<small>H</small></button>
+                <button type="button" className={`btn doit ${book === 'stand' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('stand')}>Stand<small>S</small></button>
+                <button type="button" className={`btn gold ${book === 'double' ? 'hinted' : ''}`} disabled={busy || !canDouble} onClick={() => act('double')}>Double<small>+{money(extra)}</small></button>
+                <button type="button" className={`btn blue ${book === 'split' ? 'hinted' : ''}`} disabled={busy || !canSplit} onClick={() => act('split')}>Split<small>+{money(extra)}</small></button>
+              </div>
+              {g?.can_double && !canDouble && <div className="why">Doubling needs {money(extra)} on hand.</div>}
+              {g?.can_split && !canSplit && <div className="why">Splitting needs {money(extra)} on hand.</div>}
             </div>
-            {g?.can_double && !canDouble && <div className="why">Doubling needs {money(extra)} on hand.</div>}
-            {g?.can_split && !canSplit && <div className="why">Splitting needs {money(extra)} on hand.</div>}
           </>
         ) : (
           <>
-            <BetPicker value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
-            <button className="btn gold block bj-deal" disabled={busy || me.cash < wager || !g} onClick={deal}>
-              {me.cash < wager ? `Need ${money(wager)} on hand` : done ? `Deal again · ${money(wager)}` : `Deal · ${money(wager)}`}
-            </button>
+            <div className="table-bar">
+              <BetPicker part="chips" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
+              <button type="button" className="btn gold block bj-deal" disabled={busy || me.cash < wager || !g} onClick={deal}>
+                {me.cash < wager ? `Need ${money(wager)} on hand` : done ? `Deal again · ${money(wager)}` : `Deal · ${money(wager)}`}
+              </button>
+            </div>
+            <BetPicker part="amount" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
           </>
         )}
 
@@ -188,7 +194,7 @@ function summary(g: BlackjackState): string {
   const r = g.result!
   if (r.outcome === 'split') return `${r.hands?.length ?? 2} hands settled —`
   switch (r.outcome) {
-    case 'blackjack': return 'Blackjack! Paid 3 to 2 —'
+    case 'blackjack': return 'Blackjack — paid 3 to 2 —'
     case 'dealer_bust': return `Dealer busts with ${g.dealer_total} —`
     case 'win': return `${g.player_total} beats ${g.dealer_total} —`
     case 'push': return `Push at ${g.player_total} —`

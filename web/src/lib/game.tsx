@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { api, GameError } from './api'
 import { isNative, RESUME_EVENT } from './platform'
+import { errorText, isNetworkError, NET_RE, OFFLINE_TEXT } from './errors'
 import { initStore, logOutStore } from './store'
 import type { Catalog, Me } from './types'
 
@@ -19,6 +20,8 @@ interface GameState {
   /** Run an RPC, toast on error, refresh state on success. Returns result or undefined on failure. */
   run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => Promise<T | undefined>
   busy: boolean
+  /** Signed in and loaded, but the last poll or action couldn't reach the server; the top bar says so until a poll gets through. */
+  netDown: boolean
   signOut: () => Promise<void>
   /** True after the player opens a password-reset link; the app asks for a new password before anything else. */
   recovery: boolean
@@ -26,10 +29,6 @@ interface GameState {
 }
 
 const Ctx = createContext<GameState | null>(null)
-
-/** The request never reached the server (offline, dead Wi-Fi), as opposed to an error the server sent back.
- *  supabase-js reports it as "TypeError: Failed to fetch" (Chrome), "Load failed" (Safari/iOS) or "NetworkError…" (Firefox). */
-const isNetworkError = (e: unknown) => !navigator.onLine || /Failed to fetch|Load failed|NetworkError|Network request failed/i.test((e as Error)?.message ?? '')
 
 /** Full-screen stop when the first load can't reach the server, instead of a spinner that never ends (#20). */
 function CantReach({ onRetry }: { onRetry: () => void }) {
@@ -54,6 +53,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
+  const [netDown, setNetDown] = useState(false)
+  const netDownRef = useRef(false)
+  const markNet = useCallback((down: boolean) => { netDownRef.current = down; setNetDown(down) }, [])
   // A reset link lands with #...type=recovery; catch it here too in case supabase fires PASSWORD_RECOVERY before we subscribe.
   const [recovery, setRecovery] = useState(() => /(^|[#&])type=recovery(&|$)/.test(window.location.hash))
   const toastId = useRef(0)
@@ -89,9 +91,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (isNative) (uid ? initStore(uid) : logOutStore()).catch(() => {})
   }, [uid])
 
-  const toast = useCallback((text: string, kind: Toast['kind'] = 'info') => {
+  const toast = useCallback((raw: string, kind: Toast['kind'] = 'info') => {
+    // pages that toast an error's message themselves get the same plain line for a dropped connection
+    const text = kind === 'bad' && NET_RE.test(raw) ? OFFLINE_TEXT : raw
     const id = ++toastId.current
-    setToasts(t => [...t, { id, kind, text }].slice(-3))
+    // the same words already on screen (a retried action, the poll) don't stack a second copy
+    setToasts(t => (t.some(x => x.text === text) ? t : [...t, { id, kind, text }].slice(-3)))
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), kind === 'bad' ? 4500 : 3200)
   }, [])
 
@@ -101,17 +106,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (why) { toast(why, 'bad'); history.replaceState(history.state, '', window.location.pathname + window.location.search) }
   }, [toast])
 
-  // Until `me` and the catalog have both arrived, a network failure shows CantReach; after that every failure is a toast.
+  // Until `me` and the catalog have both arrived, a network failure shows CantReach. After that a dropped connection is
+  // toasted once and then held in the top bar ("Offline · retrying") instead of a fresh toast every poll; other errors toast.
   const failed = useCallback((e: unknown, what: 'me' | 'catalog') => {
-    if (!loaded.current[what] && isNetworkError(e)) setOffline(true)
-    else toast((e as Error).message, 'bad')
-  }, [toast])
+    if (!isNetworkError(e)) { toast(errorText(e), 'bad'); return }
+    if (!loaded.current[what]) { setOffline(true); return }
+    if (!netDownRef.current) toast(OFFLINE_TEXT, 'bad')
+    markNet(true)
+  }, [toast, markNet])
 
   const refresh = useCallback(async () => {
     try {
       const m = await api.me()
       gotAt.current = Date.now()
       setMe(m)
+      if (netDownRef.current) markNet(false)
     } catch (e) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
@@ -120,7 +129,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         failed(e, 'me')
       }
     }
-  }, [failed])
+  }, [failed, markNet])
 
   useEffect(() => {
     if (!session) return
@@ -136,11 +145,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // The connection coming back retries a failed start too, so nobody has to find the button.
   useEffect(() => {
     const onResume = () => { if (offline) retry(); else if (session) refresh() }
-    const onOnline = () => { if (offline) retry() }
+    const onOnline = () => { if (offline) retry(); else if (session && netDownRef.current) refresh() }
     window.addEventListener(RESUME_EVENT, onResume)
     window.addEventListener('online', onOnline)
     return () => { window.removeEventListener(RESUME_EVENT, onResume); window.removeEventListener('online', onOnline) }
   }, [offline, session, refresh, retry])
+
+  // While the connection is down, try every 10 s rather than waiting out the minute poll; the first success clears it.
+  useEffect(() => {
+    if (!netDown || !session) return
+    const t = setInterval(() => { if (document.visibilityState === 'visible') refresh() }, 10_000)
+    return () => clearInterval(t)
+  }, [netDown, session, refresh])
 
   // Refresh the moment a timer runs out — stamina/heat tick, health tick, jail release, hustlers home —
   // so nothing sits on 0:00 waiting for the minute poll. Deadlines are server times; we measure from
@@ -175,18 +191,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await refresh()
       return r
     } catch (e) {
-      toast((e as Error).message, 'bad')
+      toast(errorText(e), 'bad')
+      if (isNetworkError(e) && loaded.current.me) markNet(true)
       return undefined
     } finally {
       setBusy(false)
     }
-  }, [refresh, toast])
+  }, [refresh, toast, markNet])
 
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, signOut, recovery, endRecovery])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery }),
+    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }
