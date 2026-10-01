@@ -13,7 +13,7 @@ import type { BusinessCode, MilestoneDef } from '../lib/types'
 
 export default function Services() {
   const me = useMe()
-  const { catalog, run } = useGame()
+  const { catalog, run, ask } = useGame()
   const now = useNow()
   const nav = useNavigate()
   const [sp] = useSearchParams()
@@ -110,7 +110,7 @@ export default function Services() {
             <div className="spread turn-in">
               <div className="small">Want in? Turn yourself in to run jail jobs and fight other inmates — no stamina or cash needed. You stay until you post bail ({money(bail)}).</div>
               <Btn className="sm" disabled={me.hospital || me.diamonds < (cfg.jail_diamonds ?? 50)}
-                onClick={() => { if (confirm(`Spend ${cfg.jail_diamonds ?? 50} diamonds to go to jail? You stay until you post bail (${money(bail)}).`)) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
+                onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup.`, { title: `Go to jail for 💎 ${cfg.jail_diamonds ?? 50}?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
             </div>
           )}
         </div>
@@ -144,7 +144,7 @@ export default function Services() {
               {/* nothing to refill: one disabled "Full" instead of four live price buttons */}
               {cur >= max ? <button className="btn sm" disabled>Full</button> : <>
                 {kind === 'stamina' && (me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
-                <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
+                <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { if (max - cur < max / 2 && !await ask(`Only ${max - cur} ${kind} is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
                 {catalog.commodities.map(c => {
                   const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
                   return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>

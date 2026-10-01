@@ -5,6 +5,7 @@ import { money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Toasts } from './ui'
 import { RefillSheet } from './Refill'
+import { ConfirmSheet } from './Confirm'
 import type { Me } from '../lib/types'
 import { NamePrompt } from './NamePrompt'
 
@@ -108,6 +109,7 @@ export default function Layout() {
       {me && <NamePrompt />}
       <Outlet />
       <RefillSheet />
+      <ConfirmSheet />
       <nav className="tabbar">
         <div className="inner">
           {tabs.map(t => (

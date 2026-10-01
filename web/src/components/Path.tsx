@@ -24,7 +24,7 @@ export function pathBlock(me: Me, want: Path): string | null {
 
 export function PathCard() {
   const me = useMe()
-  const { catalog, run } = useGame()
+  const { catalog, run, ask } = useGame()
   const [open, setOpen] = useState(false)
   if (!catalog) return null
   const need = catalog.config.path_rep ?? 100
@@ -44,7 +44,7 @@ export function PathCard() {
     return (
       <div className="notice gold spread">
         <span>{info[me.path].icon} You're a <b>{info[me.path].name}</b> · {info[me.path].does.charAt(0).toLowerCase() + info[me.path].does.slice(1)}.</span>
-        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={() => { if (confirm(`Switch to ${info[other].name} for ${fee} diamonds?`)) return run(() => api.choosePath(other), { ok: () => `You're a ${info[other].name} now` }) }}>Switch · 💎 {fee}</Btn>
+        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={async () => { if (await ask(`Switch to ${info[other].name} for ${fee} diamonds?`, { title: 'Switch paths?', yes: `Switch · 💎 ${fee}`, tone: 'gold' })) return run(() => api.choosePath(other), { ok: () => `You're a ${info[other].name} now` }) }}>Switch · 💎 {fee}</Btn>
       </div>
     )
   }
@@ -63,7 +63,7 @@ export function PathCard() {
               <b>{info[p].name}</b>
               <div className="small">{info[p].does}</div>
               <div className="small muted">{info[p].gives_up}</div>
-              <Btn className="doit" onClick={() => { if (confirm(`Become a ${info[p].name}?`)) return run(() => api.choosePath(p), { ok: () => `You're a ${info[p].name}` }) }}>Be a {info[p].name}</Btn>
+              <Btn className="doit" onClick={async () => { if (await ask(`Become a ${info[p].name}? Switching later costs diamonds.`, { title: `Be a ${info[p].name}?`, yes: `Be a ${info[p].name}` })) return run(() => api.choosePath(p), { ok: () => `You're a ${info[p].name}` }) }}>Be a {info[p].name}</Btn>
             </div>
           ))}
         </div>

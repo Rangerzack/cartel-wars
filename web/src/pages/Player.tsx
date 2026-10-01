@@ -15,7 +15,7 @@ import { ModButtons } from './Admin'
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, toast, catalog, askRefill } = useGame()
+  const { run, toast, catalog, askRefill, ask } = useGame()
   const nav = useNavigate()
   const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
@@ -45,7 +45,7 @@ export default function Player() {
     load(); loadPreview()
   }
   async function block() {
-    if (!confirm(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`)) return
+    if (!await ask(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`, { title: `Block ${p!.name}?`, yes: 'Block', tone: 'red' })) return
     if (await run(() => api.blockPlayer(p!.id), { ok: () => `${p!.name} blocked` })) load()
   }
   async function unblock() {

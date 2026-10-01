@@ -633,7 +633,10 @@ with an ×, close on Escape and keep focus inside. Buttons: `doit` is the one
 primary verb on a screen (Title Case), `gold` spends or confirms, red `doit` is
 an attack, `red` deletes, `ghost` is secondary, `ghost red` leaves or kicks.
 Copy: short, second person, no exclamation marks, emoji only as icons. A spend
-that is irreversible or costs over half your cash asks first.
+that is irreversible or costs over half your cash asks first, in the game's own
+sheet (title, one line, Cancel beside the action it names), never the browser's
+`confirm()`, which some browsers and embedded web views mute or answer no by
+themselves.
 A fight's result sheet has Attack again under the result, with the same checks as
 Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,

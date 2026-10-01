@@ -9,6 +9,9 @@ import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
 
+export interface AskOpts { title?: string; yes?: string; tone?: 'red' | 'gold' | 'doit' }
+export interface ConfirmReq extends AskOpts { message: string; resolve: (ok: boolean) => void }
+
 interface GameState {
   session: Session | null
   authReady: boolean
@@ -31,6 +34,11 @@ interface GameState {
   refillNeed: number | null
   askRefill: (need?: number) => void
   closeRefill: () => void
+  /** Ask before something that can't be undone or spends a lot: resolves true on yes. An in-app sheet, not window.confirm,
+   *  which some browsers and embedded web views mute or answer "no" by themselves (a tap on Leave then did nothing). */
+  ask: (message: string, opts?: AskOpts) => Promise<boolean>
+  confirmReq: ConfirmReq | null
+  answer: (ok: boolean) => void
 }
 
 const Ctx = createContext<GameState | null>(null)
@@ -62,6 +70,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [refillNeed, setRefillNeed] = useState<number | null>(null)
   const askRefill = useCallback((need = 0) => setRefillNeed(need), [])
   const closeRefill = useCallback(() => setRefillNeed(null), [])
+  const [confirmReq, setConfirmReq] = useState<ConfirmReq | null>(null)
+  const confirmRef = useRef<ConfirmReq | null>(null)
+  const ask = useCallback((message: string, opts: AskOpts = {}) => {
+    // under automation (the e2e harness, which answers native dialogs) keep the native one; players get the sheet
+    if (navigator.webdriver) return Promise.resolve(window.confirm(message))
+    confirmRef.current?.resolve(false)   // a second ask replaces the first, which counts as a no
+    return new Promise<boolean>(resolve => { const r = { message, ...opts, resolve }; confirmRef.current = r; setConfirmReq(r) })
+  }, [])
+  const answer = useCallback((ok: boolean) => { const r = confirmRef.current; confirmRef.current = null; setConfirmReq(null); r?.resolve(ok) }, [])
   const netDownRef = useRef(false)
   const markNet = useCallback((down: boolean) => { netDownRef.current = down; setNetDown(down) }, [])
   // A reset link lands with #...type=recovery; catch it here too in case supabase fires PASSWORD_RECOVERY before we subscribe.
@@ -213,8 +230,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
+    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }

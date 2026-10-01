@@ -23,7 +23,7 @@ const pct = (weight: number, total: number) => `${Math.round((weight / total) * 
  */
 export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const me = useMe()
-  const { catalog, run, toast, refresh } = useGame()
+  const { catalog, run, toast, refresh, ask } = useGame()
   const now = useNow()
   const nav = useNavigate()
   const [showOdds, setShowOdds] = useState(false)
@@ -79,8 +79,8 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
     await refresh()
     toast(ok ? 'Subscribed to the Daily Drop' : "Your subscription is on its way. It'll show up in a minute.", ok ? 'ok' : 'info')
   }
-  const cancel = () => {
-    if (!confirm(`Cancel the Daily Drop? No more crates after today.${d.crates ? ` Your ${d.crates} unopened crate${d.crates > 1 ? 's stay' : ' stays'} yours to open.` : ''}`)) return
+  const cancel = async () => {
+    if (!await ask(`No more crates after today.${d.crates ? ` Your ${d.crates} unopened crate${d.crates > 1 ? 's stay' : ' stays'} yours to open.` : ''}`, { title: 'Cancel the Daily Drop?', yes: 'Cancel it', tone: 'red' })) return
     return run(api.unsubscribeDrop, { ok: () => 'Daily Drop cancelled' })
   }
   // Shake the crate while the server rolls, for at least a beat, then show what came out.

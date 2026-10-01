@@ -12,7 +12,7 @@ import { Btn, Modal } from './ui'
  *  Pharmacy perk included); the server checks them again. Mounted once in Layout; opened through useGame().askRefill. */
 export function RefillSheet() {
   const me = useMe()
-  const { catalog, run, refillNeed, closeRefill } = useGame()
+  const { catalog, run, refillNeed, closeRefill, ask } = useGame()
   if (refillNeed == null || !catalog) return null
   const cfg = catalog.config
   const need = refillNeed
@@ -39,7 +39,7 @@ export function RefillSheet() {
             )}
             <RefillRow icon="💎" label={`${cfg.refill_diamonds} diamonds`} sub={`fills you up · you have 💎 ${num(me.diamonds)}`} gain={missing}
               disabled={me.diamonds < cfg.refill_diamonds}
-              onClick={() => { if (missing < me.stamina_max / 2 && !confirm(`Only ${missing} stamina missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return done(() => api.refill('stamina', 'diamonds'), 'full') }} />
+              onClick={async () => { if (missing < me.stamina_max / 2 && !await ask(`Only ${missing} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return done(() => api.refill('stamina', 'diamonds'), 'full') }} />
             {catalog.commodities.map(c => {
               const units = Math.ceil(c.refill_stamina * (1 - pharmacy))
               const have = me.storage[c.code] ?? 0
