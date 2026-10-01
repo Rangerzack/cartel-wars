@@ -642,6 +642,9 @@ Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,
 diamonds, or product, each priced with what it restores), and so does any server
 refusal for stamina (crew fights). The server still checks every refill.
+Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
+Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
+that is short of thugs offers the missing ones, which join that attack.
 
 ## iOS app *(Zack, 2026-10-01)*
 

@@ -2,14 +2,15 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, hoodlumIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
+import { commodityIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
+import { HireHoodlums } from '../components/Hire'
 import { perk } from '../lib/perks'
 import { refillShare, shareLabel } from '../lib/market'
-import type { BusinessCode, MilestoneDef } from '../lib/types'
+import type { MilestoneDef } from '../lib/types'
 
 export default function Services() {
   const me = useMe()
@@ -23,12 +24,14 @@ export default function Services() {
   // link here too, and the location key changes on every tap, so tapping the same chip again scrolls again
   useEffect(() => {
     if (!focus) return
-    const t = setTimeout(() => focusCard(focus), 150)
+    // on a cold load (a link from outside, the Pages 404 bounce) the cards wait for the catalog: keep trying for 3 s
+    let tries = 0, t = 0
+    const go = () => { if (!focusCard(focus) && ++tries < 20) t = window.setTimeout(go, 150) }
+    t = window.setTimeout(go, 150)
     return () => clearTimeout(t)
   }, [focus, key])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
-  const [hood, setHood] = useState<{ code: string; n: number }>({ code: 'thug', n: 10 })
   const [heal, setHeal] = useState(20)
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const cfg = catalog.config
@@ -37,10 +40,6 @@ export default function Services() {
   // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
   const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
   const bail = Math.ceil(cfg.bail_base * (1 - law))   // jail has no timer: you're in until you post this
-  const owned = me.hoodlums[hood.code] ?? 0
-  const hdef = catalog.hoodlums.find(h => h.code === hood.code)!
-  const hoodPerk: BusinessCode | null = hood.code === 'thug' ? 'gym' : hood.code === 'mercenary' || hood.code === 'enforcer' ? 'shooting_range' : null
-  const hoodCost = Math.ceil(Math.round(hdef.base_price * hood.n * (1 + (owned + hood.n / 2) / 2000)) * (1 - (hoodPerk ? perk(me, hoodPerk) : 0)))
   // mirrors _health_price: per-point price climbs with points bought in the last 24h
   const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
@@ -180,17 +179,7 @@ export default function Services() {
     boost: me.boost && <BoostCard />,
     hoodlums: (
       <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
-        <div className="bd stack">
-          <div className="seg">
-            {catalog.hoodlums.map(h => <button key={h.code} className={hood.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}>{hoodlumIcon[h.code]} {h.name}</button>)}
-          </div>
-          <div className="small muted">{hdef.att ? `${hdef.att} attack` : ''}{hdef.att && hdef.def ? ' · ' : ''}{hdef.def ? `${hdef.def} defense` : ''}{hdef.intel ? 'Reveals a block\'s garrison before you attack' : ''} · base {money(hdef.base_price)} — price climbs with how many you hold. You have {num(owned)}.</div>
-          {hoodPerk && <PerkTag code={hoodPerk} />}
-          <div className="spread">
-            <Qty value={hood.n} onChange={n => setHood({ ...hood, n })} min={1} max={1000} />
-            <Btn className="doit" disabled={me.cash < hoodCost} onClick={() => run(() => api.buyHoodlums(hood.code, hood.n), { ok: r => `Hired for ${money(r.cost)}` })}>Hire · {money(hoodCost)}</Btn>
-          </div>
-        </div>
+        <div className="bd"><HireHoodlums /></div>
       </Card>
     ),
   }

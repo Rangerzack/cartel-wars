@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { ago, hoodlumIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Modal, Qty, RowLink } from '../components/ui'
+import { HireHoodlums } from '../components/Hire'
 import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
@@ -22,6 +23,8 @@ export default function Territory() {
   const [log, setLog] = useState<TerritoryLog[] | null>(null)
   // ?hood=12 opens a hood; &block=70 also opens that block (links from the activity feed)
   const [blockId, setBlockId] = useState<number | null>(() => Number(sp.get('block')) || null)
+  // which hoodlum the hire panel under the tiles is open on (?hire=thug opens it from a link)
+  const [hire, setHire] = useState<string | null>(() => sp.get('hire'))
   const hoodId = Number(sp.get('hood')) || null
   // highlight one business across the city (?biz=gym); kept in the URL so Back keeps it
   const biz = (sp.get('biz') as BusinessCode | null) || null
@@ -45,12 +48,20 @@ export default function Territory() {
         ? <BackBar fallback={biz ? `/territory?biz=${biz}` : '/territory'} right={<span className="muted small">{hood.district} · {coord(hood)}</span>} />
         : <BackBar fallback="/" />}
       {!me.crew && <div className="notice blue">Territory is held by crews. <Link to="/crew">Join or found a crew</Link> to fight for blocks.</div>}
+      {/* the tiles are the hire buttons: hoodlums are bought where they're used, not two pages away */}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (
-          <div key={k} className="stat"><div className="k">{hoodlumIcon[k]} {k === 'mercenary' ? 'Mercs' : k === 'spy' ? 'Spies' : 'Thugs'}</div><div className="v">{num(me.hoodlums[k] ?? 0)}</div></div>
+          <button key={k} type="button" className={`stat stat-btn ${hire === k ? 'on' : ''}`} aria-expanded={hire === k} onClick={() => setHire(hire === k ? null : k)}>
+            <div className="k">{hoodlumIcon[k]} {k === 'mercenary' ? 'Mercs' : k === 'spy' ? 'Spies' : 'Thugs'}</div><div className="v">{num(me.hoodlums[k] ?? 0)}</div>
+            <span className="stat-add">+ Hire</span>
+          </button>
         ))}
       </div>
-      <div className="small muted">Thugs and mercs attack blocks; spies size up a garrison. Hire them at <Link to="/services?focus=hoodlums">Services › Hoodlums</Link>.</div>
+      {hire ? (
+        <Card title="🧢 Hire hoodlums" right={<button type="button" className="btn sm ghost" onClick={() => setHire(null)}>Done</button>}>
+          <div className="bd"><HireHoodlums key={hire} initial={{ code: hire, n: hire === 'thug' ? Math.max(10, (data?.rules.min_thugs ?? 51) - thugs) : 5 }} /></div>
+        </Card>
+      ) : <div className="small muted">Thugs and mercs attack blocks; spies size up a garrison. Tap one to hire more.</div>}
 
       {hood ? (
         <HoodView hood={hood} onBlock={setBlockId} biz={biz} />
@@ -183,6 +194,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
   const [station, setStation] = useState({ code: 'thug', n: 1 })
   const [intel, setIntel] = useState<{ garrison: Record<string, number>; resistance: number } | null>(null)
   const [result, setResult] = useState<AttackBlockResult | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
   const load = useCallback(() => api.block(id).then(setB).catch(e => toast(e.message, 'bad')), [id, toast])
   useEffect(() => { load() }, [load])
   const refresh = () => { load(); onChanged() }
@@ -274,7 +286,20 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
                 Attack ≈ <b>{num(attackPower)}</b> (±10%) · {rules.stamina} stamina. {b.owner ? `Every win counts toward your crew's ${rules.siege_wins} and restarts their bonus clock.` : 'One win claims it.'}
               </div>
               {(me.hospital || me.jailed) && <div className="notice red">{me.hospital ? "You're in the hospital — heal up before you attack." : "You can't run a turf war from jail."}</div>}
-              {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <Link to="/services?focus=hoodlums">Hire more →</Link></div>}
+              {thugs < rules.min_thugs ? (
+                <div className="hire-inline">
+                  <div className="small"><b>You need {num(rules.min_thugs)} thugs</b> to start a turf attack — you have {num(thugs)}. Hire the rest here; they join this attack.</div>
+                  <HireHoodlums kinds={['thug', 'mercenary']} btnClass="gold" initial={{ code: 'thug', n: rules.min_thugs - thugs }}
+                    onHired={(code, n) => setForce(f => code === 'thug' ? { ...f, thugs: Math.max(f.thugs, Math.min(thugs + n, rules.min_thugs)) } : { ...f, mercs: f.mercs + n })} />
+                </div>
+              ) : !moreOpen ? (
+                <button type="button" className="linkbtn small" onClick={() => setMoreOpen(true)}>🧢 Hire more thugs or mercs</button>
+              ) : (
+                <div className="hire-inline">
+                  <HireHoodlums kinds={['thug', 'mercenary']} btnClass="gold"
+                    onHired={(code, n) => setForce(f => code === 'thug' ? { ...f, thugs: f.thugs + n } : { ...f, mercs: f.mercs + n })} />
+                </div>
+              )}
               <div className="hstack">
                 <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital} onClick={() => me.stamina < rules.stamina ? askRefill(rules.stamina) : attack()}>Attack</Btn>
                 <Btn className="sm" disabled={spies < 1} onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>
