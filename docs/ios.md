@@ -10,6 +10,10 @@ Purchases (in-app purchases, see `docs/ops.md`), pulled in with Swift Package Ma
 
 `.github/workflows/ios.yml` runs on GitHub's macOS runner (Xcode 26). You don't need a Mac.
 
+> The workflow was written as `docs/ios-workflow.yml` because the tools that push from this machine can't write under
+> `.github/workflows/`. Move it once, then delete this note:
+> `git mv docs/ios-workflow.yml .github/workflows/ios.yml && git commit -m "iOS workflow" && git push`
+
 1. `npm ci && npm run build:ios` in `web/`: Vite build with the live Supabase URL and key (the same ones as
    `pages.yml`), then `cap sync ios`.
 2. `xcodebuild -resolvePackageDependencies` fetches Capacitor's Swift packages.
@@ -71,15 +75,19 @@ or a plugged-in iPhone. After changing web code, run `npm run build:ios` again.
 - `cap sync` never touches these files. Adding a Capacitor plugin (`npm install @capacitor/…` and then
   `npm run build:ios`) rewrites `web/ios/App/CapApp-SPM/Package.swift`; commit that change.
 
-## Icon and splash (placeholders)
+## Icon and splash
 
-The current icon and launch screen are **placeholders**: the `web/public/icon.svg` shield on `#121216`.
-The final art is #21. To replace it, overwrite the files in `web/assets/`:
+`scripts/app-art.mjs` draws both from the game's own mark and fonts and writes every file Xcode reads: the gold shield
+with the CW monogram, full-bleed on the dark gradient (iOS rounds the corners; the PNG has no alpha channel, which Apple
+requires), and the launch screen with the sign-in screen's wordmark centred on `#121216`, kept inside the middle
+1,100 px because phones crop the sides. Run `node scripts/app-art.mjs` from the repo root after changing the art and
+commit `web/assets/` and `web/ios/App/App/Assets.xcassets/`.
 
-- `icon.png`: 1024×1024, square corners (iOS rounds them), **no transparency**. Apple rejects icons
-  with an alpha channel.
-- `splash.png` and `splash-dark.png`: 2732×2732, the same image twice (the game is dark either way). Phones
-  crop the sides, so keep the logo within the middle ~1200 px.
+To use art made elsewhere (#21) instead, overwrite the files in `web/assets/`:
+
+- `icon.png`: 1024×1024, square corners, **no transparency**. Original art only (4.1(c)), suitable for 4+ (2.3.8).
+- `splash.png` and `splash-dark.png`: 2732×2732, the same image twice (the game is dark either way), logo within the
+  middle ~1200 px.
 
 Then, from `web/`:
 

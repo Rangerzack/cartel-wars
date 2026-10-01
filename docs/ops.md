@@ -302,8 +302,9 @@ Store returns, so a row whose product isn't live yet stays hidden there.
 
 ## Turning the Daily Drop's paid plan on
 
-`drop_free` is a constant in `_cfg`, so it changes with a migration: copy the newest `create or replace function _cfg`
-(the latest migration that has one) into a new migration, change `drop_free` from 1 to 0, and ship it. From then on
+`drop_free` is a constant in `_cfg`, so it changes with a migration. `docs/drop-paid.sql` is that migration, written
+and waiting: copy it to `supabase/migrations/` under the next free number (check first that no later migration has
+redefined `_cfg`) and ship it. From then on
 `subscribe_drop` refuses ("Subscribe through the store"), the app's Subscribe button is the App Store purchase, and the
 web says it's an iPhone subscription. Before that, the subscription product has to be approved and live.
 
