@@ -46,6 +46,7 @@ export default function Home() {
     { to: '/activity', ic: '📰', t: 'Activity', s: unread ? `${unread} new` : 'Attacks on you, sales, sieges, crew news' },
     { to: '/accolades', ic: '🎖', t: 'Accolades', s: me.ribbons.length ? `${me.ribbons.length} stripe${me.ribbons.length > 1 ? 's' : ''} this week` : 'Weekly ranked stripes' },
     { to: '/fight?tab=top', ic: '🏆', t: 'Top Users', s: 'Fighters, hustlers, traders, crews' },
+    { to: '/store', ic: '💎', t: 'Diamonds', s: `${num(me.diamonds)} on hand · diamond packs and the Daily Drop` },
   ]
 
   return (
@@ -100,13 +101,18 @@ export default function Home() {
 
       {fights.length > 0 && (
         <Card title="Latest fights" right={<Link to="/fight?tab=log" className="small">all ›</Link>}>
-          {fights.map(f => (
-            <div key={f.id} className="row link" onClick={() => nav(`/player/${f.i_attacked ? f.defender_id : f.attacker_id}`)}>
-              <span>{f.won ? '🏆' : '💀'}</span>
-              <div className="grow"><div className="t">{f.i_attacked ? `You attacked ${f.defender}` : `${f.attacker} attacked you`}</div><div className="s">{f.won ? 'won' : 'lost'} · {ago(f.at)}</div></div>
-              <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>
-            </div>
-          ))}
+          {fights.map(f => {
+            const otherId = f.i_attacked ? f.defender_id : f.attacker_id
+            // a player who deleted their account has no profile to open
+            const other = otherId ? (f.i_attacked ? f.defender : f.attacker) : <span className="muted">Deleted player</span>
+            return (
+              <div key={f.id} className={otherId ? 'row link' : 'row'} onClick={otherId ? () => nav(`/player/${otherId}`) : undefined}>
+                <span>{f.won ? '🏆' : '💀'}</span>
+                <div className="grow"><div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div><div className="s">{f.won ? 'won' : 'lost'} · {ago(f.at)}</div></div>
+                <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>
+              </div>
+            )
+          })}
         </Card>
       )}
 

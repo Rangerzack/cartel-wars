@@ -388,6 +388,10 @@ deno_version = 2
 [functions.report-notify]
 verify_jwt = false
 
+# RevenueCat calls this with its own Authorization header (REVENUECAT_WEBHOOK_AUTH), not a user JWT. See docs/ops.md.
+[functions.iap-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

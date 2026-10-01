@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { ago, dropIcon, hoodlumIcon, money, nextRollover, num, timeLeft } from '../lib/format'
+import { policyUrl, type PolicyPage } from '../lib/pages'
+import { isNative, openExternal } from '../lib/platform'
+import { buyDrop, getOfferings, manageSubscriptions, storeReady, waitForDelivery, type StoreProduct } from '../lib/store'
 import { useNow } from '../lib/useNow'
 import type { DropPrize, DropResult, RecentDrop } from '../lib/types'
 import { Btn, Card, Modal } from './ui'
@@ -10,24 +13,39 @@ import { Btn, Card, Modal } from './ui'
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
 
-/** The Daily Drop card on Home: subscribe, the crate stack, opening a crate, and the odds. */
+/**
+ * The Daily Drop card (Home and the Store): subscribe, the crate stack, opening a crate, and the odds. The odds sit
+ * above the subscribe button whenever it shows: Apple wants the odds of a paid random prize shown before purchase
+ * (guideline 3.1.1). While drop_free is 1 everyone gets the free plan; in the iOS app, once drop_free is 0 or the
+ * player has had a paid plan, Subscribe is an App Store purchase at StoreKit's price. The web never shows a price.
+ */
 export function DailyDrop() {
   const me = useMe()
-  const { catalog, run } = useGame()
+  const { catalog, run, toast, refresh } = useGame()
   const now = useNow()
   const nav = useNavigate()
   const [showOdds, setShowOdds] = useState(false)
   const [jackpots, setJackpots] = useState<RecentDrop[] | null>(null)
   const [reveal, setReveal] = useState<{ r?: DropResult } | null>(null)
+  const [product, setProduct] = useState<StoreProduct | null>(null)
+  const [delivering, setDelivering] = useState(false)
   const d = me.drop
   const prizes = catalog?.drop_prizes
+  const free = !!catalog?.config.drop_free
+  const dropProduct = catalog?.store?.drop_product ?? ''
+  // the App Store plan: in the iOS app once the subscription is for sale, or for a player who already paid for one
+  const viaStore = storeReady && !!dropProduct && (!free || !!d?.drop_paid)
+  const wantPrice = viaStore && !d?.subscribed
+  useEffect(() => {
+    if (!wantPrice) return
+    getOfferings([dropProduct]).then(r => setProduct(r[dropProduct] ?? null)).catch(() => setProduct(null))
+  }, [wantPrice, dropProduct])
   if (!d || !prizes?.length || !catalog) return null
-  const cfg = catalog.config
-  const price = `$${((cfg.drop_price_cents ?? 299) / 100).toFixed(2)}`
-  const free = !!cfg.drop_free
+  const price = product?.priceString
   const total = prizes.reduce((s, p) => s + p.weight, 0)
   const jack = prizes.filter(p => p.jackpot)
   const full = d.crates >= d.max
+  const credits = (me.free_refills ?? 0) > 0 || (me.free_hustlers ?? 0) > 0
 
   const toggleOdds = () => {
     const next = !showOdds
@@ -35,6 +53,18 @@ export function DailyDrop() {
     if (next && !jackpots) api.recentDrops(5).then(setJackpots).catch(() => setJackpots([]))
   }
   const subscribe = () => run(api.subscribeDrop, { ok: r => `Subscribed — ${r.crates === 1 ? 'your first crate is here' : `${r.crates} crates waiting`}` })
+  // An App Store purchase: StoreKit takes the payment, then the webhook turns the plan on, so wait for get_me to show it.
+  const subscribePaid = async () => {
+    let r
+    try { r = await buyDrop(dropProduct) } catch (e) { toast((e as Error).message, 'bad'); return }
+    if (r === 'cancelled') { toast('Purchase cancelled', 'info'); return }
+    if (r === 'pending') { toast('Waiting for approval. The Daily Drop starts once Apple approves it.', 'info'); return }
+    setDelivering(true)
+    const ok = await waitForDelivery(m => !!m.drop?.subscribed && !!m.drop.drop_paid)
+    setDelivering(false)
+    await refresh()
+    toast(ok ? 'Subscribed to the Daily Drop' : "Your subscription is on its way. It'll show up in a minute.", ok ? 'ok' : 'info')
+  }
   const cancel = () => {
     if (!confirm(`Cancel the Daily Drop? No more crates after today.${d.crates ? ` Your ${d.crates} unopened crate${d.crates > 1 ? 's stay' : ' stays'} yours to open.` : ''}`)) return
     return run(api.unsubscribeDrop, { ok: () => 'Daily Drop cancelled' })
@@ -53,7 +83,9 @@ export function DailyDrop() {
   return (
     <>
       <Card id="drop" title="🎁 Daily Drop" className={`drop-card${d.crates > 0 ? ' has-crates' : ''}`}
-        right={d.subscribed ? <small className="tabular">{d.crates}/{d.max} crates</small> : <small className="drop-price">{free ? <><s>{price}/mo</s> <b>FREE</b></> : `${price}/mo`}</small>}>
+        right={d.subscribed ? <small className="tabular">{d.crates}/{d.max} crates</small>
+          : viaStore ? <small className="drop-price tabular">{price ? `${price}/mo` : ''}</small>
+          : free ? <small className="drop-price"><b>FREE</b></small> : undefined}>
         <div className="bd stack">
           {d.crates > 0 ? (
             <>
@@ -72,32 +104,45 @@ export function DailyDrop() {
               <div className="small">Jackpots: {jack.map((p, i) => <span key={p.code}>{i ? ' or ' : ''}<b className="gold">{dropIcon[p.kind]} {p.label}</b></span>)}</div>
             </div>
           )}
+        </div>
+        {!d.subscribed && <>
+          <div className="row small muted">What can drop? See the odds below.</div>
+          <Odds prizes={prizes} total={total} jackpots={null} onPlayer={id => nav(`/player/${id}`)} />
+        </>}
+        {(!d.subscribed || d.last || credits) && <div className="bd stack">
           {!d.subscribed && (
-            free
-              ? <>
-                  <Btn className="gold block" onClick={subscribe}>Subscribe — Free for Now</Btn>
-                  <div className="small muted center">{price} a month once it goes paid. Free while it's in early access, and you can cancel any time.</div>
-                </>
-              : <div className="small muted center">Subscriptions open soon — {price} a month.</div>
+            viaStore ? <>
+                <Btn className="gold block" disabled={!price || delivering} onClick={subscribePaid}>{delivering ? 'Starting your Daily Drop…' : 'Subscribe'}</Btn>
+                <div className="small muted center">{price ?? '—'} per month, renews until cancelled. Cancel any time in your device settings.</div>
+                <PolicyLinks />
+              </>
+            : free ? <>
+                <Btn className="gold block" onClick={subscribe}>Subscribe — Free for Now</Btn>
+                <div className="small muted center">The Daily Drop is free while the game is in early access. {isNative ? 'Later it will be a monthly subscription.' : 'In the iPhone app it will be a monthly subscription.'}</div>
+                <PolicyLinks />
+              </>
+            : <div className="small muted center">The Daily Drop is a monthly subscription in the iPhone app.</div>
           )}
           {d.last && <div className="small muted">Last crate: <b className={d.last.jackpot ? 'gold' : ''}>{dropIcon[d.last.kind]} {d.last.label}</b> · {ago(d.last.at, now)}</div>}
-          {((me.free_refills ?? 0) > 0 || (me.free_hustlers ?? 0) > 0) && (
+          {credits && (
             <div className="hstack drop-credits">
               {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}>⚡ {me.free_refills} free refill{me.free_refills === 1 ? '' : 's'} ›</button>}
               {(me.free_hustlers ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
             </div>
           )}
-        </div>
-        <div className="row link" onClick={toggleOdds}>
-          <div className="grow small muted">{showOdds ? 'Hide the odds' : 'What can drop? See the odds'}</div><span className="chev" style={showOdds ? { transform: 'rotate(90deg)' } : undefined}>›</span>
-        </div>
-        {showOdds && <Odds prizes={prizes} total={total} jackpots={jackpots} onPlayer={id => nav(`/player/${id}`)} />}
-        {d.subscribed && (
-          <div className="row small muted">
-            <div className="grow">Subscribed {d.since ? ago(d.since, now) : ''}{d.opened ? ` · ${num(d.opened)} crate${d.opened > 1 ? 's' : ''} opened` : ''}{free ? ' · free plan' : ''}</div>
-            <button className="btn sm ghost" onClick={cancel}>Cancel</button>
+        </div>}
+        {d.subscribed && <>
+          <div className="row link" onClick={toggleOdds}>
+            <div className="grow small muted">{showOdds ? 'Hide the odds' : 'What can drop? See the odds'}</div><span className="chev" style={showOdds ? { transform: 'rotate(90deg)' } : undefined}>›</span>
           </div>
-        )}
+          {showOdds && <Odds prizes={prizes} total={total} jackpots={jackpots} onPlayer={id => nav(`/player/${id}`)} />}
+          <div className="row small muted">
+            <div className="grow">Subscribed {d.since ? ago(d.since, now) : ''}{d.opened ? ` · ${num(d.opened)} crate${d.opened > 1 ? 's' : ''} opened` : ''}{d.drop_paid ? (d.until ? ` · paid through ${new Date(d.until).toLocaleDateString()}` : '') : ' · free plan'}</div>
+            {d.drop_paid
+              ? <button className="btn sm ghost" onClick={manageSubscriptions}>Manage subscription</button>
+              : <button className="btn sm ghost" onClick={cancel}>Cancel</button>}
+          </div>
+        </>}
       </Card>
       {reveal && (
         <Modal title={reveal.r?.jackpot ? 'Jackpot!' : 'Daily Drop'} onClose={() => setReveal(null)}>
@@ -109,6 +154,20 @@ export function DailyDrop() {
         </Modal>
       )}
     </>
+  )
+}
+
+const legal: [PolicyPage, string][] = [['terms', 'Terms of service'], ['privacy', 'Privacy policy']]
+
+/** Terms and privacy next to Subscribe: Apple wants both linked where a subscription is sold (guideline 3.1.2). */
+function PolicyLinks() {
+  return (
+    <div className="small muted center">
+      {legal.map(([page, label], i) => (
+        <span key={page}>{i ? ' · ' : ''}<a href={policyUrl(page)} target="_blank" rel="noopener" style={{ color: 'inherit' }}
+          onClick={e => { e.preventDefault(); openExternal(policyUrl(page)) }}>{label}</a></span>
+      ))}
+    </div>
   )
 }
 

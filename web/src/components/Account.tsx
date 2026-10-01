@@ -64,7 +64,7 @@ function DeleteAccount({ onClose, onDeleted }: { onClose: () => void; onDeleted:
           <li>Everything you built is gone for good: cash, bank, diamonds, gear, product, grow houses and hoodlums. Purchases can't be refunded.</li>
           <li>Your chat messages, DMs and forum posts are deleted, and so are threads you started.</li>
           <li>If you run a crew, your Co-Capo takes over, or else the longest-standing member. A crew of one disbands. Crew and cartel banks stay where they are.</li>
-          <li>Game history other players see, like trades and their activity feed, stays without your name.</li>
+          <li>Game history other players see, like fights, trades and their activity feed, stays without your name.</li>
           <li>Deleting your account doesn't cancel the Daily Drop or any other Apple subscription. Cancel those in your device settings.</li>
         </ul>
         <label className="f">Type your street name to confirm

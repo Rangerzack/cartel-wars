@@ -45,6 +45,9 @@ env:
   # Same publishable (anon) key as pages.yml; the app talks to the same Supabase project.
   VITE_SUPABASE_URL: https://bghoornhtsgzlebrbdoh.supabase.co
   VITE_SUPABASE_ANON_KEY: sb_publishable_PaWcx58uSEkv3dTaNpk8aA_B_HNRcl-
+  # RevenueCat's public iOS key (appl_…), a repository variable (Settings → Secrets and variables → Actions → Variables).
+  # Unset, the app builds without purchases. See docs/ops.md, "Purchases".
+  VITE_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
 jobs:
   testflight:
     runs-on: macos-26                  # Xcode 26: App Store Connect rejects uploads from older Xcode since 2026-04-28
