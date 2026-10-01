@@ -144,7 +144,7 @@ export default function Services() {
         <div className="row small muted refill-next"><div>After {fullRefills} product refills in a day, each one restores half as much as the one before (½, ¼, ⅛ …). Your next product refill restores <b>{nextShare >= 1 ? 'everything missing' : `${shareLabel(nextShare)} of what's missing`}</b>. The full ones come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Diamond and free refills are always full.</div></div>
       </Card>
 
-      <Card id="upgrades" title="💎 Upgrades" right={<small>{num(me.diamonds)} diamonds</small>}>
+      <Card id="upgrades" title="💎 Upgrades" right={<a className="small" onClick={() => nav('/store')}>{num(me.diamonds)} diamonds ›</a>}>
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },

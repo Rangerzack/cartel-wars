@@ -7,7 +7,7 @@ import { ComboPill } from './Combo'
 
 const icon: Record<ActivityItem['kind'], string> = {
   attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', filled: '📦', applied: '📨', joined: '🤝', kicked: '🚪',
-  daily_cash: '💰', moderated: '🛡',
+  daily_cash: '💰', moderated: '🛡', purchase: '💎', purchase_refunded: '↩️',
 }
 
 /** Where tapping an activity line takes you. */
@@ -19,6 +19,7 @@ export function activityLink(a: ActivityItem): string | null {
     case 'sold': case 'filled': return '/economy?tab=market'
     case 'daily_cash': return '/services?focus=bank'
     case 'moderated': return '/profile'
+    case 'purchase': case 'purchase_refunded': return '/store'
     default: return null
   }
 }
@@ -69,6 +70,9 @@ function Sentence({ a }: { a: ActivityItem }) {
       : d.action === 'unmute' ? <>An admin lifted your mute</>
       : d.action?.startsWith('mute_') ? <>An admin muted you until {d.until ? new Date(d.until).toLocaleString() : 'further notice'}</>
       : <>An admin took action on your account</>; break
+    case 'purchase': body = <>You bought {num(d.diamonds ?? 0)} diamonds</>; break
+    case 'purchase_refunded': body = <>Apple refunded a {num(d.bought ?? d.diamonds ?? 0)}-diamond purchase{d.diamonds
+      ? <>, so {num(d.diamonds)} diamond{d.diamonds === 1 ? ' was' : 's were'} taken back</> : <>. You'd already spent them</>}</>; break
     default: body = null
   }
   return <>{body}</>

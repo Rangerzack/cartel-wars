@@ -1,7 +1,8 @@
 -- Tests for in-app account deletion (#8): the typed confirmation, thugs, crew succession (Co-Capo, the longest-standing
 -- member, a crew of one), the Don, a poker seat, listings and buy orders settled before the profile goes, what other
--- players keep (trades, ledger, territory log, activity lines) and lose (fights, chat lines, DMs, forum posts), the
--- deleted_accounts tally, the dead session, and grants.
+-- players keep (fights, trades, ledger, territory log, activity lines) and lose (chat lines, DMs, forum posts), the
+-- deleted_accounts tally, the dead session, deletes straight from auth.users (the dashboard's "Delete user": a member, a
+-- Capo, a crew of one), and grants.
 -- Run after the other suites (reuses their helpers): scripts/local-db.sh test
 \set ON_ERROR_STOP on
 \set QUIET on
@@ -82,6 +83,10 @@ do $$ begin
   perform fill_order((select id from buy_orders where buyer_id = 'dd555555-5555-5555-5555-555555555555' and status = 'open'), 25);
   perform attack('dd555555-5555-5555-5555-555555555555');
 end $$;
+-- and Witness hits back, so Kingpin is on both sides of Witness's fight log
+update profiles set health = 100, stamina = 100 where id in ('dd111111-1111-1111-1111-111111111111', 'dd555555-5555-5555-5555-555555555555');
+select as_user('dd555555-5555-5555-5555-555555555555');
+do $$ begin perform attack('dd111111-1111-1111-1111-111111111111'); end $$;
 insert into territory_log (block_id, attacker_id, crew_id, success, attack, resistance)
 select min(id), 'dd111111-1111-1111-1111-111111111111', (select id from crews where name = 'Kingpin Crew'), true, 900, 400 from blocks;
 
@@ -133,14 +138,17 @@ do $$ begin perform crew_create('Solo Crew', '🎩'); perform cartel_create('Two
 select as_user('ddbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
 do $$ begin perform cartel_accept((select id from cartels where name = 'Two Crew Cartel')); end $$;
 
--- Before: Witness sees Kingpin's fight and DM
+-- Before: Witness sees Kingpin's fights and DM
 select as_user('dd555555-5555-5555-5555-555555555555');
 do $$ begin
-  assert exists (select 1 from jsonb_array_elements(get_fights()) e where e->>'attacker' = 'Kingpin');
+  assert exists (select 1 from jsonb_array_elements(get_fights()) e where e->>'attacker' = 'Kingpin' and e->>'defender' = 'Witness');
+  assert exists (select 1 from jsonb_array_elements(get_fights()) e where e->>'attacker' = 'Witness' and e->>'defender' = 'Kingpin');
   assert exists (select 1 from jsonb_array_elements(get_conversations()) e where e->>'other_id' = 'dd111111-1111-1111-1111-111111111111');
   assert (select reply_count from forum_threads where title = 'Witness thread') = 2;
 end $$;
 create temp table _test_counts as select (select count(*) from deleted_accounts) as deleted;
+create temp table _test_fights as select get_fights() as log, p.fights_won as won, p.fights_lost as lost, (combo_meta()->>'fights')::int as meta
+  from profiles p where p.id = 'dd555555-5555-5555-5555-555555555555';
 
 -- The confirmation, and thugs ------------------------------------------------------------------------------------------
 select as_user((select id::text from profiles where is_bot order by bot_level limit 1));
@@ -198,8 +206,8 @@ do $$ declare c crews; ca cartels; r jsonb; begin
   assert (r->'hand'->>'finished')::boolean and (r->'hand'->'result'->'won'->>'2')::bigint = (select blinds from _test_table), r::text;
 end $$;
 
--- Witness: trades, the activity lines and the territory log stay without the name; the fight, the chat line, the DMs
--- and Kingpin's forum posts are gone, and the threads they were in add up -------------------------------------------------
+-- Witness: fights, trades, the activity lines and the territory log stay without the name; the chat line, the DMs and
+-- Kingpin's forum posts are gone, and the threads they were in add up -----------------------------------------------------
 select as_user('dd555555-5555-5555-5555-555555555555');
 do $$ declare r jsonb; k text := 'dd111111-1111-1111-1111-111111111111'; t forum_threads; begin
   r := get_me();
@@ -212,8 +220,21 @@ do $$ declare r jsonb; k text := 'dd111111-1111-1111-1111-111111111111'; t forum
   assert exists (select 1 from jsonb_array_elements(r) e where e->>'kind' = 'filled' and e->>'actor_id' is null and e->>'actor' is null), r::text;
   r := get_territory_log(100);
   assert exists (select 1 from jsonb_array_elements(r) e where e->>'crew' = 'Kingpin Crew' and e->>'attacker_id' is null and e->>'attacker' is null), r::text;
+  -- both fights stay in Witness's log with Kingpin's side reading "Deleted player", and nothing else about them changed
   r := get_fights();
-  assert jsonb_typeof(r) = 'array' and not exists (select 1 from jsonb_array_elements(r) e where e->>'attacker' = 'Kingpin'), r::text;
+  assert exists (select 1 from jsonb_array_elements(r) e where e->>'attacker' = 'Deleted player' and e->>'attacker_id' is null
+                   and e->>'defender' = 'Witness' and not (e->>'i_attacked')::boolean), r::text;
+  assert exists (select 1 from jsonb_array_elements(r) e where e->>'defender' = 'Deleted player' and e->>'defender_id' is null
+                   and e->>'attacker' = 'Witness' and (e->>'i_attacked')::boolean), r::text;
+  assert (select array_agg(e - '{attacker,attacker_id,defender,defender_id}'::text[] order by (e->>'id')::bigint) from jsonb_array_elements(r) e)
+       = (select array_agg(e - '{attacker,attacker_id,defender,defender_id}'::text[] order by (e->>'id')::bigint) from jsonb_array_elements((select log from _test_fights)) e),
+         'who won, damage and cash read as before: ' || r::text;
+  assert not exists (select 1 from fights where k::uuid in (attacker_id, defender_id, winner_id)), 'no trace of the id';
+  -- Witness's record is untouched and still adds up to the log; the city's combo stats still count both fights
+  assert (select fights_won from profiles where id = auth.uid()) = (select won from _test_fights)
+     and (select fights_lost from profiles where id = auth.uid()) = (select lost from _test_fights);
+  assert (select fights_won + fights_lost from profiles where id = auth.uid()) = jsonb_array_length(r) and jsonb_array_length(r) = 2, r::text;
+  assert (combo_meta()->>'fights')::int = (select meta from _test_fights), combo_meta()::text;
   assert not exists (select 1 from jsonb_array_elements(get_messages('global', 500)) e where e->>'body' = 'kingpin was here');
   assert exists (select 1 from jsonb_array_elements(get_messages('global', 500)) e where e->>'body' = 'witness was here');
   assert not exists (select 1 from jsonb_array_elements(get_conversations()) e where e->>'other_id' = k), 'the DM conversation is gone';
@@ -267,6 +288,61 @@ do $$ declare ca cartels; r jsonb; begin
   assert (r->>'is_don')::boolean and r->>'don' = 'Ally Capo', r::text;
 end $$;
 
+-- Deleting straight from auth.users, as the Supabase dashboard's "Delete user" does: the profile delete trigger runs the
+-- same succession without touching the row on its way out --------------------------------------------------------------
+insert into auth.users (id, raw_user_meta_data) values
+  ('dc111111-1111-1111-1111-111111111111', '{"name":"Dash Capo"}'),
+  ('dc222222-2222-2222-2222-222222222222', '{"name":"Dash Co"}'),
+  ('dc333333-3333-3333-3333-333333333333', '{"name":"Dash Member"}'),
+  ('dc444444-4444-4444-4444-444444444444', '{"name":"Dash Lone"}');
+update profiles set cash = 1000000 where id::text like 'dc%';
+select as_user('dc111111-1111-1111-1111-111111111111');
+do $$ begin perform crew_create('Dash Crew', '💨'); perform cartel_create('Dash Cartel'); perform crew_bank(3000); end $$;
+select as_user('dc222222-2222-2222-2222-222222222222');
+do $$ begin perform crew_apply((select id from crews where name = 'Dash Crew')); end $$;
+select as_user('dc333333-3333-3333-3333-333333333333');
+do $$ begin perform crew_apply((select id from crews where name = 'Dash Crew')); end $$;
+select as_user('dc111111-1111-1111-1111-111111111111');
+do $$ begin perform crew_decide('dc222222-2222-2222-2222-222222222222', true); perform crew_decide('dc333333-3333-3333-3333-333333333333', true);
+  perform crew_set_co_capo('dc222222-2222-2222-2222-222222222222'); end $$;
+select as_user('dc444444-4444-4444-4444-444444444444');
+do $$ begin perform crew_create('Dash Lone Crew', '🌘'); perform cartel_create('Dash Lone Cartel'); end $$;
+update blocks set owner_crew_id = (select id from crews where name = 'Dash Lone Crew'), taken_at = now(), bonus_at = now() + interval '1 day'
+ where id = (select max(id) from blocks where owner_crew_id is null);
+
+-- a member: the crew carries on as it was
+delete from auth.users where id = 'dc333333-3333-3333-3333-333333333333';
+do $$ declare c crews; begin
+  select * into c from crews where name = 'Dash Crew';
+  assert not exists (select 1 from profiles where id = 'dc333333-3333-3333-3333-333333333333');
+  assert c.capo_id = 'dc111111-1111-1111-1111-111111111111' and c.co_capo_id = 'dc222222-2222-2222-2222-222222222222' and c.bank = 3000, row_to_json(c)::text;
+  assert (select count(*) from profiles where crew_id = c.id) = 2;
+end $$;
+
+-- the Capo, who is also the Don: the Co-Capo takes the crew and the cartel, and the bank stays
+delete from auth.users where id = 'dc111111-1111-1111-1111-111111111111';
+select as_user('dc222222-2222-2222-2222-222222222222');
+do $$ declare c crews; r jsonb; begin
+  select * into c from crews where name = 'Dash Crew';
+  assert not exists (select 1 from profiles where id = 'dc111111-1111-1111-1111-111111111111');
+  assert c.capo_id = auth.uid() and c.co_capo_id is null and c.bank = 3000, row_to_json(c)::text;
+  assert (select don_id from cartels where name = 'Dash Cartel') = auth.uid(), 'and is Don now';
+  assert (select array_agg(id) from profiles where crew_id = c.id) = array[auth.uid()];
+  r := get_me();
+  assert (r->'crew'->>'is_capo')::boolean and (r->'cartel'->>'is_don')::boolean, r::text;
+  r := get_bank_ledger('crew');
+  assert exists (select 1 from jsonb_array_elements(r) e where e->>'kind' = 'deposit' and (e->>'amount')::bigint = 3000 and e->>'player_id' is null), r::text;
+end $$;
+
+-- a crew of one: it disbands, its block goes free, and the cartel it was alone in dissolves
+do $$ declare b int := (select id from blocks where owner_crew_id = (select id from crews where name = 'Dash Lone Crew')); begin
+  assert b is not null;
+  delete from auth.users where id = 'dc444444-4444-4444-4444-444444444444';
+  assert not exists (select 1 from profiles where id = 'dc444444-4444-4444-4444-444444444444');
+  assert not exists (select 1 from crews where name = 'Dash Lone Crew') and not exists (select 1 from cartels where name = 'Dash Lone Cartel');
+  assert (select owner_crew_id is null and bonus_at is null from blocks where id = b), 'the block is free';
+end $$;
+
 -- The tally: one row each, nothing that identifies anyone --------------------------------------------------------------
 do $$ declare n0 bigint := (select deleted from _test_counts); begin
   assert (select count(*) from deleted_accounts) = n0 + 4;
@@ -274,7 +350,8 @@ do $$ declare n0 bigint := (select deleted from _test_counts); begin
        = array['id', 'deleted_at', 'days_played', 'had_purchases'];
   assert (select array_agg(days_played order by id) from (select * from deleted_accounts order by id desc limit 4) x) = array[0, 12, 0, 0];
   assert (select array_agg(had_purchases order by id) from (select * from deleted_accounts order by id desc limit 4) x) = array[false, false, true, false];
-  assert not exists (select 1 from auth.users where id::text similar to 'dd(1|6|9|a)%');
+  assert not exists (select 1 from auth.users where id in ('dd111111-1111-1111-1111-111111111111', 'dd666666-6666-6666-6666-666666666666',
+                                                           'dd999999-9999-9999-9999-999999999999', 'ddaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'));
 end $$;
 
 -- Grants: signed-in players only; the tally is private ----------------------------------------------------------------

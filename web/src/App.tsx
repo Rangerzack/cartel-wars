@@ -20,6 +20,7 @@ import Casino from './pages/Casino'
 import PokerTable from './pages/PokerTable'
 import Forum from './pages/Forum'
 import Admin from './pages/Admin'
+import Store from './pages/Store'
 import { features } from './lib/features'
 import { Toasts } from './components/ui'
 import { SetNewPassword } from './components/Account'
@@ -51,6 +52,7 @@ function Gate() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/accolades" element={<Accolades />} />
         <Route path="/activity" element={<Activity />} />
+        <Route path="/store" element={<Store />} />
         <Route path="/casino" element={<Casino />} />
         {features.casinoGames.length > 1 && <Route path="/casino/table/:id" element={<PokerTable />} />}
         <Route path="/casino/:game" element={<Casino />} />

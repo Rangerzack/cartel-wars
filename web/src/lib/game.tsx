@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { api, GameError } from './api'
-import { RESUME_EVENT } from './platform'
+import { isNative, RESUME_EVENT } from './platform'
+import { initStore, logOutStore } from './store'
 import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
@@ -81,6 +82,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     })
     return () => sub.subscription.unsubscribe()
   }, [])
+
+  // In the iOS app RevenueCat follows the signed-in player, so the webhook credits purchases to this user id (lib/store.ts).
+  const uid = session?.user.id
+  useEffect(() => {
+    if (isNative) (uid ? initStore(uid) : logOutStore()).catch(() => {})
+  }, [uid])
 
   const toast = useCallback((text: string, kind: Toast['kind'] = 'info') => {
     const id = ++toastId.current

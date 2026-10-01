@@ -116,6 +116,8 @@ export type DropKind = 'herb' | 'dust' | 'pills' | 'diamonds' | 'cash' | 'refill
 export interface DropPrize { code: string; label: string; kind: DropKind; amount: number; weight: number; jackpot: boolean; sort: number }
 export interface DropState {
   subscribed: boolean; since: string | null; until: string | null; crates: number; max: number; opened: number
+  /** The plan came from the App Store: it renews through Apple and is cancelled in the device settings. */
+  drop_paid?: boolean
   last: { label: string; kind: DropKind; amount: number; jackpot: boolean; at: string } | null
 }
 export interface DropResult { code: string; label: string; kind: DropKind; amount: number; jackpot: boolean; crates: number }
@@ -166,8 +168,12 @@ export interface Catalog {
   combos?: ComboDef[]
   /** The diamond milestone ladder: n actions or fight wins pays reward diamonds, once. */
   milestones?: MilestoneDef[]
+  /** In-app purchases: the diamond packs on sale and the Daily Drop's product id. Prices come from StoreKit. */
+  store?: { packs: StorePack[]; drop_product: string }
   config: Record<string, number>
 }
+/** A diamond pack: its App Store product id and how many diamonds it credits. */
+export interface StorePack { id: string; diamonds: number }
 export interface MilestoneDef { key: string; kind: 'actions' | 'wins'; n: number; reward: number }
 
 export interface PlayerSummary {
@@ -226,7 +232,8 @@ export interface ThugRow {
   hospital: boolean; win_pct: number; hits: number; dry: boolean; combo?: string | null
 }
 export interface FightLog {
-  id: number; attacker: string; attacker_id: string; defender: string; defender_id: string
+  /** A side whose player deleted their account has a null id and the name "Deleted player". */
+  id: number; attacker: string; attacker_id: string | null; defender: string; defender_id: string | null
   attacker_dmg: number; defender_dmg: number; cash: number; won: boolean; i_attacked: boolean; at: string
   attacker_combo?: string | null; defender_combo?: string | null; attacker_combo_bonus?: number; defender_combo_bonus?: number
 }
@@ -326,9 +333,12 @@ export interface Message { id: number; sender_id: string; sender_name: string; b
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
 export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash' | 'moderated'
+  | 'purchase' | 'purchase_refunded'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
-  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string; until?: string }
+  data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string; until?: string
+          /** purchase: diamonds credited; purchase_refunded: diamonds taken back, of the `bought` the refunded pack gave */
+          diamonds?: number; bought?: number }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null

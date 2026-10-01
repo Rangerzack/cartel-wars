@@ -105,6 +105,7 @@ export default function Player() {
               <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" value={dia || ''} onChange={e => setDia(Number(e.target.value) || 0)} />
               <Btn className="blue" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
             </div>
+            <div className="small muted">Only diamonds you earned in the game can be sent. Bought ones stay with you.</div>
           </div>
         </Card>
       )}

@@ -20,7 +20,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
 | Heat | 0 | 100 (+50 per 💎30 upgrade, no cap *(Zack)*) | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+ at base; each heat upgrade moves both lines up 50 with the max (one upgrade: max 150, yellow 90, red 125). Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
-| Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop; no real-money purchase in this clone. |
+| Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop, or bought in the iOS app (see Store). |
 
 Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.
 Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
@@ -224,8 +224,9 @@ These are 75% of the launch values (cut 2026-10-01 along with block bonuses).
 
 ## Daily Drop *(Zack's idea and odds)*
 
-A subscription that leaves one crate a day. It will be $2.99 a month; for now
-it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
+A subscription that leaves one crate a day. It will be a monthly App Store subscription
+in the iOS app (see Store); for now it's free (`_cfg drop_free = 1`) and players subscribe
+with a button on Home or in the Store.
 
 - A crate lands at every 00:00 UTC rollover while subscribed, and one straight
   away on subscribing (once per game day, so re-subscribing doesn't farm crates).
@@ -247,8 +248,10 @@ it's free (`_cfg drop_free = 1`) and players subscribe with a button on Home.
 - Free Refills are stamina refill credits: a full refill each that doesn't count
   toward the three product refills a day. Hustlers are credits, one hustler each:
   they waive the $400 hire fee, or for a Trader that hustler's cut.
-- Paid plan, later: the payment webhook calls `_drop_subscribe(player, paid_through)`
-  and `drop_free` goes to 0. Crates stop after the paid-through day.
+- The card shows this table, with each prize's odds, above the Subscribe button
+  (Apple's rule for paid random prizes).
+- Paid plan: the store webhook calls `_drop_subscribe(player, paid_through)` (see Store).
+  Crates stop after the paid-through day.
 
 ## Heat, police and jail
 
@@ -529,13 +532,61 @@ Apple wants an app that makes accounts to let people delete them in the app (gui
 - **Loose ends** are settled first, the usual way: open listings and buy orders are cancelled, and a poker seat is given
   up, folding a live hand so the table plays on (chips already in that pot go with the player).
 - **Gone**: the sign-in, the profile and everything in it (cash, bank, diamonds, gear, product, grow houses, hustlers,
-  hoodlums), chat lines, DMs (both sides of the conversation), forum threads (with their replies) and replies, fights
-  (from both players' logs), casino history, reports and blocks.
-- **Stays, without the name**: market trades, crew and cartel ledger entries, the territory log and other players'
-  activity lines ("A deleted player attacked you"). Threads that lost replies are recounted.
-- `deleted_accounts` keeps a tally — the date, days from sign-up, and whether the account ever paid (the Daily Drop's
-  paid plan) — and nothing that identifies the player.
+  hoodlums), chat lines, DMs (both sides of the conversation), forum threads (with their replies) and replies, casino
+  history, reports and blocks.
+- **Stays, without the name**: fights (the other player's log reads "Deleted player attacked you" with nothing to tap,
+  so their win/loss record still adds up to it, and the city's combo stats keep counting them), market trades, crew and
+  cartel ledger entries, the territory log and other players' activity lines ("A deleted player attacked you"). Threads
+  that lost replies are recounted.
+- **Deleting the user in the Supabase dashboard** runs the same crew succession (the profile delete trigger), so it works
+  for Capos and crew members too. The other loose ends (listings, buy orders, a poker seat, DMs, thread counts, the
+  tally) are only settled by the in-app delete.
+- `deleted_accounts` keeps a tally — the date, days from sign-up, and whether the account ever paid (a paid Daily
+  Drop, or diamonds bought and not refunded) — and nothing that identifies the player.
 - Deleting doesn't cancel an Apple subscription; the sheet, Support and the Privacy Policy all say so.
+
+## Store *(Zack, 2026-10-01)*
+
+Diamond packs and the Daily Drop subscription are sold through Apple's in-app purchase in the iOS app (guideline
+3.1.1). RevenueCat runs the purchase on the phone and tells the server through a webhook (the `iap-webhook` edge
+function, which calls `iap_apply`); setup is in `docs/ops.md`. The web build sells nothing: its Store (Home →
+Diamonds) lists the packs with "Diamonds are sold in the iPhone app" and no prices or buttons.
+
+- **Packs are data.** `store_packs` holds each App Store product id, its diamonds and its place in the list. The
+  suggested packs (#7) are 100, 550, 1,200, 2,600, 7,000 and 15,000 diamonds. Prices are set per product in App
+  Store Connect and come from StoreKit on the phone, in the player's currency; the game never names one. In the app
+  the Store shows only the packs the App Store actually sells. A pack switched off (`active`) leaves the Store, and a
+  late purchase of it still pays out.
+- **Buying**: StoreKit takes the payment, the webhook credits the pack, and Activity says "You bought N diamonds".
+  The app watches for the diamonds for up to 20 seconds ("Delivering…"), then says they're on their way.
+- **Purchased diamonds never expire and can't be gifted.** Send Diamonds only sends diamonds earned in the game
+  (the starter 25, milestones, crates, gifts from others): "You can only send diamonds you earned in the game".
+  That's Apple's rule on gifting purchases, and it closes the stolen card → alt account → chargeback loop.
+  Spending takes purchased diamonds first, so as much as possible of what's left can be sent. The server keeps the
+  count in `profiles.diamonds_bought_unspent`; a trigger on `profiles` takes every drop in diamonds off it (floored
+  at 0) instead of changing the twenty-odd places diamonds are spent, and Send Diamonds puts the gift back because a
+  gift is earned diamonds.
+- **Refunds claw back.** When Apple refunds a pack, the diamonds that purchase gave come off the balance, never
+  below 0: what was already spent stays spent. Activity says how many were taken back. `diamonds_bought` (lifetime)
+  drops by the pack too.
+- **The webhook is idempotent and on the record.** Every call writes one `iap_grants` row, keyed on (provider,
+  transaction, event), so RevenueCat's retries change nothing; ignored calls (unknown products, unknown players,
+  events we don't use) are recorded too. The rows stay, without the player, when an account is deleted.
+- **The Daily Drop subscription** (`io.rangelab.cartelwars.drop.monthly`, monthly, renews until cancelled): a
+  purchase, renewal, re-enabled renewal or plan change pays it through the end of the period Apple reports
+  (`drop_until`), and a late event never moves that date back. Expiry lets it lapse; a refund ends it at once;
+  turning off renewal or a billing problem changes nothing until Apple says it has expired (a billing problem gets
+  Apple's grace period first). A paid plan is cancelled in the device settings, not in the game: the card says
+  "paid through" and has Manage subscription where Cancel was. Crates already left stay either way.
+- **Free until it goes live.** While `drop_free` is 1 anyone can take the free plan, in the app too. Zack sets it to
+  0 when the subscription goes live: from then on the app's Subscribe button is the App Store purchase (with the
+  price, "per month, renews until cancelled", and the Terms and Privacy links), the web says it's an iPhone
+  subscription, and `subscribe_drop` refuses.
+- **Odds before purchase.** The Daily Drop card always shows the prize table and each prize's odds above Subscribe
+  (guideline 3.1.1 on paid random prizes), with Terms and Privacy links next to the button (3.1.2). Diamond packs
+  are fixed amounts.
+- **Restore purchases** in the Store brings back a subscription bought on the same Apple ID. Packs are used up when
+  bought, so there's nothing to restore for them.
 
 ## Economy at a glance (for tuning)
 
@@ -579,8 +630,9 @@ What differs from the web:
   password there and signs in to the app with it.
 - Coming back to the app refreshes the player state at once. The tab bar hides
   while the keyboard is up.
-- **Purchases** (diamonds, if they're ever sold) will go through Apple's in-app
-  purchase inside the app (guideline 3.1.1). That comes later.
+- **Purchases**: diamond packs and the Daily Drop subscription go through Apple's
+  in-app purchase inside the app (guideline 3.1.1); the web build sells nothing
+  (see Store).
 
 Both builds: if the first load can't reach the server (offline, dead Wi-Fi), the
 game shows **Can't reach the city** with a Retry button instead of a spinner.

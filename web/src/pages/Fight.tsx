@@ -118,13 +118,14 @@ function Log() {
       {!list && <Empty><span className="spin" /></Empty>}
       {list?.length === 0 && <Empty>No fights yet.</Empty>}
       {list?.map(f => {
-        const other = f.i_attacked ? f.defender : f.attacker
         const otherId = f.i_attacked ? f.defender_id : f.attacker_id
+        // a player who deleted their account has no profile to open
+        const other = otherId ? (f.i_attacked ? f.defender : f.attacker) : <span className="muted">Deleted player</span>
         return (
-          <div key={f.id} className="row link" onClick={() => nav(`/player/${otherId}`)}>
+          <div key={f.id} className={otherId ? 'row link' : 'row'} onClick={otherId ? () => nav(`/player/${otherId}`) : undefined}>
             <span style={{ fontSize: 18 }}>{f.won ? '🏆' : '💀'}</span>
             <div className="grow">
-              <div className="t">{f.i_attacked ? `You attacked ${other}` : `${other} attacked you`}</div>
+              <div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div>
               <div className="s">{f.won ? 'Won' : 'Lost'} · dealt {f.i_attacked ? f.attacker_dmg : f.defender_dmg}, took {f.i_attacked ? f.defender_dmg : f.attacker_dmg} · {ago(f.at, now)}</div>
               {(f.attacker_combo || f.defender_combo) && (
                 <div className="s combo-vs">

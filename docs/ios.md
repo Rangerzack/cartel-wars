@@ -3,8 +3,8 @@
 The App Store build is the web app inside a native shell ([Capacitor 8](https://capacitorjs.com)).
 `web/ios/` is a normal Xcode project. Its `App/App/public/` folder holds a copy of `web/dist`,
 built with `BASE_PATH=/` and copied in by `npx cap sync ios`. That folder is not committed; every build
-regenerates it. Native plugins: App, Browser, Haptics, Keyboard, Splash Screen and Status Bar, pulled in
-with Swift Package Manager (no CocoaPods).
+regenerates it. Native plugins: App, Browser, Haptics, Keyboard, Splash Screen, Status Bar and RevenueCat
+Purchases (in-app purchases, see `docs/ops.md`), pulled in with Swift Package Manager (no CocoaPods).
 
 ## How a build gets to TestFlight
 

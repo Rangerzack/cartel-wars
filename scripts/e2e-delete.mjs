@@ -1,6 +1,6 @@
 // Browser walkthrough for in-app account deletion (#8): Profile → Delete account, the typed street name that unlocks
 // the button, deleting, landing back on sign-in, the old login no longer working, and another player's activity line
-// about them showing "A deleted player".
+// about them showing "A deleted player" and their fight staying in that player's log as "Deleted player", with no link.
 // Usage (local stack running): node scripts/e2e-delete.mjs [--shots dir]
 import { chromium } from 'playwright'
 import fs from 'node:fs'
@@ -46,6 +46,8 @@ try {
   const wId = (await one('select id from profiles where name = $1', [`Witness${RUN}`])).id
   // the goner hit the witness once (the insert writes the witness's activity line, as attack() does)
   await db.query('insert into fights (attacker_id, defender_id, attacker_dmg, defender_dmg, cash_taken, winner_id) values ($1, $2, 30, 10, 0, $2)', [id, wId])
+  await db.query('update profiles set fights_won = fights_won + 1 where id = $1', [wId])
+  await db.query('update profiles set fights_lost = fights_lost + 1 where id = $1', [id])
   const tally = await count('select count(*) as n from deleted_accounts')
 
   // Profile → Delete account: the button stays off until the street name is typed (any case)
@@ -86,6 +88,26 @@ try {
   await w.goto(`${BASE}/activity`)
   await w.locator('.activity', { hasText: 'A deleted player attacked you' }).waitFor()
   await snap(w, 'witness-activity')
+
+  // ...and so does the fight, in My Fights and on Home: "Deleted player", not a link, and tapping it goes nowhere
+  await w.goto(`${BASE}/fight?tab=log`)
+  const fightRow = w.locator('.row', { hasText: 'Deleted player attacked you' })
+  await fightRow.waitFor()
+  if (await fightRow.evaluate(el => el.classList.contains('link'))) throw new Error('a deleted side is not a link')
+  if (await fightRow.locator('a').count()) throw new Error('no link inside the row either')
+  await fightRow.click()
+  await w.waitForTimeout(300)
+  if (!w.url().includes('/fight')) throw new Error(`tapping a deleted side stays put, went to ${w.url()}`)
+  if (await w.locator('.row', { hasText: name }).count()) throw new Error('the old name is nowhere in the log')
+  await snap(w, 'witness-fights')
+  await w.goto(BASE)
+  const homeRow = w.locator('.card', { hasText: 'Latest fights' }).locator('.row', { hasText: 'Deleted player attacked you' })
+  await homeRow.waitFor()
+  await w.getByText('1W · 0L').waitFor()   // the record still adds up to the log
+  await homeRow.click()
+  await w.waitForTimeout(300)
+  if (new URL(w.url()).pathname.includes('/player/')) throw new Error(`Home's latest fights stays put too, went to ${w.url()}`)
+  await snap(w, 'witness-home')
 
   console.log('E2E DELETE PASSED')
 } catch (e) {
