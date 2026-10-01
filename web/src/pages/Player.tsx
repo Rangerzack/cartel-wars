@@ -38,7 +38,9 @@ export default function Player() {
 
   async function fight() {
     const r = await run(() => api.attack(p!.id), { silent: true })
-    if (r) { setResult(r); load(); loadPreview() }
+    if (r) setResult(r)
+    // reload either way: a refusal (they just went to the hospital, say) is what disables Attack again
+    load(); loadPreview()
   }
   async function block() {
     if (!confirm(`Block ${p!.name}? They can't message you and their posts are hidden. You can undo this from your Profile.`)) return
@@ -143,6 +145,14 @@ export default function Player() {
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
             {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
+            {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
+            <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
+            {cantFight && <div className="why">{
+              p.hospital ? `${p.name} is in the hospital — let them heal up.`
+              : me.hospital ? "You're in the hospital. Check out at Services."
+              : jailWall ? (me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them.")
+              : `You need 2 stamina to fight — it comes back ${catalog?.config.stamina_regen_amount ?? 2} ${every(catalog?.config.stamina_regen_minutes ?? 10)}.`
+            }</div>}
           </div>
         </Modal>
       )}

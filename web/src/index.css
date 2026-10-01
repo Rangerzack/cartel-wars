@@ -390,13 +390,14 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 
 /* Territory map ---------------------------------------------------------- */
 .blocks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; }
-.block {
+/* the tile class is also the .btn.block modifier (a full-width button), so the tile rules stay off buttons */
+.block:not(.btn) {
   position: relative; border: 1px solid #2a2a33; border-radius: 9px; padding: 8px 6px; text-align: center; font-size: 12px; cursor: pointer;
   min-height: 62px; display: flex; flex-direction: column; justify-content: center; gap: 3px;
   background: linear-gradient(#18181d, #0f0f12); box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 2px 6px rgba(0,0,0,.45);
   transition: transform .1s ease, box-shadow .15s ease;
 }
-@media (hover: hover) { .block:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 6px 14px rgba(0,0,0,.55); } }
+@media (hover: hover) { .block:not(.btn):hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 6px 14px rgba(0,0,0,.55); } }
 .block b { font-family: var(--display); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; font-size: 13px; }
 .block.mine { border-color: #2e9c4f; background: linear-gradient(#173222, #0c1a11); box-shadow: 0 1px 0 rgba(140,255,170,.12) inset, 0 0 14px rgba(46,156,79,.18), 0 2px 6px rgba(0,0,0,.45); }
 .block.enemy { border-color: #8a2e28; background: linear-gradient(#321614, #1a0c0b); box-shadow: 0 1px 0 rgba(255,150,140,.1) inset, 0 0 14px rgba(168,50,43,.16), 0 2px 6px rgba(0,0,0,.45); }
