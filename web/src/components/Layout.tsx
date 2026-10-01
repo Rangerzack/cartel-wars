@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, type MouseEvent, type ReactNode } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useGame } from '../lib/game'
 import { money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
@@ -26,20 +26,35 @@ function badges(me: Me): Record<string, Badge> {
   }
 }
 
-function Bar({ cls, label, value, max, extra }: { cls: string; label: string; value: number; max: number; extra?: string }) {
-  const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))
+/** `mark`: a value to draw a 1 px tick at on the track (heat: where red, the bust risk, starts). */
+function Bar({ cls, label, value, max, extra, mark }: { cls: string; label: string; value: number; max: number; extra?: string; mark?: number }) {
+  const pct = (v: number) => Math.max(0, Math.min(100, (v / Math.max(1, max)) * 100))
   return (
     <div className={`bar ${cls}`}>
       <div className="lbl"><span>{label}</span><span>{num(value)}/{num(max)}{extra ? ` · ${extra}` : ''}</span></div>
-      <div className="track"><div className="fill" style={{ width: pct + '%' }} /></div>
+      <div className="track"><div className="fill" style={{ width: pct(value) + '%' }} />{mark !== undefined && mark < max && <i className="mark" style={{ left: pct(mark) + '%' }} />}</div>
     </div>
   )
 }
 
+/** A top-bar shortcut (P2-5): looks exactly like the plain text it replaces. Tapping it while already on that card
+ *  (Services doesn't re-run its scroll for the same ?focus=) brings the card back into view and flashes it again. */
+function TopLink({ to, label, className = '', children }: { to: string; label: string; className?: string; children: ReactNode }) {
+  const loc = useLocation()
+  const again = (e: MouseEvent) => {
+    if (loc.pathname + loc.search !== to) return
+    const el = document.getElementById(new URLSearchParams(to.split('?')[1] ?? '').get('focus') ?? '')
+    if (!el) return
+    e.preventDefault()
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+    el.classList.remove('focused'); void el.offsetWidth; el.classList.add('focused')
+  }
+  return <Link to={to} className={`tb-link ${className}`.trim()} aria-label={label} onClick={again}>{children}</Link>
+}
+
 export default function Layout() {
-  const { me } = useGame()
+  const { me, catalog, netDown } = useGame()
   const now = useNow()
-  const nav = useNavigate()
   const b = me ? badges(me) : {}
   const unread = (me?.unread_activity ?? 0) + (me?.unread_dms ?? 0)
   // (2) in the browser tab title, and the home-screen app icon badge where the platform supports it
@@ -61,22 +76,30 @@ export default function Layout() {
       <Toasts />
       {me && (
         <header className="topbar">
-          <div className="title" onClick={() => nav('/profile')}>
+          <Link to="/profile" className="title tb-link" aria-label={`${me.name}, ${me.crew ? me.crew.name : 'no crew'}: your profile`}>
             <span className="av">{me.avatar}</span>
             <span className="who"><b>{me.name}</b><small>{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'no crew'}</small></span>
-          </div>
+          </Link>
           <div className="money tabular">
-            <span className="cash">{money(me.cash)}</span><span className="dia">💎 {num(me.diamonds)}</span>
-            <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} />
+            <TopLink to="/services?focus=bank" className="cash" label={`${money(me.cash)} cash: bank`}>{money(me.cash)}</TopLink>
+            <TopLink to="/store" className="dia" label={`${num(me.diamonds)} diamonds: store`}>💎 {num(me.diamonds)}</TopLink>
+            <TopLink to="/services?focus=police" label={`Heat ${num(me.heat)} of ${num(me.heat_max)}: police`}>
+              <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} mark={me.heat_red ?? catalog?.config.heat_red} />
+            </TopLink>
           </div>
           <div className="bars">
-            <Bar cls="stamina" label="⚡ Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
-            <Bar cls="health" label="❤️ Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
+            <TopLink to="/services?focus=refills" label={`Stamina ${num(me.stamina)} of ${num(me.stamina_max)}: refills`}>
+              <Bar cls="stamina" label="⚡ Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
+            </TopLink>
+            <TopLink to="/services?focus=hospital" label={`Health ${num(me.health)} of ${num(me.health_max)}: hospital`}>
+              <Bar cls="health" label="❤️ Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
+            </TopLink>
           </div>
         </header>
       )}
-      {me && (me.jailed || me.hospital) && (
+      {me && (me.jailed || me.hospital || netDown) && (
         <div className="status-strip">
+          {netDown && <span className="pill red">📡 Offline · retrying</span>}
           {me.jailed && <span className="pill red">🔒 In jail{me.jail_until ? ` · ${timeLeft(me.jail_until, now)}` : ' · until bail'}</span>}
           {me.hospital && <span className="pill red">🏥 Hospitalized</span>}
         </div>

@@ -36,7 +36,7 @@ export function ReportModal({ kind = 'profile', id, name, refId, quote, onClose 
         <div className="small muted">What's wrong with {what[kind]}? An admin will take a look — reports are private.</div>
         {kind === 'profile' ? <Seg value={reason} onChange={setReason} options={profileReasons} /> : <Seg value={contentReason} onChange={setContentReason} options={contentReasons} />}
         <textarea className="input" rows={2} maxLength={200} placeholder="Anything the admin should know (optional)" value={note} onChange={e => setNote(e.target.value)} />
-        <Btn className="doit red block" onClick={async () => { const r = await run(send, { ok: () => 'Thanks — an admin will take a look' }); if (r) onClose() }}>Send Report</Btn>
+        <Btn className="doit block" onClick={async () => { const r = await run(send, { ok: () => 'Thanks — an admin will take a look' }); if (r) onClose() }}>Send Report</Btn>
       </div>
     </Modal>
   )

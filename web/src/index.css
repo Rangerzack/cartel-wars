@@ -12,6 +12,8 @@
   --green: #4cc26b;
   --yellow: #e8c547;
   --red: #e0483f;
+  /* red as text on cards: --red is 4.2:1 on #1c1c22, this is 5.3:1. Fills and buttons keep --red (P2-7) */
+  --red-text: #f0625a;
   --blue: #5aa9ff;
   --diamond: #8fd3ff;
   --tab-h: 60px;
@@ -60,6 +62,13 @@ input, select, textarea { font: inherit; }
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; align-items: center;
 }
 .topbar .title { display: flex; align-items: center; gap: 9px; min-width: 0; cursor: pointer; }
+/* top-bar shortcuts (P2-5): links drawn exactly like the text and bars they wrap; `all: unset` drops the link colour,
+   so the focus ring and the no-callout/no-select of other controls are set again here */
+.tb-link {
+  all: unset; box-sizing: border-box; cursor: pointer; border-radius: 6px;
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+.tb-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .av {
   width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 20px; line-height: 1;
   background: radial-gradient(circle at 35% 28%, #44444f, #141418 72%);
@@ -73,7 +82,7 @@ input, select, textarea { font: inherit; }
 .topbar .dia { font-family: var(--display); font-weight: 500; font-size: 16px; color: var(--diamond); text-shadow: 0 0 10px rgba(143,211,255,.25), 0 1px 0 #000; white-space: nowrap; }
 .bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .bar { font-size: 11px; color: var(--muted); }
-.bar .lbl { display: flex; justify-content: space-between; margin-bottom: 3px; font-variant-numeric: tabular-nums; font-size: 10.5px; letter-spacing: .3px; }
+.bar .lbl { display: flex; justify-content: space-between; margin-bottom: 3px; font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: .3px; }
 .bar .lbl span:first-child { text-transform: uppercase; letter-spacing: .7px; font-weight: 600; }
 .bar .track { position: relative; height: 8px; background: linear-gradient(#040405, #121216); border-radius: 5px; overflow: hidden; border: 1px solid #000; box-shadow: 0 1px 0 rgba(255,255,255,.07); }
 .bar .fill { position: relative; height: 100%; border-radius: 4px; transition: width .5s cubic-bezier(.2,.8,.2,1); box-shadow: 0 0 10px var(--glow, transparent); }
@@ -81,6 +90,8 @@ input, select, textarea { font: inherit; }
 .bar.mini { width: 70px; font-weight: 500; }
 .bar.mini .lbl { margin-bottom: 1px; }
 .bar.mini .track { height: 6px; }
+/* where red heat (the bust risk) starts on the top-bar heat bar */
+.bar .track .mark { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; background: #ff8a80; box-shadow: 0 0 0 .5px rgba(0,0,0,.45); }
 .bar.stamina .fill { background: linear-gradient(90deg, #1b64ad, #4cb6f7); --glow: rgba(76,182,247,.45); }
 .bar.health .fill { background: linear-gradient(90deg, #17803a, #5ad67f); --glow: rgba(90,214,127,.4); }
 .bar.heat.green .fill { background: linear-gradient(90deg, #1f7a3c, #5ad67f); --glow: rgba(90,214,127,.35); }
@@ -105,10 +116,11 @@ input, select, textarea { font: inherit; }
 .tabbar .inner { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); height: var(--tab-h); }
 .tabbar a {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: #74748a; font-family: var(--display); font-size: 10.5px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+  color: #8c8ca0; font-family: var(--display); font-size: 11.5px; font-weight: 500; letter-spacing: .4px; text-transform: uppercase;
 }
 .tabbar a .ic { font-size: 21px; line-height: 1; filter: grayscale(1) brightness(1.05) opacity(.8); transition: transform .15s ease, filter .15s ease; }
-.tabbar a:hover .ic { filter: grayscale(.4) opacity(.95); }
+/* hover only where there's a pointer: iOS keeps :hover after a tap, leaving a stray chevron or lifted tile (P3-2) */
+@media (hover: hover) { .tabbar a:hover .ic { filter: grayscale(.4) opacity(.95); } }
 .tabbar a.active { color: var(--gold-hi); text-shadow: 0 0 10px rgba(227,179,65,.35); }
 .tabbar a.active .ic { filter: drop-shadow(0 2px 6px rgba(227,179,65,.35)); transform: translateY(-2px) scale(1.06); }
 .tabbar a.active::before {
@@ -150,14 +162,21 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
 .row .grow { flex: 1; min-width: 0; }
 .row .t { font-weight: 600; }
 .row .s { font-size: 12.5px; color: var(--muted); }
-.row.link { cursor: pointer; }
-.row.link:hover { background: rgba(255,255,255,.025); }
+.row.link { cursor: pointer; min-height: 44px; }
+/* rows that navigate are real links or buttons (RowLink in ui.tsx): focusable and announced as such, drawn like the div rows */
+a.row.link, button.row.link { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.055); color: inherit; font: inherit; }
+a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
+/* a text link that runs code rather than navigating (was <a onClick> with no href, which can't take focus) */
+.linkbtn { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; }
+/* one focus ring for everything that can take focus, in the house colour (buttons and inputs already had theirs) */
+:where(a, button, summary, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (hover: hover) { .row.link:hover { background: rgba(255,255,255,.025); } }
 .row.link:active { background: rgba(227,179,65,.07); }
 .chev { color: #6a6a7a; font-size: 20px; line-height: 1; transition: transform .12s; }
-.row.link:hover .chev { transform: translateX(2px); color: var(--gold); }
+@media (hover: hover) { .row.link:hover .chev { transform: translateX(2px); color: var(--gold); } }
 .muted { color: var(--muted); }
 .gold { color: var(--gold); }
-.red { color: var(--red); }
+.red { color: var(--red-text); }
 .green { color: var(--green); }
 .dia { color: var(--diamond); }
 .small { font-size: 12.5px; }
@@ -173,9 +192,13 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
   background: linear-gradient(#121216, #1b1b21); border: 1px solid #0a0a0d;
   box-shadow: 0 1px 0 rgba(255,255,255,.055), 0 2px 5px rgba(0,0,0,.55) inset;
 }
-.stat .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .9px; font-weight: 600; }
+/* 11 px for legibility (P2-7); the tracking came down from .9 px so labels take the same width and wrap where they did */
+.stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
 .stat .v { font-family: var(--display); font-size: 21px; font-weight: 600; letter-spacing: .3px; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.25; }
+/* last-resort ellipsis for a value that still doesn't fit; the padding (cancelled by the margin) leaves the glow room before the clip */
+.stat .v { overflow: hidden; text-overflow: ellipsis; padding: 6px 10px; margin: -6px -10px; }
 .stat .v.sm { font-size: 16px; }
+/* a value wider than its tile is stepped down by Stat (ui.tsx) to 16, 14 or 12.5 px, measured, so "$8,420,000" and "1,640/10,936" fit a 375 px three-column grid */
 .stat .v.gold { color: var(--gold); text-shadow: 0 0 14px rgba(227,179,65,.28); }
 .stat .v.dia { text-shadow: 0 0 12px rgba(143,211,255,.25); }
 .stat .v.green { text-shadow: 0 0 12px rgba(76,194,107,.25); }
@@ -190,6 +213,8 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
 .notice.gold { background: linear-gradient(#2e2511, #221b0b); border-color: #5a4a1c; border-left-color: var(--gold); color: #f3dc98; }
 
 /* Buttons ---------------------------------------------------------------- */
+/* Which style (P3-9): doit = the one primary verb on a screen, Title Case · gold = spends money or diamonds, or confirms,
+   sentence case · red doit = attacks only · red = irreversible deletes · ghost = secondary · ghost red = leave or kick */
 .btn {
   appearance: none; position: relative; border: 1px solid #000; border-radius: 8px; padding: 9px 14px; cursor: pointer;
   font-family: var(--body); font-weight: 700; font-size: 14.5px; text-transform: none; letter-spacing: .2px; white-space: nowrap;
@@ -198,7 +223,7 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
   box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 -1px 0 rgba(0,0,0,.35) inset, 0 2px 5px rgba(0,0,0,.55);
   transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
 }
-.btn:hover:not(:disabled) { filter: brightness(1.13); }
+@media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.13); } }
 .btn:active:not(:disabled) { transform: translateY(1px); filter: brightness(.9); box-shadow: 0 1px 4px rgba(0,0,0,.75) inset; }
 .btn:disabled { opacity: .4; cursor: default; filter: saturate(.5); }
 .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -207,19 +232,24 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
   background: var(--gloss), linear-gradient(#303030, #0a0a0a 58%, #000);
   border-color: #000; box-shadow: 0 1px 0 rgba(255,255,255,.24) inset, 0 0 0 1px #2a2a2a, 0 3px 8px rgba(0,0,0,.8);
 }
-.btn.doit:hover:not(:disabled) { filter: none; box-shadow: 0 1px 0 rgba(255,255,255,.28) inset, 0 0 0 1px rgba(227,179,65,.6), 0 0 14px rgba(227,179,65,.2), 0 3px 8px rgba(0,0,0,.8); }
+@media (hover: hover) { .btn.doit:hover:not(:disabled) { filter: none; box-shadow: 0 1px 0 rgba(255,255,255,.28) inset, 0 0 0 1px rgba(227,179,65,.6), 0 0 14px rgba(227,179,65,.2), 0 3px 8px rgba(0,0,0,.8); } }
 .btn.gold {
   color: #231800; text-shadow: 0 1px 0 rgba(255,244,200,.45);
   background: var(--gloss), linear-gradient(#f7d879, #cf9d38 55%, #9c7424);
   box-shadow: 0 1px 0 rgba(255,246,210,.85) inset, 0 -1px 0 rgba(90,60,0,.4) inset, 0 2px 6px rgba(0,0,0,.55), 0 0 10px rgba(227,179,65,.15);
 }
 .btn.red {
-  background: var(--gloss), linear-gradient(#eb6a61, #b3322b 55%, #7a1b17);
+  background: var(--gloss), linear-gradient(#d9564d, #b3322b 55%, #7a1b17);
   box-shadow: 0 1px 0 rgba(255,180,172,.7) inset, 0 -1px 0 rgba(60,0,0,.4) inset, 0 2px 6px rgba(0,0,0,.55), 0 0 10px rgba(224,72,63,.15);
 }
-.btn.blue { background: var(--gloss), linear-gradient(#66b2ff, #2b6bbf 55%, #1d4d8f); box-shadow: 0 1px 0 rgba(200,228,255,.7) inset, 0 2px 6px rgba(0,0,0,.55); }
+.btn.blue { background: var(--gloss), linear-gradient(#4f9ae8, #2b6bbf 55%, #1d4d8f); box-shadow: 0 1px 0 rgba(200,228,255,.7) inset, 0 2px 6px rgba(0,0,0,.55); }
 .btn.sm { padding: 5px 10px; min-height: 30px; font-size: 13px; border-radius: 7px; }
+/* 44 px touch target (P2-6) without a bigger button: an invisible hit area 7 px above and below, 3 px each side
+   (keep 8 px between small buttons so neighbouring areas meet rather than overlap). Insets count from inside the 1 px border */
+.btn.sm::after { content: ''; position: absolute; inset: -8px -4px; }
 .btn.doit.sm { font-size: 14px; min-width: 0; }
+/* Do It was 43 px tall; full-width ones are already taller (the map's .block rule gives every .btn.block min-height 62 px) */
+.btn.doit:not(.sm, .block) { min-height: 44px; }
 .btn.block { width: 100%; }
 .btn.ghost {
   background: linear-gradient(rgba(255,255,255,.035), rgba(255,255,255,.01)); border: 1px solid var(--line-hi); color: #a9a9b6;
@@ -234,12 +264,16 @@ h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg
   box-shadow: 0 2px 4px rgba(0,0,0,.6) inset, 0 1px 0 rgba(255,255,255,.045);
   transition: border-color .15s, box-shadow .15s;
 }
-.input::placeholder { color: #5f5f6c; }
+.input::placeholder { color: #7c7c8a; }
 .input:focus { border-color: rgba(227,179,65,.6); box-shadow: 0 2px 4px rgba(0,0,0,.6) inset, 0 0 0 3px rgba(227,179,65,.13); }
 .input.sm { min-height: 30px; padding: 4px 8px; font-size: 13px; width: 84px; }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .qty { display: inline-flex; align-items: center; gap: 4px; }
 .qty input { width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.qty .input.sm { min-height: 36px; }
+/* the ± are 36 px squares; with the 4 px reach of their hit areas they meet the field and stay 44 px */
+.qty .btn.sm { min-width: 36px; min-height: 36px; padding: 0 6px; }
+.qty .btn.sm::after { inset: -5px; }
 
 /* Segmented tabs --------------------------------------------------------- */
 .seg {
@@ -248,27 +282,40 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
   box-shadow: 0 2px 4px rgba(0,0,0,.6) inset, 0 1px 0 rgba(255,255,255,.055);
 }
 .seg button {
-  flex: 1 1 auto; min-width: 0; border: 0; background: transparent; color: #8a8a98; border-radius: 7px; padding: 7px 5px; cursor: pointer;
+  flex: 1 1 auto; min-width: 0; background: transparent; color: #8a8a98; padding: 7px 5px; cursor: pointer;
   font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: .7px; text-transform: uppercase; transition: color .15s;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* 44 px touch target (P2-6) with the same 32 px pill: a transparent border above and below that the margin takes back.
+     The pill is the padding box (background clipped to it, 7 px corners), so it looks as before; an ::after hit area
+     wouldn't work here because the ellipsis needs overflow: hidden, which would clip it */
+  border: 0 solid transparent; border-width: 7px 0; margin: -7px 0; border-radius: 7px / 14px; background-clip: padding-box;
 }
-.seg button:hover { color: #c5c5d0; }
+@media (hover: hover) { .seg button:hover { color: #c5c5d0; } }
 .seg button.on {
   color: var(--gold-hi); text-shadow: 0 1px 0 #000;
-  background: var(--gloss), linear-gradient(#42424e, #25252d); box-shadow: 0 1px 0 rgba(255,255,255,.16) inset, 0 1px 4px rgba(0,0,0,.65);
+  background: var(--gloss), linear-gradient(#42424e, #25252d); background-clip: padding-box; box-shadow: 0 1px 0 rgba(255,255,255,.16) inset;
 }
+/* the ring goes on the pill, not the taller hit area */
+.seg button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold) inset; }
+.seg button.on:focus-visible { box-shadow: 0 0 0 2px var(--gold) inset, 0 1px 0 rgba(255,255,255,.16) inset; }
 
 /* Toasts ----------------------------------------------------------------- */
-.toasts { position: fixed; left: 0; right: 0; top: calc(10px + env(safe-area-inset-top)); z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; padding: 0 12px; }
+/* at the bottom, just above the tab bar, so they don't cover the cash and diamonds a deposit or purchase just changed (P2-8) */
+.toasts {
+  position: fixed; left: 0; right: 0; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 10px); z-index: 50;
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; pointer-events: none; padding: 0 12px;
+}
+.auth .toasts { bottom: calc(16px + env(safe-area-inset-bottom)); }
 .toast {
   max-width: 480px; width: 100%; padding: 11px 14px; border-radius: 12px; font-weight: 600; font-size: 14px; border: 1px solid rgba(0,0,0,.8);
-  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 10px 28px rgba(0,0,0,.65); animation: pop .22s cubic-bezier(.2,.9,.3,1.2);
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 10px 28px rgba(0,0,0,.65); animation: toastin .22s cubic-bezier(.2,.9,.3,1.2);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .toast.ok { background: var(--gloss), linear-gradient(rgba(47,125,70,.96), rgba(28,84,45,.96)); color: #eaffef; }
 .toast.bad { background: var(--gloss), linear-gradient(rgba(170,52,45,.96), rgba(110,29,24,.96)); color: #ffe4e1; }
 .toast.info { background: var(--gloss), linear-gradient(rgba(62,62,74,.96), rgba(36,36,43,.96)); color: #fff; }
 @keyframes pop { from { transform: translateY(-10px) scale(.97); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes toastin { from { transform: translateY(10px) scale(.97); opacity: 0 } to { transform: none; opacity: 1 } }
 
 /* Result modal ----------------------------------------------------------- */
 .modal-bg {
@@ -286,6 +333,23 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .modal::before { content: ''; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: #3e3e4a; }
 @keyframes up { from { transform: translateY(26px); opacity: 0 } to { transform: none; opacity: 1 } }
 .modal h3 { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 1px 0 #000; }
+/* the sheet is focused when it opens (for the keyboard and VoiceOver); it needs no ring of its own */
+.modal:focus-visible { outline: none; }
+/* title and × stay at the top of a tall sheet (P2-9); the band is see-through until the sheet scrolls, so a short sheet
+   looks as it did. The margin and padding make the band start at the sheet's top edge; browsers measure a sticky
+   offset from inside the sheet's 22 px padding, hence top: -22px to pin it to that edge */
+.modal-hd {
+  position: sticky; top: -22px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -22px -16px 0; padding: 22px 16px 10px;
+}
+.modal-hd h3 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.modal.scrolled .modal-hd { background: #212129; box-shadow: 0 1px 0 rgba(0,0,0,.6), 0 2px 0 rgba(255,255,255,.04), 0 8px 14px -8px rgba(0,0,0,.8); }
+.modal-x {
+  flex: none; width: 44px; height: 44px; margin: -8px -10px -8px 0; display: grid; place-items: center; padding: 0 0 2px;
+  background: none; border: 0; border-radius: 50%; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer;
+}
+.modal-x:active { color: var(--text); background: rgba(255,255,255,.06); }
+@media (hover: hover) { .modal-x:hover { color: var(--text); } }
 
 /* Chat ------------------------------------------------------------------- */
 .chat { display: flex; flex-direction: column; height: calc(100dvh - 176px - var(--tab-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 260px; }
@@ -293,7 +357,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .msg { font-size: 14px; }
 .msg .who { font-family: var(--display); font-weight: 600; letter-spacing: .4px; color: var(--gold); margin-right: 6px; }
 .msg.me .who { color: var(--blue); }
-.msg .when { color: #55555f; font-size: 11px; margin-left: 6px; }
+.msg .when { color: #8a8a96; font-size: 11px; margin-left: 6px; }
 .chat form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); }
 .chat .chat-cut { padding: 12px; border-top: 1px solid var(--line); text-align: center; }
 
@@ -315,6 +379,14 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 }
 .logo p { margin: 8px 0 0; color: #b3a37a; font-family: var(--display); font-size: 13px; letter-spacing: 2.2px; text-transform: uppercase; }
 .auth .card { width: 100%; max-width: 380px; }
+/* password field with its Show toggle over the right end (P3-17): a 44 px target, gold while the password shows */
+.pw-field { position: relative; }
+.pw-field .input { padding-right: 64px; }
+.pw-toggle {
+  position: absolute; right: 0; bottom: -1.5px; min-width: 60px; height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; cursor: pointer;
+  font-family: var(--display); font-size: 13px; font-weight: 500; letter-spacing: .7px; text-transform: uppercase; color: var(--muted);
+}
+.pw-toggle[aria-pressed="true"] { color: var(--gold-hi); }
 
 /* Territory map ---------------------------------------------------------- */
 .blocks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; }
@@ -324,7 +396,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
   background: linear-gradient(#18181d, #0f0f12); box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 2px 6px rgba(0,0,0,.45);
   transition: transform .1s ease, box-shadow .15s ease;
 }
-.block:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 6px 14px rgba(0,0,0,.55); }
+@media (hover: hover) { .block:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 6px 14px rgba(0,0,0,.55); } }
 .block b { font-family: var(--display); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; font-size: 13px; }
 .block.mine { border-color: #2e9c4f; background: linear-gradient(#173222, #0c1a11); box-shadow: 0 1px 0 rgba(140,255,170,.12) inset, 0 0 14px rgba(46,156,79,.18), 0 2px 6px rgba(0,0,0,.45); }
 .block.enemy { border-color: #8a2e28; background: linear-gradient(#321614, #1a0c0b); box-shadow: 0 1px 0 rgba(255,150,140,.1) inset, 0 0 14px rgba(168,50,43,.16), 0 2px 6px rgba(0,0,0,.45); }
@@ -340,13 +412,13 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
   background: radial-gradient(circle at 57% 57%, rgba(227,179,65,.10), transparent 60%), repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 12px), #0b0b0e;
   box-shadow: 0 2px 6px rgba(0,0,0,.6) inset;
 }
-.hoodgrid .axis { font-family: var(--display); font-size: 10px; color: #7d7460; text-align: center; letter-spacing: .5px; }
+.hoodgrid .axis { font-family: var(--display); font-size: 10px; color: #9a8f74; text-align: center; letter-spacing: .5px; }
 .hcell {
   aspect-ratio: 1; min-width: 0; border: 1px solid #26262e; border-radius: 6px; padding: 3px; display: flex; flex-direction: column; gap: 2px;
   cursor: pointer; color: inherit; font: inherit; background: linear-gradient(#18181d, #0f0f12);
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px rgba(0,0,0,.6); transition: transform .1s ease, box-shadow .15s ease;
 }
-.hcell:hover { transform: scale(1.08); z-index: 1; position: relative; box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 4px 12px rgba(0,0,0,.7); }
+@media (hover: hover) { .hcell:hover { transform: scale(1.08); z-index: 1; position: relative; box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 4px 12px rgba(0,0,0,.7); } }
 .hcell.r0 { background: linear-gradient(#3a2d10, #1c1507); border-color: #8a6d26; box-shadow: 0 0 12px rgba(227,179,65,.3), 0 1px 0 rgba(255,230,160,.18) inset; }
 .hcell.r1 { background: linear-gradient(#251e0f, #141009); border-color: #3d3218; }
 .hcell.r2 { background: linear-gradient(#1c1810, #110f0b); }
@@ -357,7 +429,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .hcell .mini i.mine, .legend i.mine { background: linear-gradient(#4fd279, #22863f); }
 .hcell .mini i.enemy, .legend i.enemy { background: linear-gradient(#e0574d, #8f241e); }
 .hcell .mini i.siege, .legend i.siege { box-shadow: 0 0 0 1px var(--gold-hi), 0 0 5px rgba(227,179,65,.7); }
-.hcell .lbl { font-family: var(--display); font-size: 9px; line-height: 1; color: #858593; text-align: center; white-space: nowrap; overflow: hidden; letter-spacing: .3px; }
+.hcell .lbl { font-family: var(--display); font-size: 10px; line-height: 1; color: #a3a3b0; text-align: center; white-space: nowrap; overflow: hidden; letter-spacing: .3px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 10px; height: 10px; }
@@ -409,6 +481,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .paytable div { display: flex; justify-content: space-between; }
 .wheel-result { width: 74px; height: 74px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 4px solid #6b5722; background: #1c1c22; }
 .wheel-result.red { background: #b91c1c; } .wheel-result.black { background: #111; } .wheel-result.green { background: #15803d; }
+/* the colour class names the pocket; without this the .red / .green text utilities paint the number in the disc's own colour */
+.wheel-result.red, .wheel-result.black, .wheel-result.green { color: #fff; }
 .wheel-result.spinning { animation: rot 1s linear infinite; }
 .roulette { display: grid; grid-template-columns: 30px 1fr 30px; gap: 3px; }
 .roulette .grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-flow: column; grid-template-rows: repeat(3, 1fr); gap: 3px; }
@@ -439,7 +513,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; co
 .felt { position: relative; height: 360px; background: radial-gradient(ellipse at center, #256e42, #133a26 70%); border: 6px solid #3d2b12; border-radius: 45%; box-shadow: 0 0 0 2px #6b5722 inset, 0 6px 18px rgba(0,0,0,.6); }
 .felt .board { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; width: 60%; }
 .felt .pot { font-weight: 700; font-size: 14px; background: rgba(0,0,0,.35); border-radius: 12px; padding: 2px 10px; }
-.seat { position: absolute; transform: translate(-50%, -50%); width: 92px; background: rgba(0,0,0,.55); border: 2px solid #2b2b33; border-radius: 10px; padding: 4px 6px 6px; text-align: center; font-size: 11.5px; color: #fff; }
+.seat { position: absolute; transform: translate(-50%, -50%); width: 84px; background: rgba(0,0,0,.55); border: 2px solid #2b2b33; border-radius: 10px; padding: 4px 6px 6px; text-align: center; font-size: 11.5px; color: #fff; }
 .seat.empty { background: rgba(0,0,0,.25); color: #bcd; border-style: dashed; cursor: pointer; min-height: 44px; }
 .seat.empty:disabled { cursor: default; color: #7a8; }
 .seat .cards { height: 38px; display: flex; justify-content: center; align-items: flex-end; margin-top: -22px; }
@@ -476,29 +550,31 @@ textarea.input { resize: vertical; font: inherit; }
   background: radial-gradient(circle at 35% 28%, #34343e, #121216 72%);
   box-shadow: 0 0 0 1px #000, 0 1px 0 1px rgba(255,255,255,.06), 0 2px 5px rgba(0,0,0,.55);
 }
-.row.link:hover .ico { box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(227,179,65,.45), 0 2px 5px rgba(0,0,0,.55); }
+@media (hover: hover) { .row.link:hover .ico { box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(227,179,65,.45), 0 2px 5px rgba(0,0,0,.55); } }
 /* big storage / stat numbers read better in the display face */
 .bignum { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .3px; }
 
 /* Clickable player / crew / cartel names (chat, forum) */
 .nlink { color: inherit; text-decoration: none; cursor: pointer; border-radius: 3px; transition: color .12s, background .12s; }
-.nlink:hover { background: rgba(255,255,255,.06); }
+@media (hover: hover) { .nlink:hover { background: rgba(255,255,255,.06); } }
 .nlink.strong { font-weight: 600; color: #f0e0b0; }
 .nlink.crew { color: #9fcbff; }
 .nlink.cartel { color: #d2b0ff; }
 .nlink.mention { font-weight: 600; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .nlink.mention.player { color: var(--gold-hi); }
-.msg .who.nlink:hover { text-decoration: underline; background: none; }
+@media (hover: hover) { .msg .who.nlink:hover { text-decoration: underline; background: none; } }
 
 /* Week 1 UX ------------------------------------------------------------- */
 /* back row on pages that aren't on the tab bar */
 .backbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -2px 0 -4px; min-height: 30px; }
 .back {
-  appearance: none; background: none; border: 0; padding: 6px 8px 6px 2px; margin-left: -2px; cursor: pointer;
+  position: relative; appearance: none; background: none; border: 0; padding: 6px 8px 6px 2px; margin-left: -2px; cursor: pointer;
   font-family: var(--display); font-size: 15px; font-weight: 500; letter-spacing: .4px; text-transform: uppercase;
   color: var(--gold); text-shadow: 0 1px 0 #000; display: inline-flex; align-items: center; gap: 2px; text-decoration: none;
 }
-.back:hover { color: var(--gold-hi); }
+/* 52 × 33 drawn, 60 × 45 to the touch (P2-6) */
+.back::after { content: ''; position: absolute; inset: -6px -4px; }
+@media (hover: hover) { .back:hover { color: var(--gold-hi); } }
 .back:active { transform: translateX(-1px); }
 
 /* deep-linked cards land under the sticky top bar, not behind it */
@@ -518,8 +594,11 @@ textarea.input { resize: vertical; font: inherit; }
 }
 @keyframes floatup { 0% { opacity: 0; transform: translate(-50%, 14px) scale(.9) } 18% { opacity: 1; transform: translate(-50%, 2px) scale(1.05) } 100% { opacity: 0; transform: translate(-50%, -22px) scale(1) } }
 .session-tally { font-size: 13px; color: #c9c9d3; }
-.toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); white-space: nowrap; user-select: none; }
-.toggle input { accent-color: var(--gold); width: 16px; height: 16px; margin: 0; }
+.toggle { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); white-space: nowrap; user-select: none; }
+/* the label is 18 px tall; a tap up to 13 px above or 7 px below still flips the box (P2-6). Less below, because the
+   control under it (Actions' sort, Admin's Add Word) sits 8–12 px away and reaches up too */
+.toggle::after { content: ''; position: absolute; inset: -13px -4px -7px; }
+.toggle input { position: relative; z-index: 1; accent-color: var(--gold); width: 16px; height: 16px; margin: 0; }
 .notice a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 
 /* why a button is disabled — said before the tap, not after */
@@ -571,7 +650,7 @@ textarea.input { resize: vertical; font: inherit; }
 .warn::before { content: '⚠ '; opacity: .8; }
 
 /* smaller segmented control (Actions sort) */
-.seg.sm button { font-size: 12px; padding: 5px 4px; }
+.seg.sm button { font-size: 12px; padding: 5px 4px; border-width: 9px 0; margin: -9px 0; border-radius: 7px / 16px; }
 
 /* rookie poker table */
 .row.rookie { background: linear-gradient(90deg, rgba(227,179,65,.07), transparent 70%); }
@@ -613,7 +692,7 @@ textarea.input { resize: vertical; font: inherit; }
 .bj-felt.won { box-shadow: 0 0 0 2px #8a6a2a inset, 0 0 0 1px #000, 0 0 26px rgba(227,179,65,.55); }
 .bj-felt.lost { filter: saturate(.85); }
 .bj-arc { font-family: var(--display); letter-spacing: 2.5px; text-transform: uppercase; font-size: 12px; color: rgba(246,215,122,.85); text-shadow: 0 1px 0 #000; }
-.bj-rules { font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.55); border-top: 1px solid rgba(246,215,122,.3); border-bottom: 1px solid rgba(246,215,122,.3); padding: 3px 10px; text-align: center; }
+.bj-rules { font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.7); border-top: 1px solid rgba(246,215,122,.3); border-bottom: 1px solid rgba(246,215,122,.3); padding: 3px 10px; text-align: center; }
 .bj-dealer, .bj-hand { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 110px; justify-content: center; }
 .bj-shoe { font-family: var(--display); letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.4); font-size: 13px; }
 .bj-cards { display: flex; gap: 6px; perspective: 600px; }
@@ -667,12 +746,12 @@ textarea.input { resize: vertical; font: inherit; }
 .cr-spot { position: relative; appearance: none; cursor: pointer; color: #fff; background: rgba(0,0,0,.08); border: 2px solid rgba(255,255,255,.7); border-radius: 8px;
   padding: 6px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: var(--body);
   transition: background .15s, box-shadow .15s; min-height: 44px; }
-.cr-spot:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+@media (hover: hover) { .cr-spot:hover:not(:disabled) { background: rgba(255,255,255,.08); } }
 .cr-spot:active:not(:disabled) { background: rgba(255,255,255,.14); }
 .cr-spot:disabled { cursor: default; opacity: .85; }
 .cr-spot.has { box-shadow: 0 0 0 1px rgba(246,215,122,.6) inset; }
 .cr-l { font-family: var(--display); font-weight: 600; letter-spacing: 1.2px; font-size: 15px; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
-.cr-pay { font-size: 10.5px; color: rgba(255,255,255,.72); text-align: center; }
+.cr-pay { font-size: 10.5px; color: rgba(255,255,255,.85); text-align: center; }
 .cr-chip { position: absolute; right: 4px; bottom: 2px; z-index: 1; transform: scale(.85); transform-origin: bottom right; }
 .cr-float { position: absolute; left: 50%; top: 0; transform: translateX(-50%); z-index: 3; font-weight: 800; font-size: 13px; padding: 1px 7px; border-radius: 9px; pointer-events: none; white-space: nowrap;
   animation: crfloat 2.4s ease-out forwards; }
@@ -842,19 +921,28 @@ textarea.input { resize: vertical; font: inherit; }
 
 /* Moderation: name prompt, reports, admin */
 .name-prompt { padding: 12px 12px 0; }
-.mod-buttons { gap: 6px; }
+.mod-buttons { gap: 8px; }
 .mod-report { padding: 6px 0; border-top: 1px solid rgba(255,255,255,.055); }
 .mod-report:first-child { border-top: 0; }
 .word-list { gap: 6px; }
 .word-pill { display: inline-flex; align-items: center; gap: 4px; }
-.word-pill .x { background: none; border: 0; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px; cursor: pointer; }
-.word-pill .x:hover { color: var(--red); }
+.word-pill .x { position: relative; background: none; border: 0; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px; cursor: pointer; }
+@media (hover: hover) { .word-pill .x:hover { color: var(--red-text); } }
 /* the chat switch on every word pill: lit when the word also blocks chat, struck through when it doesn't */
-.word-pill .chat-tag { background: none; border: 1px solid var(--gold-lo); border-radius: 4px; color: var(--gold-hi); font-size: 9.5px; line-height: 1; padding: 2px 3px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
-.word-pill .chat-tag.off { border-color: var(--line-hi); color: var(--muted); opacity: .55; text-decoration: line-through; }
+.word-pill .chat-tag { position: relative; background: none; border: 1px solid var(--gold-lo); border-radius: 4px; color: var(--gold-hi); font-size: 9.5px; line-height: 1; padding: 2px 3px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+/* off reads as off by the strike-through and the grey, not by fading it below legible (was opacity .55, 2.4:1) */
+.word-pill .chat-tag.off { border-color: var(--line-hi); color: #9a9aa6; text-decoration: line-through; }
+/* the pills sit 6 px apart in rows, so the × and the chat switch reach into the pill's own padding and half the gaps */
+.word-pill .x::after, .word-pill .chat-tag::after { content: ''; position: absolute; top: -8px; bottom: -8px; }
+.word-pill .x::after { left: -2px; right: -12px; }
+.word-pill .chat-tag::after { top: -9px; bottom: -9px; left: -4px; right: -3px; }
 /* reports of content (#10): the ⋯ on someone else's chat line, the reported text in the report sheet and the queue */
-.msg .more { background: none; border: 0; color: #55555f; font-size: 15px; line-height: 1; padding: 2px 6px; margin-left: 2px; cursor: pointer; }
-.msg .more:hover { color: var(--text); }
+.msg .more { position: relative; background: none; border: 0; color: #8a8a96; font-size: 15px; line-height: 1; padding: 2px 6px; margin-left: 2px; cursor: pointer; }
+/* 27 × 19 drawn, 45 × 45 to the touch (P2-6); names and @mentions on the lines around it stay on top, so the bigger
+   area only takes taps on plain text and gaps */
+.msg .more::after { content: ''; position: absolute; inset: -13px -9px; }
+.msg .nlink { position: relative; z-index: 1; }
+@media (hover: hover) { .msg .more:hover { color: var(--text); } }
 .report-quote { font-style: italic; color: #c5c5d0; border-left: 2px solid var(--line-hi); padding: 2px 0 2px 8px; overflow-wrap: anywhere; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
 .mod-buttons .k { color: var(--muted); font-size: 12px; }
 
@@ -874,5 +962,99 @@ button, .btn, .row.link, .seg button, .tabbar a { touch-action: manipulation; }
 .card[id] { scroll-margin-top: calc(112px + env(safe-area-inset-top)); }
 /* iOS app with the keyboard up (lib/native.ts sets .kb): the web view ends at the keyboard, so drop the tab bar and its space */
 .kb .tabbar { display: none; }
+.kb .toasts { bottom: 10px; }
 .kb .app { padding-bottom: 6px; }
 .kb .chat:not(.compact) { height: calc(100dvh - 176px - env(safe-area-inset-top)); }
+
+/* UX round (2026-10-01): Home quick grid, Services chips, stat links, store packs ---------------------------------- */
+/* Home quick grid: the places with no tab, 3 × 3 under the stats. Same bevel as a stat tile. */
+.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.quick a {
+  position: relative; min-width: 0; min-height: 68px; padding: 8px 4px 7px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  color: inherit; text-decoration: none; background: linear-gradient(#121216, #1b1b21); border: 1px solid #0a0a0d;
+  box-shadow: 0 1px 0 rgba(255,255,255,.055), 0 2px 5px rgba(0,0,0,.55) inset;
+}
+.quick a:active { background: linear-gradient(#1a1710, #221d12); }
+.quick .ico { position: relative; }
+.quick .lbl { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quick .tbadge { top: -5px; left: calc(100% - 10px); }
+
+/* Profile: "Product moved" and "Market sales" wrap to two lines in a 3-up tile; values sit on one baseline per row */
+.stat-grid .stat { display: flex; flex-direction: column; justify-content: space-between; }
+
+/* a stat tile that opens its page (Home's Storage → Economy, where Expand is) */
+.stat-link { display: block; color: inherit; text-decoration: none; min-width: 0; }
+.stat-link .stat::after { content: '›'; position: absolute; top: 5px; right: 9px; color: #6a6a7a; font-size: 17px; line-height: 1; }
+
+/* Services: a chip per card at the top, scrolling sideways; it follows the card order */
+.svc-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 -12px; padding: 0 12px 2px; scrollbar-width: none; }
+.svc-nav::-webkit-scrollbar { display: none; }
+.svc-nav a {
+  flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: #c9c9d3; text-decoration: none; white-space: nowrap;
+  background: linear-gradient(#1c1c22, #141418); border: 1px solid var(--line);
+}
+.svc-nav a.on { color: var(--gold-hi); border-color: #6b5520; }
+.svc-nav a.alert { color: #ffa39b; border-color: #6a241f; }
+
+/* a code-run text link inside a notice (Open →, Deal me in) reads like the notice's other links */
+.notice .linkbtn { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+
+/* a whole card that navigates (Home's path teaser) */
+a.card { display: block; color: inherit; text-decoration: none; }
+
+/* activity lines: the time is the row's own link (the sentence already links names) */
+.row.activity a.when { display: inline-block; color: var(--muted); text-decoration: none; }
+
+/* store packs on the web, where they can't be bought */
+.store-pack.off { opacity: .6; }
+
+/* UX round: economy, crew, territory, chat, forum and casino tables ------------------------------------------------ */
+/* a link drawn as a button (Forum ›, Sit, Back to the forum): <a> is inline, which would drop the button's min-height */
+a.btn { display: inline-flex; align-items: center; justify-content: center; }
+/* a button that takes the rest of its row (Collect next to Upgrade, Roll next to Take down) */
+.btn.flex1 { flex: 1 1 0; min-width: 0; }
+/* pushes the last control of an .hstack to the right edge (Abandon, away from Stop) */
+.push-right { margin-left: auto; }
+
+/* an h2 with a control at its right end (Grow Houses · Collect All, Offers · filter); the h2's gold rule fills the gap */
+.h2row { display: flex; align-items: center; gap: 10px; }
+.h2row h2 { flex: 1; min-width: 0; }
+
+/* rows that hold their own buttons stay divs: the text part still opens the row on a tap, and its title is the link */
+.row .grow.link { cursor: pointer; }
+.tlink { color: inherit; text-decoration: none; }
+
+/* the ledger's All / In / Out / Bonuses filter, under the card header rather than crammed into it */
+.ledger-seg { padding-bottom: 4px; }
+
+/* Forum: pinned and locked as words, not a tooltip on an emoji */
+.pill.xs { padding: 1px 7px; margin-right: 6px; font-weight: 600; vertical-align: 1px; }
+
+/* Territory: block tiles are buttons now (focus, VoiceOver); these undo the button defaults the tile's own rules don't set */
+/* (scoped to the hood grid: .btn.block buttons elsewhere must keep their own font and colour) */
+.blocks6 button.block { width: 100%; font: inherit; color: inherit; }
+.block .biz-perk { font-size: 12px; line-height: 1.25; }
+.city-hint { margin-top: 8px; }
+
+/* Chat: the seg and the Forum › link share a row; the seg takes what's left */
+.chat-tabs { display: flex; align-items: center; gap: 8px; }
+.chat-tabs .seg { flex: 1; min-width: 0; }
+.chat-tabs > .btn { flex: none; }
+/* the time and the ⋯ wrap as one, so the ⋯ never lands alone on a line */
+.msg .meta { white-space: nowrap; }
+
+/* P2-15: a table's chips and its Roll / Deal / Spin stay in reach above the tab bar while the felt scrolls. Sticky, not
+   fixed: at the end of the table the bar settles back into its place under the felt, so it never hides the felt's last
+   row. A card's overflow: hidden would make the card the sticky bar's scroll box and pin it in place, so table cards let
+   it show, and round their header themselves. */
+.card.table-card { overflow: visible; }
+.card.table-card > .hd { border-radius: 11px 11px 0 0; }
+.table-bar {
+  position: sticky; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px); z-index: 5;
+  display: flex; flex-direction: column; gap: 8px; margin: 0 -6px; padding: 8px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: linear-gradient(#1c1c22, #141418); box-shadow: 0 -6px 18px rgba(0, 0, 0, .6);
+}
+.kb .table-bar { bottom: 6px; }

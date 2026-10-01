@@ -51,13 +51,16 @@ try {
   const a = await newPlayer(N('Buyer'))
   const aId = (await one('select id from profiles where name = $1', [N('Buyer')])).id
 
-  // Home → Diamonds → the store: six packs, amounts only
-  await a.locator('.row.link', { hasText: 'diamond packs and the Daily Drop' }).click()
+  // Home's quick grid → the store: the "sold in the iPhone app" notice first, then six packs, dimmed, amounts only
+  await a.locator('.quick').getByRole('link', { name: 'Store' }).click()
   await a.waitForURL(/\/store$/)
   const packs = a.locator('#diamonds')
-  await packs.getByText('Diamonds are sold in the iPhone app.').waitFor()
+  const notice = packs.getByText('Diamonds are sold in the iPhone app.')
+  await notice.waitFor()
   const rows = packs.locator('.store-pack')
   if (await rows.count() !== 6) throw new Error(`packs ${await rows.count()}`)
+  if ((await notice.boundingBox()).y > (await rows.first().boundingBox()).y) throw new Error('the notice comes before the packs')
+  if (await packs.locator('.store-pack.off').count() !== 6) throw new Error('packs are dimmed on the web')
   const amounts = (await rows.locator('.t').allTextContents()).map(s => s.trim())
   if (amounts.join('|') !== '100 diamonds|550 diamonds|1,200 diamonds|2,600 diamonds|7,000 diamonds|15,000 diamonds') throw new Error(amounts.join('|'))
   if (await rows.getByRole('button').count() !== 0) throw new Error('no buy buttons on the web')

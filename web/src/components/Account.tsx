@@ -42,7 +42,7 @@ export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
           ? <><NewPasswordFields submitLabel="Save new password" onDone={() => setChanging(false)} /><button className="btn sm ghost" onClick={() => setChanging(false)}>Cancel</button></>
           : <div className="grid2">
               <button className="btn" onClick={() => setChanging(true)}>Change password</button>
-              <Btn className="ghost red" onClick={async () => { if (confirm('Sign out of Cartel Wars on this device?')) { await signOut(); onSignedOut() } }}>Sign out</Btn>
+              <Btn className="ghost" onClick={async () => { if (confirm('Sign out of Cartel Wars on this device?')) { await signOut(); onSignedOut() } }}>Sign out</Btn>
             </div>}
         <button className="btn sm ghost red" onClick={() => setDeleting(true)}>Delete account</button>
       </div>

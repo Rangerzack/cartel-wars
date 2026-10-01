@@ -79,7 +79,7 @@ try {
   await p.getByLabel('Email').fill(email)
   await p.getByLabel('Password').fill('secret123')
   await p.getByRole('button', { name: 'Sign In' }).click()
-  await p.getByText('Invalid login credentials').waitFor()
+  await p.locator('.why', { hasText: 'Invalid login credentials' }).waitFor()
   await p.waitForTimeout(500)
   if (await p.locator('.topbar').count()) throw new Error('no way back in')
   await snap(p, 'sign-in-fails')

@@ -48,7 +48,7 @@ export default function Roulette() {
 
   return (
     <>
-      <Card title="🎡 Roulette" right={<small>European · single zero</small>}>
+      <Card title="🎡 Roulette" className="table-card" right={<small>European · single zero</small>}>
         <div className="bd stack">
           <div className={`wheel-result ${spinning ? 'spinning' : ''} ${last ? last.color : ''}`}>
             {spinning ? <span className="spin" /> : last ? <>{last.number}</> : '—'}
@@ -78,16 +78,20 @@ export default function Roulette() {
             <button className="o" onClick={() => add('odd')}>Odd{amt('odd') && <i>{chips(amt('odd'))}</i>}</button>
             <button className="o" onClick={() => add('high')}>19–36{amt('high') && <i>{chips(amt('high'))}</i>}</button>
           </div>
-          <BetPicker value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip (tap a spot to place it)" />
+          {/* chips and Spin ride above the tab bar while the board scrolls under them */}
+          <div className="table-bar">
+            <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip (tap a spot to place it)" />
+            <div className="hstack" style={{ flexWrap: 'nowrap' }}>
+              <button type="button" className="btn gold flex1" disabled={spinning || !list.length || total > me.cash} onClick={spin}>{spinning ? <span className="spin" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a bet'}</button>
+              <button type="button" className="btn ghost" disabled={spinning || !list.length} onClick={() => setBets({})}>Clear</button>
+            </div>
+          </div>
+          <BetPicker part="amount" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} />
           {list.length > 0 && (
             <div className="betlist">
-              {list.map(b => <span key={key(b)} className="pill" onClick={() => remove(key(b))}>{label(b)} {money(b.amount)} ✕</span>)}
+              {list.map(b => <button type="button" key={key(b)} className="pill" aria-label={`Take back ${label(b)} ${money(b.amount)}`} onClick={() => remove(key(b))}>{label(b)} {money(b.amount)} ✕</button>)}
             </div>
           )}
-          <div className="hstack">
-            <button className="btn gold grow" disabled={spinning || !list.length || total > me.cash} onClick={spin}>{spinning ? <span className="spin" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a bet'}</button>
-            <button className="btn ghost" disabled={spinning || !list.length} onClick={() => setBets({})}>Clear</button>
-          </div>
           <div className="small muted">Straight 35:1 · dozens & columns 2:1 · even-money bets 1:1. Table max {money(500000)} per spin.</div>
         </div>
       </Card>

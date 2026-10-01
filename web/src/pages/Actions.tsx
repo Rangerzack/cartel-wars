@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, dropOdds, every, findIcon, money, num } from '../lib/format'
@@ -55,7 +55,8 @@ export default function Actions() {
     const r = await run(() => api.doAction(a.id), { silent: true })
     if (!r) return
     const res: Result = { a, pay: r.pay, rep: r.rep, busted: r.busted, heat: r.heat, stamina: r.stamina }
-    setSession(s => ({ jobs: s.jobs + 1, cash: s.cash + (r.pay || 0), rep: s.rep + (r.rep || 0), finds: s.finds + (r.found ? 1 : 0) }))
+    // net cash: what the job paid less what it cost, so a reputation job that costs $8,000 reads −$8,000, not +$0
+    setSession(s => ({ jobs: s.jobs + 1, cash: s.cash + (r.pay || 0) - a.cash_cost, rep: s.rep + (r.rep || 0), finds: s.finds + (r.found ? 1 : 0) }))
     if (r.found) { setFound({ item: r.found, res }); api.recentFinds(6).then(setFinds).catch(() => {}); return }
     if (r.busted || a.effect === 'go_to_jail') { setBust(res); return }
     const key = ++flashKey.current
@@ -67,14 +68,14 @@ export default function Actions() {
   return (
     <div className="page">
       <h2>{me.jailed ? 'Jail Actions' : 'Actions'}</h2>
-      {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <a onClick={() => nav('/services')}>Post bail →</a></div>}
-      {me.hospital && <div className="notice red">You can't work from a hospital bed. <a onClick={() => nav('/services')}>Buy health →</a></div>}
-      {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <a onClick={() => nav('/economy')}>Choose your path →</a></div>}
-      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <a onClick={() => nav('/services?focus=refills')}>refill it →</a></div>}
+      {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <Link to="/services?focus=jail">Post bail →</Link></div>}
+      {me.hospital && <div className="notice red">You can't work from a hospital bed. <Link to="/services?focus=hospital">Buy health →</Link></div>}
+      {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <Link to="/economy">Choose your path →</Link></div>}
+      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <Link to="/services?focus=refills">refill it →</Link></div>}
 
       <div className="spread">
         {session.jobs > 0
-          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'} · <b className="gold">+{money(session.cash)}</b>{session.rep > 0 && <> · <b className="dia">⭐ +{num(session.rep)}</b></>}{session.finds > 0 && <> · <b className="find-tag">🎁 {session.finds}</b></>}</div>
+          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'}{session.cash !== 0 && <> · <b className={session.cash > 0 ? 'gold' : 'red'}>{session.cash > 0 ? '+' : '−'}{money(Math.abs(session.cash))}</b></>}{session.rep > 0 && <> · <b className="dia">⭐ +{num(session.rep)}</b></>}{session.finds > 0 && <> · <b className="find-tag">🎁 {session.finds}</b></>}</div>
           : <div className="small muted">Tap Do It — results show right on the job.</div>}
         <label className="toggle small"><input type="checkbox" checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Can do now</label>
       </div>
@@ -89,7 +90,8 @@ export default function Actions() {
         {shown.length === 0 && <Empty>{onlyAvailable ? 'Nothing you can run right now — buy the gear or find a bigger crew.' : 'No jobs here.'}</Empty>}
         {shown.map(a => {
           const block = blockedBy(a)
-          const cant = me.hospital || me.stamina < a.stamina_cost || !!block
+          const tired = me.stamina < a.stamina_cost
+          const cant = me.hospital || tired || !!block
           const f = flash[a.id]
           return (
             <div key={a.id} className={`row action ${f ? 'flashing' : ''}`}>
@@ -99,12 +101,13 @@ export default function Actions() {
                 <div className="s tabular">
                   <span style={{ color: '#7dd3fc' }}>⚡ {a.stamina_cost}</span>
                   {' · '}
-                  {a.effect === 'go_to_jail' ? <span>🔒 2 hours in jail</span> : a.pay_rep > 0 ? <span className="dia">⭐ +{a.pay_rep} reputation</span> : <span className="gold">{money(a.pay_min)}–{money(a.pay_max)}</span>}
+                  {a.effect === 'go_to_jail' ? <span>🔒 jail until you post bail</span> : a.pay_rep > 0 ? <span className="dia">⭐ +{a.pay_rep} reputation</span> : <span className="gold">{money(a.pay_min)}–{money(a.pay_max)}</span>}
                   {a.heat_gain > 0 && <> · <span className="red">🔥 +{a.heat_gain}</span></>}
-                  {a.cash_cost > 0 && <> · costs {money(a.cash_cost)}</>}
+                  {a.cash_cost > 0 && <> · <span className={block === 'cash' ? 'red' : ''}>costs {money(a.cash_cost)}</span></>}
                   {a.requires_item && <> · <span className={block === 'item' ? 'red' : 'green'}>needs {itemName(a.requires_item)}</span></>}
                   {a.min_crew > 0 && <> · <span className={block === 'crew' ? 'red' : 'green'}>crew of {a.min_crew}</span></>}
                   {perStamina(a) > 0 && a.pay_rep === 0 && <span className="muted"> · ~{money(perStamina(a))}/⚡</span>}
+                  {tired && !me.hospital && <> · <span className="red">need ⚡{a.stamina_cost}</span></>}
                 </div>
                 {a.drop_item && <div className="find-tag">🎁 Rare find: <b>{itemName(a.drop_item)}</b> · {dropOdds(a.stamina_cost, catalog.config.drop_stamina)}</div>}
                 {f && (
@@ -128,13 +131,13 @@ export default function Actions() {
           {finds && finds.length === 0 && <div className="small muted">Nobody's found one yet.</div>}
           {finds && finds.length > 0 && (
             <div className="finds-ticker">
-              {finds.map((f, i) => <div key={i} className="small"><a onClick={() => nav(`/player/${f.player_id}`)}>{f.player}</a> found a <b className="find-tag">{f.item}</b>{f.action ? <> on {f.action}</> : null} <span className="muted">· {ago(f.at)}</span></div>)}
+              {finds.map((f, i) => <div key={i} className="small"><Link to={`/player/${f.player_id}`}>{f.player}</Link> found a <b className="find-tag">{f.item}</b>{f.action ? <> on {f.action}</> : null} <span className="muted">· {ago(f.at)}</span></div>)}
             </div>
           )}
         </div>
       </Card>
       {found && (
-        <Modal title="Rare find!" onClose={() => { const b = found.res; setFound(null); if (b.busted) setBust(b) }}>
+        <Modal title="Rare find" onClose={() => { const b = found.res; setFound(null); if (b.busted) setBust(b) }}>
           <div className="find-modal">
             <div className="big">{findIcon[found.item.category]}</div>
             <div className="name">{found.item.name}</div>
@@ -146,16 +149,16 @@ export default function Actions() {
         </Modal>
       )}
       {bust && (
-        <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted!'} onClose={() => setBust(null)}>
+        <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted'} onClose={() => setBust(null)}>
           {bust.a.effect === 'go_to_jail' ? (
-            <p>The cops took the money and the hint. You're in jail for two hours — check your jail setup.</p>
+            <p>The cops took the money and the hint. You're in jail until you post bail — check your jail setup.</p>
           ) : (
             <>
               {bust.pay > 0 && <p className="gold" style={{ fontSize: 22, fontWeight: 800, margin: '4px 0' }}>+{money(bust.pay)}</p>}
               <p className="red">Your heat was in the red and a patrol caught you. You're in jail until you post bail — regular weapons are confiscated, jail setup is active.</p>
             </>
           )}
-          <Btn className="gold block" onClick={() => { setBust(null); nav('/services') }}>Post bail</Btn>
+          <Btn className="gold block" onClick={() => { setBust(null); nav('/services?focus=jail') }}>Post bail</Btn>
         </Modal>
       )}
     </div>

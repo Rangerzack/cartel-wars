@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { ago } from '../lib/format'
-import { Btn, Card, Empty, Modal } from '../components/ui'
+import { Btn, Card, Empty, Modal, RowLink } from '../components/ui'
 import type { Conversation, Message, PublicPlayer } from '../lib/types'
 import { features } from '../lib/features'
 import { LinkedText, PlayerLink } from '../components/Linked'
@@ -19,7 +19,8 @@ export default function Chat() {
     { v: 'global', l: 'Live Chat' },
     ...(me.crew ? [{ v: `crew:${me.crew.id}`, l: 'Crew' }] : []),
     ...(me.cartel ? [{ v: `cartel:${me.cartel.id}`, l: 'Cartel' }] : []),
-    { v: 'dms', l: 'Conversations' },
+    // "DMs" (the word the admin queue uses too): with Forum › beside the seg, "Conversations" no longer fits at 375 px
+    { v: 'dms', l: 'DMs' },
   ]
   const isDm = channel.startsWith('dm:')
   const valid = channel === 'global' || channel === 'dms' || /^(crew|cartel):[0-9a-f-]{36}$/.test(channel) || /^dm:[0-9a-f-]{36}:[0-9a-f-]{36}$/.test(channel) || /^table:[0-9]+$/.test(channel)
@@ -27,11 +28,14 @@ export default function Chat() {
   if (!valid) return null
   return (
     <div className="page" style={{ gap: 8 }}>
-      <div className="seg">
-        {tabs.map(t => <button key={t.v} className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>
-          {t.l}{t.v === 'dms' && (me.unread_dms ?? 0) > 0 && <span className="tbadge red inline">{me.unread_dms}</span>}
-        </button>)}
-        {features.forum && <button onClick={() => nav('/forum')}>Forum</button>}
+      {/* the seg switches channels in place; the forum is another page, so it's a link beside it rather than a tab in it */}
+      <div className="chat-tabs">
+        <div className="seg">
+          {tabs.map(t => <button key={t.v} type="button" className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>
+            {t.l}{t.v === 'dms' && (me.unread_dms ?? 0) > 0 && <span className="tbadge red inline">{me.unread_dms}</span>}
+          </button>)}
+        </div>
+        {features.forum && <Link to="/forum" className="btn sm ghost">Forum ›</Link>}
       </div>
       {channel === 'dms' ? <Conversations /> : <Channel key={channel} channel={channel} />}
     </div>
@@ -101,16 +105,21 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
     if (await run(() => api.blockPlayer(m.sender_id), { ok: () => `${m.sender_name} blocked` }) && other) api.player(other.id).then(setOther).catch(() => {})
   }
 
+  const title = other ? `💬 ${other.name}` : channel.startsWith('table') ? 'Table Talk' : undefined
   return (
     <>
-      <Card className={`chat ${compact ? 'compact' : ''}`} title={other ? `💬 ${other.name}` : channel === 'global' ? 'Live Chat' : channel.startsWith('crew') ? 'Crew Chat' : channel.startsWith('table') ? 'Table Talk' : 'Cartel Chat'}>
+      {/* Live Chat, Crew and Cartel are named by the seg above them, so their card has no header and the log gets its
+          room; a DM names who it's with, and table talk has no seg */}
+      <Card className={`chat ${compact ? 'compact' : ''}`} title={title}>
         <div className="log" ref={logRef}>
           {!shown && <Empty><span className="spin" /></Empty>}
           {shown?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}
           {shown?.map(m => (
             <div key={m.id} className={`msg ${m.sender_id === me.id ? 'me' : ''}`}>
-              <PlayerLink id={m.sender_id} className="who">{m.sender_name}</PlayerLink><LinkedText text={m.body} /><span className="when">{ago(m.created_at)}</span>
-              {m.sender_id !== me.id && <button className="more" aria-label={`More for ${m.sender_name}'s message`} onClick={() => setMenu(m)}>⋯</button>}
+              <PlayerLink id={m.sender_id} className="who">{m.sender_name}</PlayerLink><LinkedText text={m.body} />
+              {/* time and ⋯ wrap together, so the ⋯ never sits alone on a line */}
+              <span className="meta"><span className="when">{ago(m.created_at)}</span>
+                {m.sender_id !== me.id && <button className="more" aria-label={`More for ${m.sender_name}'s message`} onClick={() => setMenu(m)}>⋯</button>}</span>
             </div>
           ))}
         </div>
@@ -138,7 +147,6 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
 
 function Conversations() {
   const { toast } = useGame()
-  const nav = useNavigate()
   const [list, setList] = useState<Conversation[] | null>(null)
   useEffect(() => { api.conversations().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
   return (
@@ -146,13 +154,13 @@ function Conversations() {
       {!list && <Empty><span className="spin" /></Empty>}
       {list?.length === 0 && <Empty>No private conversations. Open a player's profile and tap Chat.</Empty>}
       {list?.map(c => (
-        <div key={c.channel} className={`row link ${c.unread ? 'unread' : ''}`} onClick={() => nav(`/chat/${c.channel}`)}>
+        <RowLink key={c.channel} to={`/chat/${c.channel}`} className={c.unread ? 'unread' : ''}>
           <div className="grow"><div className="t">{c.other}</div><div className="s">{c.last}</div></div>
           <div className="stack" style={{ gap: 4, alignItems: 'flex-end' }}>
             <span className="small muted">{ago(c.at)}</span>
             {!!c.unread && <span className="tbadge red inline">{c.unread}</span>}
           </div>
-        </div>
+        </RowLink>
       ))}
     </Card>
   )

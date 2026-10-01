@@ -21,6 +21,10 @@ select as_user('c1111111-1111-1111-1111-111111111111');
 do $$ declare t uuid := (select id from profiles where name = 'Thug 50'); r jsonb; before bigint; after_hit bigint; begin
   perform get_me();
   assert exists (select 1 from jsonb_array_elements(find_players('Thug 5')) e where e->>'name' = 'Thug 50'), 'thugs show up in search';
+  -- an empty search (Fight › Players as it opens) lists real players only; the Thugs tab has the thugs
+  assert not exists (select 1 from jsonb_array_elements(find_players('', 5000)) e join profiles p on p.id = (e->>'id')::uuid where p.is_bot), 'no thugs on an empty search';
+  assert jsonb_array_length(find_players('', 5000)) = (select count(*) from profiles where not is_bot and id <> auth.uid())
+     and jsonb_array_length(find_players('', 5000)) > 0, 'every real player is still listed';
   -- make the hunter strong enough to win
   update profiles set cash = 0, stamina = 25, health = 100 where id = auth.uid();
   insert into inventory (player_id, item_id, qty) select auth.uid(), id, 6 from item_defs where name = 'Minigun';

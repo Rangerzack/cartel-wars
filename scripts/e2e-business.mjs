@@ -41,6 +41,7 @@ try {
 
   // Found a crew in the UI, then hand it the whole center hood plus three outer Gyms and an outer Pawn Shop
   await a.goto(`${BASE}/crew`)
+  await a.getByRole('button', { name: 'Start a crew' }).click()
   await a.getByLabel('Name').fill(N('Pollos'))
   await a.getByRole('button', { name: 'Found It' }).click()
   await a.getByText('Your crew is on the map').waitFor()
@@ -81,7 +82,7 @@ try {
   await panel.getByText('This block').waitFor()
   await panel.getByText(/Your crew gets .+ from it \(full hood\)/).waitFor()
   await snap(a, 'block-panel')
-  await a.getByRole('button', { name: 'Close' }).click()
+  await a.getByRole('button', { name: 'Close' }).last().click()
 
   // Crew page: the perks card, one row per business
   await a.goto(`${BASE}/crew/${crewId}`)

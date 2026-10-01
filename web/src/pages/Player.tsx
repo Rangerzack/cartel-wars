@@ -61,15 +61,13 @@ export default function Player() {
             {p.cartel && <span className="pill gold">🕴 {p.cartel.name}</span>}
           </div>
           <Ribbons list={p.ribbons} />
-          <div className="grid3">
+          <div className="grid2">
             <Stat k="Health" v={`${num(p.health)}/${num(p.health_max)}`} />
             <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} cls="sm" />
             <Stat k="Actions" v={num(p.actions)} />
             <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
           </div>
-          {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
-          {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
-          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}.</div>}
+          {/* the actions come before the odds so Attack is on the first screen at 375 × 667 (P2-3) */}
           {!isMe && (
             <div className="hstack">
               <Btn className="doit red" disabled={cantFight} onClick={fight}>⚔️ Attack</Btn>
@@ -79,6 +77,9 @@ export default function Player() {
               {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
             </div>
           )}
+          {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
+          {!isMe && !me.hospital && !p.hospital && me.stamina < 2 && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}.</div>}
+          {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
           {!isMe && p.blocked && <div className="small muted">You've blocked them — no messages either way</div>}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
         </div>
@@ -98,13 +99,15 @@ export default function Player() {
         <Card title="Send Money / Diamonds">
           <div className="bd stack">
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Cash amount" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Cash amount" aria-label="Cash to send" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
               <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => run(() => api.sendCash(p.id, amount), { ok: r => `Sent ${money(r.sent)} to ${p.name}` })}>Send $</Btn>
             </div>
+            {amount > me.cash && <div className="why">You have {money(me.cash)} on hand.</div>}
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" value={dia || ''} onChange={e => setDia(Number(e.target.value) || 0)} />
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" aria-label="Diamonds to send" value={dia || ''} onChange={e => setDia(Number(e.target.value) || 0)} />
               <Btn className="blue" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
             </div>
+            {dia > me.diamonds && <div className="why">You have 💎 {num(me.diamonds)}.</div>}
             <div className="small muted">Only diamonds you earned in the game can be sent. Bought ones stay with you.</div>
           </div>
         </Card>

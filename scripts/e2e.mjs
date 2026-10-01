@@ -77,6 +77,7 @@ try {
 
   // Crew
   await p.goto(BASE + '/crew')
+  await p.getByRole('button', { name: 'Start a crew' }).click()
   await p.getByLabel('Name').fill(N('Los Pollos '))
   await p.getByRole('button', { name: 'Found It' }).click()
   await toast(p, /on the map/)
@@ -88,7 +89,7 @@ try {
   await p.goto(BASE + '/services')
   await p.locator('.card', { hasText: 'Hoodlums' }).waitFor()
   // a turf attack needs at least 51 thugs
-  await p.locator('.qty input').last().fill('60')
+  await p.locator('#hoodlums .qty input').fill('60')
   await p.getByRole('button', { name: /Hire · / }).click()
   await toast(p, /Hired for/)
   // make the first block deterministic: unclaimed, no garrison (resistance 250 vs 51 thugs ≈ 510)
@@ -104,7 +105,7 @@ try {
   await p.getByRole('button', { name: 'Attack', exact: true }).click()
   await p.locator('.modal', { hasText: /Block taken/ }).waitFor()
   await snap(p, 'territory')
-  await p.getByRole('button', { name: 'Close' }).click()
+  await p.getByRole('button', { name: 'Close' }).last().click()
 
   // Chat
   await p.goto(BASE + '/chat')
@@ -139,6 +140,7 @@ try {
   // Third player founds a rival crew and launches a crew fight
   const t = await newPlayer(N('Tuco'))
   await t.goto(BASE + '/crew')
+  await t.getByRole('button', { name: 'Start a crew' }).click()
   await t.getByLabel('Name').fill(N('Salamancas '))
   await t.getByRole('button', { name: 'Found It' }).click()
   await toast(t, /on the map/)
@@ -148,7 +150,7 @@ try {
   await t.getByRole('button', { name: /Crew Fight/ }).click()
   await t.locator('.modal', { hasText: /took the fight|held the line/ }).waitFor()
   await snap(t, 'crew-fight')
-  await t.getByRole('button', { name: 'Close' }).click()
+  await t.getByRole('button', { name: 'Close' }).last().click()
   await t.getByRole('button', { name: /Crew Fight · / }).waitFor()   // cooldown shown
 
   // Back bars: step back when there's history, fall back home when the page was opened directly
@@ -170,6 +172,7 @@ try {
   // Disabled buttons say why before the tap
   await p.goto(BASE + '/economy')
   await p.getByRole('button', { name: 'Marketplace' }).click()
+  await p.getByRole('button', { name: 'Sell', exact: true }).click()
   await p.locator('.why', { hasText: /in storage to list|need a vehicle/ }).waitFor()
   if (!(await p.getByRole('button', { name: 'List It' }).isDisabled())) throw new Error('List It should be disabled with nothing in storage')
 

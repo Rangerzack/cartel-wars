@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { money, num } from '../lib/format'
@@ -77,19 +77,18 @@ export function PathCard() {
 export function HomePath() {
   const me = useMe()
   const { catalog } = useGame()
-  const nav = useNavigate()
   if (!catalog || me.path) return null
   if (me.path_required) return <PathCard />
   const need = catalog.config.path_rep ?? 100
   if (me.rep_earned < need * 0.5) return null
   const pct = Math.min(100, (me.rep_earned / need) * 100)
   return (
-    <div className="card path-teaser link" onClick={() => nav('/actions')}>
+    <Link to="/actions" className="card path-teaser link">
       <div className="bd stack" style={{ gap: 6 }}>
         <div className="spread"><b>🔓 Pick a path at {num(need)} reputation</b><span className="small tabular">{num(me.rep_earned)}/{num(need)}</span></div>
         <div className="bar"><div className="track"><div className="fill" style={{ width: pct + '%' }} /></div></div>
         <div className="small muted">Producer runs grow houses; Trader sends hustlers on better terms. You can pick early on the Economy page.</div>
       </div>
-    </div>
+    </Link>
   )
 }

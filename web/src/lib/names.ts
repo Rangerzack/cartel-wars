@@ -39,11 +39,13 @@ const MAX_AGE = 60_000
 export function loadNames(force = false): Promise<NameDirectory> {
   if (!force && cache && Date.now() - cache.loadedAt < MAX_AGE) return Promise.resolve(cache)
   if (inflight) return inflight
-  inflight = Promise.all([api.me(), api.findPlayers('', 5000), api.listCrews(''), api.listCartels()])
-    .then(([me, players, crews, cartels]) => {
+  // an empty find_players search leaves the NPC thugs out (Fight › Players), so they come from a search of their own:
+  // "Thug 50" in chat stays a link
+  inflight = Promise.all([api.me(), api.findPlayers('', 5000), api.findPlayers('Thug', 300), api.listCrews(''), api.listCartels()])
+    .then(([me, players, thugs, crews, cartels]) => {
       cache = build([
         { kind: 'player', id: me.id, name: me.name },
-        ...players.map(p => ({ kind: 'player' as const, id: p.id, name: p.name })),
+        ...[...players, ...thugs].map(p => ({ kind: 'player' as const, id: p.id, name: p.name })),
         ...crews.map(c => ({ kind: 'crew' as const, id: c.id, name: c.name })),
         ...cartels.map(c => ({ kind: 'cartel' as const, id: c.id, name: c.name })),
       ])

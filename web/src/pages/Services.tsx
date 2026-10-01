@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { commodityIcon, hoodlumIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
 import { useNow } from '../lib/useNow'
+import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
 import { perk } from '../lib/perks'
@@ -17,17 +18,14 @@ export default function Services() {
   const nav = useNavigate()
   const [sp] = useSearchParams()
   const focus = sp.get('focus')
-  // /services?focus=bank|refills|hoodlums|police|hospital|upgrades|boost scrolls straight to that card
+  const { key } = useLocation()
+  // /services?focus=bank|refills|upgrades|boost|hoodlums|police|hospital|jail scrolls straight to that card; the chips
+  // link here too, and the location key changes on every tap, so tapping the same chip again scrolls again
   useEffect(() => {
     if (!focus) return
-    const t = setTimeout(() => {
-      const el = document.getElementById(focus)
-      if (!el) return
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      el.classList.remove('focused'); void el.offsetWidth; el.classList.add('focused')
-    }, 150)
+    const t = setTimeout(() => focusCard(focus), 150)
     return () => clearTimeout(t)
-  }, [focus])
+  }, [focus, key])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
   const [hood, setHood] = useState<{ code: string; n: number }>({ code: 'thug', n: 10 })
@@ -56,8 +54,12 @@ export default function Services() {
   const maxSlots = cfg.max_slots ?? 130
   const slotsMaxed = me.inventory_slots >= maxSlots
 
-  return (
-    <div className="page">
+  // "hurt" is under half health: a scratch from one fight heals in minutes and shouldn't push Bank down the page
+  const hurt = me.hospital || me.health < me.health_max / 2
+  const hot = me.heat >= heatRed
+
+  const cards: Record<string, ReactNode> = {
+    hospital: (
       <Card id="hospital" title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
         <div className="bd stack">
           <PerkTag code="clinic" />
@@ -83,16 +85,18 @@ export default function Services() {
           ) : <div className="small muted">You're at full health.</div>}
         </div>
       </Card>
-      {me.jailed && (
-        <Card title="🔒 County Jail" right={<small>until you post bail</small>}>
-          <div className="bd stack">
-            <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only.</div>
-            <PerkTag code="law_office" />
-            <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)}` })}>Post Bail · {money(bail)}</Btn>
-          </div>
-        </Card>
-      )}
-
+    ),
+    jail: me.jailed && (
+      <Card id="jail" title="🔒 County Jail" right={<small>until you post bail</small>}>
+        <div className="bd stack">
+          <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only.</div>
+          <PerkTag code="law_office" />
+          <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)}` })}>Post Bail · {money(bail)}</Btn>
+          {me.cash < bail && <div className="why">Bail comes out of cash on hand — you have {money(me.cash)}.</div>}
+        </div>
+      </Card>
+    ),
+    police: (
       <Card id="police" title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat * (1 - bent))} per heat point</small>}>
         <div className="bd stack">
           <div className="spread">
@@ -111,14 +115,16 @@ export default function Services() {
           )}
         </div>
       </Card>
-
+    ),
+    bank: (
       <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
           <div className="small muted">Cash on hand can be taken in fights. Banked cash can't. Carrying more cash than the other side is worth +1 in a fight, though. {cfg.daily_cash ? <>Everyone gets {money(cfg.daily_cash)} on hand at 00:00 UTC — next in {timeLeft(nextRollover(now), now)}.</> : null}</div>
-          <input className="input" inputMode="numeric" placeholder="Amount" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
+          <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
           <div className="grid2">
-            <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={() => run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })}>Deposit</Btn>
-            <Btn disabled={bank <= 0 || bank > me.bank} onClick={() => run(() => api.bankWithdraw(bank), { ok: r => `Withdrawn. Balance ${money(r.bank)}` })}>Withdraw</Btn>
+            {/* the field clears after a move, so a second tap can't send the same amount again */}
+            <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={async () => { if (await run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })) setBank(0) }}>Deposit</Btn>
+            <Btn disabled={bank <= 0 || bank > me.bank} onClick={async () => { if (await run(() => api.bankWithdraw(bank), { ok: r => `Withdrawn. Balance ${money(r.bank)}` })) setBank(0) }}>Withdraw</Btn>
           </div>
           <div className="hstack">
             <button className="btn sm ghost" onClick={() => setBank(me.cash)}>All cash</button>
@@ -126,25 +132,33 @@ export default function Services() {
           </div>
         </div>
       </Card>
-
+    ),
+    refills: (
       <Card id="refills" title="⚡ Refills" right={<small>{Math.min(fullRefills, me.refills_used)}/{fullRefills} full product refills today</small>}>
         {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
-        {(['stamina', 'health'] as const).map(kind => (
-          <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
-            <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(kind === 'stamina' ? me.stamina : me.health)}/{num(kind === 'stamina' ? me.stamina_max : me.health_max)}</span></div>
-            {kind === 'stamina' && (me.free_refills ?? 0) > 0 && <Btn className="sm gold" disabled={me.stamina >= me.stamina_max} onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
-            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max; if (cur >= max) return; if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
-            {catalog.commodities.map(c => {
-              const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
-              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>
-            })}
-          </div>
-        ))}
+        {(['stamina', 'health'] as const).map(kind => {
+          const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max
+          return (
+            <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
+              <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(cur)}/{num(max)}</span></div>
+              {/* nothing to refill: one disabled "Full" instead of four live price buttons */}
+              {cur >= max ? <button className="btn sm" disabled>Full</button> : <>
+                {kind === 'stamina' && (me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
+                <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={() => { if (max - cur < max / 2 && !confirm(`Only ${max - cur} ${kind} missing — spend ${cfg.refill_diamonds} diamonds anyway?`)) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
+                {catalog.commodities.map(c => {
+                  const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
+                  return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>
+                })}
+              </>}
+            </div>
+          )
+        })}
         {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, and they don't count toward the three a day.</div>}
         <div className="row small muted refill-next"><div>After {fullRefills} product refills in a day, each one restores half as much as the one before (½, ¼, ⅛ …). Your next product refill restores <b>{nextShare >= 1 ? 'everything missing' : `${shareLabel(nextShare)} of what's missing`}</b>. The full ones come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Diamond and free refills are always full.</div></div>
       </Card>
-
-      <Card id="upgrades" title="💎 Upgrades" right={<a className="small" onClick={() => nav('/store')}>{num(me.diamonds)} diamonds ›</a>}>
+    ),
+    upgrades: (
+      <Card id="upgrades" title="💎 Upgrades" right={<Link className="small" to="/store">💎 {num(me.diamonds)} ›</Link>}>
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },
@@ -153,7 +167,7 @@ export default function Services() {
         ].map(u => (
           <div key={u.k} className="row">
             <div className="grow"><div className="t">{u.t}</div><div className="s">{u.s}</div></div>
-            {u.k === 'slots' && slotsMaxed ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={u.dis || me.diamonds < u.c || me.cash < u.cash}
+            {u.dis ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={me.diamonds < u.c || me.cash < u.cash}
               onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : u.k === 'heat' ? `+${cfg.heat_upgrade_amount ?? 50} max heat — red now starts at ${heatRed + (cfg.heat_upgrade_amount ?? 50)}` : 'Upgraded' })}>
               💎 {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
             </Btn>}
@@ -162,9 +176,9 @@ export default function Services() {
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
         <Milestones />
       </Card>
-
-      <BoostCard />
-
+    ),
+    boost: me.boost && <BoostCard />,
+    hoodlums: (
       <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
         <div className="bd stack">
           <div className="seg">
@@ -178,6 +192,20 @@ export default function Services() {
           </div>
         </div>
       </Card>
+    ),
+  }
+  // What you came for first (P2-13): jail when you're in it, the hospital when you're hurt, the police when heat is
+  // red; otherwise Bank, the card used most. The rest keep their order.
+  const urgent = [me.jailed && 'jail', hurt && 'hospital', hot && 'police'].filter((k): k is string => !!k)
+  const order = [...urgent, ...['bank', 'refills', 'upgrades', 'boost', 'hoodlums', 'police', 'hospital'].filter(k => !urgent.includes(k) && cards[k])]
+  const label: Record<string, string> = { bank: 'Bank', refills: 'Refills', upgrades: 'Upgrades', boost: 'Boost', hoodlums: 'Hoodlums', police: 'Police', hospital: 'Hospital', jail: 'Jail' }
+
+  return (
+    <div className="page">
+      <nav className="svc-nav" aria-label="Services">
+        {order.map(k => <Link key={k} to={`/services?focus=${k}`} replace className={focus === k ? 'on' : urgent.includes(k) ? 'alert' : ''}>{label[k]}</Link>)}
+      </nav>
+      {order.map(k => <Fragment key={k}>{cards[k]}</Fragment>)}
     </div>
   )
 }

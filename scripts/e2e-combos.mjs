@@ -87,7 +87,7 @@ try {
   await modal.locator('.combo-result .combo-pill', { hasText: 'Back Alley' }).waitFor()
   await modal.getByText(/you counter them: your combo rolls 0–10, theirs rolls nothing/).waitFor()
   await snap(a, 'result-counter')
-  await modal.getByRole('button', { name: 'Close' }).click()
+  await modal.getByRole('button', { name: 'Close' }).last().click()
 
   // next look: the preview remembers Back Alley
   await a.reload()

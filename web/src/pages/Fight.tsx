@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Card, Empty, Seg } from '../components/ui'
+import { Card, Empty, RowLink, Seg } from '../components/ui'
 import type { ComboMeta, FightLog, PlayerSummary, StyleCode, ThugRow, TopUsers } from '../lib/types'
 import { ComboPill, StyleLine } from '../components/Combo'
 import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
@@ -30,7 +30,6 @@ export default function Fight() {
 
 function Players() {
   const { toast } = useGame()
-  const nav = useNavigate()
   const now = useNow(10_000)
   const [q, setQ] = useState('')
   const [list, setList] = useState<PlayerSummary[] | null>(null)
@@ -45,7 +44,7 @@ function Players() {
         {!list && <Empty><span className="spin" /></Empty>}
         {list?.length === 0 && <Empty>Nobody's around. Quiet city.</Empty>}
         {list?.map(p => (
-          <div key={p.id} className="row link" onClick={() => nav(`/player/${p.id}`)}>
+          <RowLink key={p.id} to={`/player/${p.id}`}>
             <span className="ico">{p.avatar}</span>
             <div className="grow">
               <div className="t">{p.name} {p.crew && <span className="muted small">{p.crew.emblem} {p.crew.name}</span>}</div>
@@ -54,7 +53,7 @@ function Players() {
             {p.hospital && <span className="pill red">🏥</span>}
             {p.jailed && <span className="pill red">🔒</span>}
             <span className="chev">›</span>
-          </div>
+          </RowLink>
         ))}
       </Card>
     </>
@@ -65,7 +64,6 @@ function Players() {
 function Thugs() {
   const { toast, catalog } = useGame()
   const cfg = catalog?.config ?? {}
-  const nav = useNavigate()
   const [list, setList] = useState<ThugRow[] | null>(null)
   const [all, setAll] = useState(false)
   useEffect(() => { api.findThugs().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
@@ -91,7 +89,7 @@ function Thugs() {
         {shown.map(t => {
           const [cls, l] = label(t.win_pct)
           return (
-            <div key={t.id} className={`row link thug-row ${t.dry ? 'dry' : ''}`} onClick={() => nav(`/player/${t.id}`)}>
+            <RowLink key={t.id} to={`/player/${t.id}`} className={`thug-row ${t.dry ? 'dry' : ''}`}>
               <span className="ico">{t.avatar}</span>
               <div className="grow">
                 <div className="t">{t.name}{t.combo ? <> <ComboPill code={t.combo} /></> : null}</div>
@@ -99,7 +97,7 @@ function Thugs() {
               </div>
               {t.hospital ? <span className="pill red">🏥</span> : <b className="tabular gold pay">~{money(worth(t))}</b>}
               <span className="chev">›</span>
-            </div>
+            </RowLink>
           )
         })}
       </Card>
@@ -109,33 +107,31 @@ function Thugs() {
 
 function Log() {
   const { toast } = useGame()
-  const nav = useNavigate()
   const now = useNow(10_000)
   const [list, setList] = useState<FightLog[] | null>(null)
   useEffect(() => { api.fights().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
   return (
     <Card>
       {!list && <Empty><span className="spin" /></Empty>}
-      {list?.length === 0 && <Empty>No fights yet.</Empty>}
+      {list?.length === 0 && <Empty>No fights yet. The <Link to="/fight?tab=thugs">Thugs tab</Link> lists easy first wins.</Empty>}
       {list?.map(f => {
         const otherId = f.i_attacked ? f.defender_id : f.attacker_id
         // a player who deleted their account has no profile to open
         const other = otherId ? (f.i_attacked ? f.defender : f.attacker) : <span className="muted">Deleted player</span>
-        return (
-          <div key={f.id} className={otherId ? 'row link' : 'row'} onClick={otherId ? () => nav(`/player/${otherId}`) : undefined}>
-            <span style={{ fontSize: 18 }}>{f.won ? '🏆' : '💀'}</span>
-            <div className="grow">
-              <div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div>
-              <div className="s">{f.won ? 'Won' : 'Lost'} · dealt {f.i_attacked ? f.attacker_dmg : f.defender_dmg}, took {f.i_attacked ? f.defender_dmg : f.attacker_dmg} · {ago(f.at, now)}</div>
-              {(f.attacker_combo || f.defender_combo) && (
-                <div className="s combo-vs">
-                  {f.i_attacked ? 'You' : 'They'} ran <ComboPill code={f.attacker_combo} /> · {f.i_attacked ? 'they' : 'you'} ran <ComboPill code={f.defender_combo} />
-                </div>
-              )}
-            </div>
-            <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>
+        const body = <>
+          <span style={{ fontSize: 18 }}>{f.won ? '🏆' : '💀'}</span>
+          <div className="grow">
+            <div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div>
+            <div className="s">{f.won ? 'Won' : 'Lost'} · dealt {f.i_attacked ? f.attacker_dmg : f.defender_dmg}, took {f.i_attacked ? f.defender_dmg : f.attacker_dmg} · {ago(f.at, now)}</div>
+            {(f.attacker_combo || f.defender_combo) && (
+              <div className="s combo-vs">
+                {f.i_attacked ? 'You' : 'They'} ran <ComboPill code={f.attacker_combo} /> · {f.i_attacked ? 'they' : 'you'} ran <ComboPill code={f.defender_combo} />
+              </div>
+            )}
           </div>
-        )
+          {f.cash === 0 ? <span className="tabular muted">$0</span> : <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>}
+        </>
+        return otherId ? <RowLink key={f.id} to={`/player/${otherId}`}>{body}</RowLink> : <div key={f.id} className="row">{body}</div>
       })}
     </Card>
   )
@@ -143,19 +139,18 @@ function Log() {
 
 function Top() {
   const { toast } = useGame()
-  const nav = useNavigate()
   const [top, setTop] = useState<TopUsers | null>(null)
   useEffect(() => { api.topUsers().then(setTop).catch(e => toast(e.message, 'bad')) }, [toast])
   if (!top) return <Empty><span className="spin" /></Empty>
   const board = (title: string, rows: { id: string; name: string; value: number; emblem?: string }[], fmt: (n: number) => string, link: (id: string) => string) => (
     <Card title={title}>
-      {(rows ?? []).length === 0 && <Empty>—</Empty>}
+      {(rows ?? []).length === 0 && <Empty>Nobody on the board yet.</Empty>}
       {(rows ?? []).map((r, i) => (
-        <div key={r.id} className="row link" onClick={() => nav(link(r.id))}>
+        <RowLink key={r.id} to={link(r.id)}>
           <span className="muted tabular" style={{ width: 22 }}>{i + 1}.</span>
           <div className="grow t">{r.emblem ? r.emblem + ' ' : ''}{r.name}</div>
           <b className="tabular">{fmt(r.value)}</b>
-        </div>
+        </RowLink>
       ))}
     </Card>
   )

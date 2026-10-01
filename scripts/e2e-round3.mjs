@@ -53,7 +53,7 @@ try {
   await modal.locator('.scoreline').waitFor()
   await modal.getByText(/your hit landed in full/).waitFor()
   await snap(a, 'fight-result')
-  await a.getByRole('button', { name: 'Close' }).click()
+  await a.getByRole('button', { name: 'Close' }).last().click()
   // after a hit you're hotter than the thug: the heat edge flips to you
   await box.locator('.edge-col', { hasText: 'Your edges' }).locator('.pill', { hasText: 'More heat' }).waitFor()
 
@@ -66,6 +66,13 @@ try {
   await a.locator('.thug-row').filter({ has: a.locator('.t', { hasText: /^Thug 1$/ }) }).getByText(/hit 1× this hour/).waitFor()
   await a.getByRole('button', { name: 'Best paydays' }).click()
   await snap(a, 'thugs')
+
+  // Players tab: no thugs until you search for one by name
+  await a.goto(`${BASE}/fight`)
+  await a.locator('.card .spin').waitFor({ state: 'detached' })
+  if (await a.locator('.card .row', { hasText: /Thug \d/ }).count()) throw new Error('no thugs on the Players tab before a search')
+  await a.getByPlaceholder('Search by name…').fill('Thug 1')
+  await a.locator('.card .row', { hasText: 'Thug 1' }).first().waitFor()
 
   // Actions: every job names its rare find and odds; a find pops the reveal (the roll is faked in the response)
   await a.goto(`${BASE}/actions`)
@@ -80,12 +87,12 @@ try {
     await route.fulfill({ response: res, json: body })
   })
   await sling.getByRole('button', { name: 'Do It' }).click()
-  const reveal = a.locator('.modal', { hasText: 'Rare find!' })
+  const reveal = a.locator('.modal', { hasText: 'Rare find' })
   await reveal.locator('.name', { hasText: 'EOD Bomb Suit' }).waitFor()
   await reveal.getByText(/def 115 · you own 1/).waitFor()
   await snap(a, 'rare-find')
   await a.unroute('**/rpc/do_action')
-  await reveal.getByRole('button', { name: 'Close' }).click()
+  await reveal.getByRole('button', { name: 'Close' }).last().click()
 
   // A real find (rolled in the database) shows in the city-wide list and in Items, where it can't be bought
   await db.query(`select _rare_roll($1, a, 0) from action_defs a where name = 'Take Down a Rival Don'`, [aId])

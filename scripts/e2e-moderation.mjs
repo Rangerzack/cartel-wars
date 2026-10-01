@@ -42,7 +42,7 @@ try {
   // Sign-up asks about the name first: a blocked one never becomes an account
   const c = await open('Carl')
   await signUp(c, `BigDick_${RUN}`)
-  await c.getByText("That name isn't allowed").waitFor()
+  await c.locator('.why', { hasText: "That name isn't allowed" }).waitFor()
   if (await c.locator('.topbar').count()) throw new Error('no account for a blocked name')
   await signUp(c, N('Carl'))
   await c.locator('.topbar').waitFor()

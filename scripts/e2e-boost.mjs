@@ -79,6 +79,23 @@ try {
   await up.locator('.row', { hasText: 'Setup slot +1' }).getByText('130/130 slots').waitFor()
   await up.locator('.row', { hasText: 'Setup slot +1' }).locator('.pill', { hasText: 'Maxed' }).waitFor()
   await db.query('update profiles set inventory_slots = 7 where id = $1', [aId])
+  // max stamina at 150: "Maxed" too, not a dead "💎 10"
+  await db.query('update profiles set stamina_max = 150 where id = $1', [aId])
+  await a.reload()
+  await up.locator('.row', { hasText: 'Max stamina +5' }).locator('.pill', { hasText: 'Maxed' }).waitFor()
+  if (await up.locator('.row', { hasText: 'Max stamina +5' }).getByRole('button').count()) throw new Error('no upgrade button at 150')
+  await db.query('update profiles set stamina_max = 25, stamina = 25 where id = $1', [aId])
+
+  // Refills: nothing to refill shows one disabled "Full", not price buttons that do nothing
+  await a.reload()
+  const staminaRefill = a.locator('#refills .row', { hasText: 'Stamina' })
+  await staminaRefill.getByRole('button', { name: 'Full' }).waitFor()
+  if (!(await staminaRefill.getByRole('button', { name: 'Full' }).isDisabled())) throw new Error('Full is disabled')
+  if (await staminaRefill.getByRole('button').count() !== 1) throw new Error('only Full at full stamina')
+  await db.query('update profiles set stamina = 5 where id = $1', [aId])
+  await a.reload()
+  await staminaRefill.getByRole('button', { name: /💎/ }).waitFor()
+  if (await staminaRefill.getByRole('button', { name: 'Full' }).count()) throw new Error('refills come back once stamina is missing')
 
   // Items: a full setup points at the next slot's price
   await db.query(`insert into inventory (player_id, item_id, qty) select $1, id, 7 from item_defs where name = 'Brass Knuckles'`, [aId])
@@ -134,9 +151,19 @@ try {
   const pj = await one(`select diamonds, jail_until = 'infinity' as ok from profiles where id = $1`, [aId])
   if (pj.diamonds !== 50 || !pj.ok) throw new Error('jailed for diamonds: ' + JSON.stringify(pj))
   await snap(a, 'jail')
+  // Services puts jail first while you're inside, and Home's "Post bail" lands on it
+  await a.goto(BASE)
+  await a.locator('.notice', { hasText: "You're locked up" }).getByRole('link', { name: 'Post bail →' }).click()
+  await a.waitForURL(/\/services\?focus=jail$/)
+  await a.locator('#jail.focused').waitFor()
+  if ((await a.locator('.svc-nav a').first().textContent()) !== 'Jail') throw new Error('Jail is the first chip')
+  if ((await a.locator('.page > .card').first().getAttribute('id')) !== 'jail') throw new Error('the jail card comes first')
   await jailCard.getByRole('button', { name: 'Post Bail · $8,000' }).click()
   await a.getByText('Bailed out for $8,000').waitFor()
   if ((await one('select jail_until from profiles where id = $1', [aId])).jail_until !== null) throw new Error('out on bail')
+  // out and unhurt: Bank leads again
+  await a.locator('#jail').waitFor({ state: 'detached' })
+  if ((await a.locator('.page > .card').first().getAttribute('id')) !== 'bank') throw new Error('Bank comes first once out')
 
   console.log('E2E BOOST PASSED')
 } catch (e) {

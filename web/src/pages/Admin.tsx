@@ -108,7 +108,7 @@ function Reports() {
     if (await run(() => api.modAction(t.id, action, r.ref_id!), { ok: () => ok })) load()
   }
   if (!q) return <Empty><span className="spin" /></Empty>
-  if (q.length === 0) return <Card><Empty>No open reports. 🎉</Empty></Card>
+  if (q.length === 0) return <Card><Empty>No open reports.</Empty></Card>
   return (
     <>
       {q.map(t => (

@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money } from '../lib/format'
-import { Btn, Card, Empty, Stat } from '../components/ui'
+import { Btn, Card, Empty, RowLink, Stat } from '../components/ui'
 import { Ledger } from '../components/Ledger'
 import type { CartelDetail, CartelSummary, CrewSummary } from '../lib/types'
 import { BackBar } from '../components/BackBar'
+import { CrewLink } from '../components/Linked'
 
 export default function Cartel() {
   const { id } = useParams()
@@ -40,7 +41,9 @@ function CartelHub() {
       {me.crew?.is_capo ? (
         <Card title="Found a Cartel">
           <div className="bd stack">
-            <input className="input" placeholder="Cartel name" value={name} maxLength={24} onChange={e => setName(e.target.value)} />
+            <input className="input" placeholder="Cartel name" aria-label="Cartel name" value={name} maxLength={24} onChange={e => setName(e.target.value)} />
+            {/* cartel_create takes 3–24 characters, trimmed */}
+            {name.trim().length < 3 && <div className="why">Pick a name of at least 3 characters.</div>}
             <Btn className="doit block" disabled={name.trim().length < 3} onClick={async () => { const r = await run(() => api.cartelCreate(name), { ok: () => 'You are the Don' }); if (r) nav(`/cartel/${r.id}`) }}>Found It</Btn>
           </div>
         </Card>
@@ -50,13 +53,13 @@ function CartelHub() {
       <h2>Cartels</h2>
       <Card>
         {!list && <Empty><span className="spin" /></Empty>}
-        {list?.length === 0 && <Empty>No cartels yet.</Empty>}
+        {list?.length === 0 && <Empty>No cartels yet. A crew's Capo can found one.</Empty>}
         {list?.map(c => (
-          <div key={c.id} className="row link" onClick={() => nav(`/cartel/${c.id}`)}>
+          <RowLink key={c.id} to={`/cartel/${c.id}`}>
             <span style={{ fontSize: 20 }}>🕴</span>
             <div className="grow"><div className="t">{c.name}</div><div className="s">Don {c.don} · {c.crews} crews · {c.blocks} blocks</div></div>
             <span className="chev">›</span>
-          </div>
+          </RowLink>
         ))}
       </Card>
     </div>
@@ -75,7 +78,9 @@ function CartelPage({ id }: { id: string }) {
   useEffect(() => { load() }, [load])
   useEffect(() => { if (c?.is_don) api.listCrews().then(setCrews).catch(() => {}) }, [c?.is_don])
   if (!c) return <Empty><span className="spin" /></Empty>
-  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { await run(fn, { ok }); load(); setLedgerV(v => v + 1) }
+  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { const r = await run(fn, { ok }); load(); setLedgerV(v => v + 1); return r }
+  // a deposit or withdrawal empties the field, so a second tap doesn't move the same amount again
+  const bank = async (n: number) => { if (await act(() => api.cartelBank(n), r => `Cartel bank: ${money(r.bank)}`)) setAmount(0) }
   const inviteable = (crews ?? []).filter(x => !x.cartel)
 
   return (
@@ -101,9 +106,9 @@ function CartelPage({ id }: { id: string }) {
       {c.member && (
         <Card title="Cartel Bank" right={<small>{c.is_don ? 'Don can withdraw' : 'deposits only'}</small>}>
           <div className="bd hstack">
-            <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
-            <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => act(() => api.cartelBank(amount), r => `Cartel bank: ${money(r.bank)}`)}>Deposit</Btn>
-            {c.is_don && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => act(() => api.cartelBank(-amount), r => `Cartel bank: ${money(r.bank)}`)}>Withdraw</Btn>}
+            <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" aria-label={c.is_don ? 'Amount to deposit or withdraw' : 'Amount to deposit'} value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
+            <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => bank(amount)}>Deposit</Btn>
+            {c.is_don && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => bank(-amount)}>Withdraw</Btn>}
           </div>
         </Card>
       )}
@@ -113,7 +118,7 @@ function CartelPage({ id }: { id: string }) {
         {c.crews.map(x => (
           <div key={x.id} className="row">
             <span className="ico">{x.emblem}</span>
-            <div className="grow link" onClick={() => nav(`/crew/${x.id}`)}><div className="t">{x.name}{x.capo_id === c.don_id ? ' 👑' : ''}</div><div className="s">Capo {x.capo} · {x.members} members · {x.blocks} blocks{x.votes > 0 ? ` · ${x.votes} vote${x.votes > 1 ? 's' : ''} for Don` : ''}</div></div>
+            <div className="grow link" onClick={() => nav(`/crew/${x.id}`)}><div className="t"><CrewLink id={x.id}>{x.name}</CrewLink>{x.capo_id === c.don_id ? ' 👑' : ''}</div><div className="s">Capo {x.capo} · {x.members} members · {x.blocks} blocks{x.votes > 0 ? ` · ${x.votes} vote${x.votes > 1 ? 's' : ''} for Don` : ''}</div></div>
             {c.can_vote && x.capo_id !== c.don_id && (
               <Btn className={`sm ${x.my_vote ? 'gold' : 'ghost'}`} onClick={() => act(() => api.cartelVoteDon(x.capo_id), r => (r.elected ? `${x.capo} is the new Don` : `Vote cast — ${r.votes}/${r.needed}`))}>{x.my_vote ? '✓ Voted' : 'Vote Don'}</Btn>
             )}

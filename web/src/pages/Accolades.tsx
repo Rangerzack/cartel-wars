@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useGame } from '../lib/game'
 import { api } from '../lib/api'
 import { accoladeMeta, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Card, Empty, Seg } from '../components/ui'
+import { Card, Empty, RowLink, Seg } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import type { Accolades as AccoladesT } from '../lib/types'
 import { BackBar } from '../components/BackBar'
@@ -13,7 +12,6 @@ const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf', 'ga
 
 export default function Accolades() {
   const { toast } = useGame()
-  const nav = useNavigate()
   const now = useNow(30_000)
   const [data, setData] = useState<AccoladesT | null>(null)
   const [week, setWeek] = useState<'this_week' | 'last_week'>('this_week')
@@ -34,11 +32,11 @@ export default function Accolades() {
           <Card key={k} title={<>{m.icon} {m.label}</>}>
             {rows.length === 0 && <Empty>Nobody on the board yet.</Empty>}
             {rows.map((r, i) => (
-              <div key={r.id} className="row link" onClick={() => nav(`/player/${r.id}`)}>
+              <RowLink key={r.id} to={`/player/${r.id}`}>
                 <span className={`muted tabular ${i < 3 ? 'gold' : ''}`} style={{ width: 24 }}>{i + 1}.</span>
                 <div className="grow t">{r.name}</div>
                 <b className="tabular">{m.unit(r.value)}</b>
-              </div>
+              </RowLink>
             ))}
           </Card>
         )

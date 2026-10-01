@@ -16,6 +16,12 @@ export function NameLink({ kind, id, children, className = '' }: { kind: NameKin
   return <Link to={path[kind](id)} className={`nlink ${kind} ${className}`} onClick={stop}>{children}</Link>
 }
 
+/** A list row's title as a real link, for a row that can't be one RowLink because it holds name links or buttons of its
+ *  own: keyboard and VoiceOver reach the row through its title, while a tap anywhere on the row still opens it. */
+export function TitleLink({ to, children }: { to: string; children: ReactNode }) {
+  return <Link to={to} className="tlink" onClick={stop}>{children}</Link>
+}
+
 export const PlayerLink = (p: { id: string | null | undefined; children: ReactNode; className?: string }) => <NameLink kind="player" {...p} />
 export const CrewLink = (p: { id: string | null | undefined; children: ReactNode; className?: string }) => <NameLink kind="crew" {...p} />
 export const CartelLink = (p: { id: string | null | undefined; children: ReactNode; className?: string }) => <NameLink kind="cartel" {...p} />

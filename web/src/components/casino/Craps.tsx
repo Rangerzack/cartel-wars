@@ -29,10 +29,10 @@ const isOdds = (k: CrapsBetKind) => k.endsWith('_odds')
 function call(r: { dice: [number, number]; sum: number; event?: CrapsEvent }, point: number | null): string {
   const [a, b] = r.dice, s = r.sum, hard = a === b && [4, 6, 8, 10].includes(s)
   switch (r.event) {
-    case 'natural': return s === 11 ? 'Yo-leven! Front line winner' : 'Seven! Front line winner'
+    case 'natural': return s === 11 ? 'Yo-leven. Front line wins' : 'Seven. Front line wins'
     case 'craps': return s === 2 ? 'Aces — craps' : s === 3 ? 'Ace-deuce — craps' : 'Boxcars — craps'
     case 'point': return `The point is ${s}`
-    case 'hit': return `Winner! ${s}${hard ? ' the hard way' : ''} — pay the line`
+    case 'hit': return `${s}${hard ? ' the hard way' : ''} — pay the line`
     case 'seven_out': return 'Seven out — line away'
     default:
       if (s === 11) return 'Yo-leven'
@@ -132,7 +132,7 @@ export default function Craps() {
   const settled = roll?.log.filter((l: CrapsLogLine) => l.result === 'win' || l.result === 'lose' || l.result === 'push') ?? []
 
   return (
-    <Card title="🎲 Craps" right={<small>{point ? `Point is ${point}` : 'Come-out roll'}</small>}>
+    <Card title="🎲 Craps" className="table-card" right={<small>{point ? `Point is ${point}` : 'Come-out roll'}</small>}>
       <div className="bd stack">
         {!st ? <Empty><span className="spin" /></Empty> : (
           <div className="cr-table">
@@ -254,13 +254,17 @@ export default function Craps() {
         {point === null && ((bets.place4 ?? 0) + (bets.place5 ?? 0) + (bets.place6 ?? 0) + (bets.place8 ?? 0) + (bets.place9 ?? 0) + (bets.place10 ?? 0) + (bets.hard4 ?? 0) + (bets.hard6 ?? 0) + (bets.hard8 ?? 0) + (bets.hard10 ?? 0)) > 0 &&
           <div className="small muted center">Place bets and hardways are off on the come-out roll.</div>}
 
-        <BetPicker value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip — tap the felt to bet" />
-        <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-          <button className="btn gold grow cr-roll" disabled={rolling || onFelt === 0} onClick={doRoll}>
-            {rolling ? <span className="spin" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
-          </button>
-          <button className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} title="Take down everything except Pass / Don't Pass (once the point is on) and come bets">Take down</button>
+        {/* chips and Roll ride above the tab bar while the felt scrolls under them */}
+        <div className="table-bar">
+          <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip — tap the felt to bet" />
+          <div className="hstack" style={{ flexWrap: 'nowrap' }}>
+            <button type="button" className="btn gold flex1 cr-roll" disabled={rolling || onFelt === 0} onClick={doRoll}>
+              {rolling ? <span className="spin" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
+            </button>
+            <button type="button" className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} aria-label="Take down everything except Pass / Don't Pass once the point is on, and come bets">Take down</button>
+          </div>
         </div>
+        <BetPicker part="amount" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} />
 
         {settled.length > 0 && !rolling && (
           <div className="cr-log">
