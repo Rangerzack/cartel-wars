@@ -634,6 +634,8 @@ primary verb on a screen (Title Case), `gold` spends or confirms, red `doit` is
 an attack, `red` deletes, `ghost` is secondary, `ghost red` leaves or kicks.
 Copy: short, second person, no exclamation marks, emoji only as icons. A spend
 that is irreversible or costs over half your cash asks first.
+A fight's result sheet has Attack again under the result, with the same checks as
+Attack (stamina, hospital, jail), so a streak is one tap per fight.
 
 ## iOS app *(Zack, 2026-10-01)*
 
