@@ -26,6 +26,11 @@ interface GameState {
   /** True after the player opens a password-reset link; the app asks for a new password before anything else. */
   recovery: boolean
   endRecovery: () => void
+  /** The stamina refill sheet: `need` is what the action takes (null = closed); pages open it instead of a dead button,
+   *  and `run` opens it when the server refuses for stamina. */
+  refillNeed: number | null
+  askRefill: (need?: number) => void
+  closeRefill: () => void
 }
 
 const Ctx = createContext<GameState | null>(null)
@@ -54,6 +59,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
   const [netDown, setNetDown] = useState(false)
+  const [refillNeed, setRefillNeed] = useState<number | null>(null)
+  const askRefill = useCallback((need = 0) => setRefillNeed(need), [])
+  const closeRefill = useCallback(() => setRefillNeed(null), [])
   const netDownRef = useRef(false)
   const markNet = useCallback((down: boolean) => { netDownRef.current = down; setNetDown(down) }, [])
   // A reset link lands with #...type=recovery; catch it here too in case supabase fires PASSWORD_RECOVERY before we subscribe.
@@ -191,6 +199,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await refresh()
       return r
     } catch (e) {
+      // "Not enough stamina", "You need at least 2 stamina to fight", "A turf war takes 3 stamina": offer a refill
+      const m = /(?:^|\s)(?:(\d+) )?stamina\b/i.exec(errorText(e))
+      if (m && !/free refills/i.test(errorText(e))) { setRefillNeed(m[1] ? Number(m[1]) : 0); await refresh(); return undefined }
       toast(errorText(e), 'bad')
       if (isNetworkError(e) && loaded.current.me) markNet(true)
       return undefined
@@ -202,8 +213,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill }),
+    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }

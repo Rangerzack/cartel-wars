@@ -176,7 +176,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
   id: number; rules: TerritoryData['rules']; thugs: number; mercs: number; spies: number; onClose: () => void; onChanged: () => void
 }) {
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run, toast, askRefill } = useGame()
   const now = useNow()
   const [b, setB] = useState<BlockDetail | null>(null)
   const [force, setForce] = useState({ thugs: Math.min(thugs, rules.min_thugs), mercs: 0 })
@@ -276,7 +276,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
               {(me.hospital || me.jailed) && <div className="notice red">{me.hospital ? "You're in the hospital — heal up before you attack." : "You can't run a turf war from jail."}</div>}
               {thugs < rules.min_thugs && <div className="notice red">You need at least {rules.min_thugs} thugs to start a turf attack. <Link to="/services?focus=hoodlums">Hire more →</Link></div>}
               <div className="hstack">
-                <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || me.stamina < rules.stamina} onClick={attack}>Attack</Btn>
+                <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital} onClick={() => me.stamina < rules.stamina ? askRefill(rules.stamina) : attack()}>Attack</Btn>
                 <Btn className="sm" disabled={spies < 1} onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>
               </div>
             </>

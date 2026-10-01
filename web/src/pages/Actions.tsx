@@ -12,7 +12,7 @@ type Flash = Result & { key: number }
 
 export default function Actions() {
   const me = useMe()
-  const { catalog, run } = useGame()
+  const { catalog, run, askRefill } = useGame()
   const nav = useNavigate()
   // Only jail / busts get the pop-up — they change what you can do next. Everything else shows in place.
   const [bust, setBust] = useState<Result | null>(null)
@@ -71,7 +71,7 @@ export default function Actions() {
       {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <Link to="/services?focus=jail">Post bail →</Link></div>}
       {me.hospital && <div className="notice red">You can't work from a hospital bed. <Link to="/services?focus=hospital">Buy health →</Link></div>}
       {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <Link to="/economy">Choose your path →</Link></div>}
-      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <Link to="/services?focus=refills">refill it →</Link></div>}
+      {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <button type="button" className="linkbtn" onClick={() => askRefill()}>refill it →</button></div>}
 
       <div className="spread">
         {session.jobs > 0
@@ -91,7 +91,7 @@ export default function Actions() {
         {shown.map(a => {
           const block = blockedBy(a)
           const tired = me.stamina < a.stamina_cost
-          const cant = me.hospital || tired || !!block
+          const cant = me.hospital || !!block   // short on stamina isn't a dead button: Do It offers a refill
           const f = flash[a.id]
           return (
             <div key={a.id} className={`row action ${f ? 'flashing' : ''}`}>
@@ -107,7 +107,7 @@ export default function Actions() {
                   {a.requires_item && <> · <span className={block === 'item' ? 'red' : 'green'}>needs {itemName(a.requires_item)}</span></>}
                   {a.min_crew > 0 && <> · <span className={block === 'crew' ? 'red' : 'green'}>crew of {a.min_crew}</span></>}
                   {perStamina(a) > 0 && a.pay_rep === 0 && <span className="muted"> · ~{money(perStamina(a))}/⚡</span>}
-                  {tired && !me.hospital && <> · <span className="red">need ⚡{a.stamina_cost}</span></>}
+                  {tired && !me.hospital && <> · <span className="red">need ⚡{a.stamina_cost} · tap to refill</span></>}
                 </div>
                 {a.drop_item && <div className="find-tag">🎁 Rare find: <b>{itemName(a.drop_item)}</b> · {dropOdds(a.stamina_cost, catalog.config.drop_stamina)}</div>}
                 {f && (
@@ -118,7 +118,7 @@ export default function Actions() {
                 )}
               </div>
               <div className="doit-wrap">
-                <Btn className="doit" disabled={!!cant} onClick={() => go(a)}>Do It</Btn>
+                <Btn className="doit" disabled={!!cant} onClick={() => tired ? askRefill(a.stamina_cost) : go(a)}>Do It</Btn>
                 {f && <span key={f.key} className="floater">{f.rep > 0 ? `⭐+${f.rep}` : `+${money(f.pay)}`}</span>}
               </div>
             </div>
