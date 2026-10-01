@@ -2,14 +2,15 @@ import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { commodityIcon, every, num } from '../lib/format'
-import { refillShare, shareLabel } from '../lib/market'
+import { drugRefill } from '../lib/market'
 import { perk } from '../lib/perks'
 import { Btn, Modal } from './ui'
 
 /** The sheet that opens when a job, a fight or a turf war needs more stamina than the player has: every way to refill,
  *  priced, with what each one restores, so the next tap is the refill rather than a trip to Services. The same rules as
- *  the Refills card (diamond and free refills fill you up; a product refill restores the day's share of what's missing,
- *  Pharmacy perk included); the server checks them again. Mounted once in Layout; opened through useGame().askRefill. */
+ *  the Refills card (diamond and free refills fill you up; each drug fills you up 3 times a day, 5 on the Daily Drop,
+ *  then restores half the bar; Pharmacy perk included); the server checks them again. Mounted once in Layout; opened
+ *  through useGame().askRefill. */
 export function RefillSheet() {
   const me = useMe()
   const { catalog, run, refillNeed, closeRefill, ask } = useGame()
@@ -17,10 +18,11 @@ export function RefillSheet() {
   const cfg = catalog.config
   const need = refillNeed
   const missing = me.stamina_max - me.stamina
-  const share = refillShare(me, catalog)
   const pharmacy = perk(me, 'pharmacy')
-  const productGain = Math.ceil(missing * share)
   const after = (gain: number) => me.stamina + gain >= need
+  const drugs = catalog.commodities.map(c => ({ c, units: Math.ceil(c.refill_stamina * (1 - pharmacy)), have: me.storage[c.code] ?? 0, d: drugRefill(me, catalog, c.code) }))
+  // every drug you can afford is past its full refills and half the bar still isn't enough for this
+  const halfShort = need > 0 && drugs.some(x => x.have >= x.units) && drugs.every(x => x.have < x.units || (x.d.left === 0 && !after(x.d.gain)))
   const done = async (fn: () => Promise<{ gain: number }>, what: string) => {
     if (await run(fn, { ok: r => `+${r.gain} stamina · ${what}` })) closeRefill()
   }
@@ -40,25 +42,21 @@ export function RefillSheet() {
             <RefillRow icon="💎" label={`${cfg.refill_diamonds} diamonds`} sub={`fills you up · you have 💎 ${num(me.diamonds)}`} gain={missing}
               disabled={me.diamonds < cfg.refill_diamonds}
               onClick={async () => { if (missing < me.stamina_max / 2 && !await ask(`Only ${missing} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return done(() => api.refill('stamina', 'diamonds'), 'full') }} />
-            {catalog.commodities.map(c => {
-              const units = Math.ceil(c.refill_stamina * (1 - pharmacy))
-              const have = me.storage[c.code] ?? 0
-              return (
-                <RefillRow key={c.code} icon={commodityIcon[c.code]} label={`${num(units)} ${c.name}`}
-                  sub={`restores ${share >= 1 ? 'everything missing' : `${shareLabel(share)} of what's missing`} · you have ${num(have)}`}
-                  gain={productGain} disabled={have < units}
-                  onClick={() => done(() => api.refill('stamina', c.code), share < 1 ? `${shareLabel(share)} refill` : 'full')} />
-              )
-            })}
+            {drugs.map(({ c, units, have, d }) => (
+              <RefillRow key={c.code} icon={commodityIcon[c.code]} label={`${num(units)} ${c.name}`}
+                sub={`${d.left > 0 ? `fills you up · ${d.left} of ${d.full} left today` : 'half your stamina · full again at 00:00 UTC'} · you have ${num(have)}`}
+                gain={d.gain} disabled={have < units}
+                onClick={() => done(() => api.refill('stamina', c.code), d.left > 1 ? `${d.left - 1} full ${c.name} left today` : d.left === 1 ? `last full ${c.name} today` : 'half refill')} />
+            ))}
           </div>
         )}
-        {missing > 0 && need > 0 && share < 1 && !after(productGain) && (
-          <div className="warn">A product refill restores {shareLabel(share)} of what's missing today ({num(productGain)}), which isn't enough for this on its own. Diamond and free refills always fill you up.</div>
+        {missing > 0 && halfShort && (
+          <div className="warn">Your drugs are past today's full refills, and half your stamina bar isn't enough for this. Diamond and free refills always fill you up.</div>
         )}
         <div className="small muted">
           {me.diamonds < cfg.refill_diamonds && <><Link to="/store" onClick={closeRefill}>Get diamonds ›</Link> · </>}
           <Link to="/services?focus=refills" onClick={closeRefill}>All refills ›</Link>
-          {' '}· After {cfg.refill_full ?? 3} product refills a day each one restores half as much as the one before.
+          {' '}· Each drug fills you up {me.refills?.full ?? cfg.refill_full ?? 3} times a day{me.drop?.subscribed ? '' : ` (${me.refills?.sub_full ?? 5} with the Daily Drop)`}, then restores half your stamina.
         </div>
       </div>
     </Modal>

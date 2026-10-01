@@ -9,7 +9,7 @@ import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
 import { HireHoodlums } from '../components/Hire'
 import { perk } from '../lib/perks'
-import { refillShare, shareLabel } from '../lib/market'
+import { drugRefill } from '../lib/market'
 import type { MilestoneDef } from '../lib/types'
 
 export default function Services() {
@@ -44,8 +44,12 @@ export default function Services() {
   const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
   const refillUnits = (units: number) => Math.ceil(units * (1 - pharmacy))
-  const fullRefills = cfg.refill_full ?? 3
-  const nextShare = refillShare(me, catalog)
+  // drug refills: each drug is full this many times a day (more on the Daily Drop), then half the stamina bar
+  const fullN = me.refills?.full ?? cfg.refill_full ?? 3
+  const subFull = me.refills?.sub_full ?? fullN + 2
+  const subscribed = !!me.drop?.subscribed
+  const lateGain = Math.ceil(me.stamina_max * (me.refills?.late_share ?? 0.5))
+  const usedAny = Object.values(me.refills?.used ?? {}).some(n => (n ?? 0) > 0)
   const missing = me.health_max - me.health
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
@@ -133,27 +137,34 @@ export default function Services() {
       </Card>
     ),
     refills: (
-      <Card id="refills" title="⚡ Refills" right={<small>{Math.min(fullRefills, me.refills_used)}/{fullRefills} full product refills today</small>}>
+      <Card id="refills" title="⚡ Refills" right={<small>{fullN} full per drug a day</small>}>
         {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
-        {(['stamina', 'health'] as const).map(kind => {
-          const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max
-          return (
-            <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
-              <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(cur)}/{num(max)}</span></div>
-              {/* nothing to refill: one disabled "Full" instead of four live price buttons */}
-              {cur >= max ? <button className="btn sm" disabled>Full</button> : <>
-                {kind === 'stamina' && (me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
-                <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { if (max - cur < max / 2 && !await ask(`Only ${max - cur} ${kind} is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
-                {catalog.commodities.map(c => {
-                  const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
-                  return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>
-                })}
-              </>}
-            </div>
-          )
-        })}
-        {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, and they don't count toward the three a day.</div>}
-        <div className="row small muted refill-next"><div>After {fullRefills} product refills in a day, each one restores half as much as the one before (½, ¼, ⅛ …). Your next product refill restores <b>{nextShare >= 1 ? 'everything missing' : `${shareLabel(nextShare)} of what's missing`}</b>. The full ones come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Diamond and free refills are always full.</div></div>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <div className="grow t">Stamina <span className="muted small">{num(me.stamina)}/{num(me.stamina_max)}</span></div>
+          {/* nothing to refill: one disabled "Full" instead of live price buttons */}
+          {me.stamina >= me.stamina_max ? <button className="btn sm" disabled>Full</button> : <>
+            {(me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
+            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.stamina_max - me.stamina; if (gap < me.stamina_max / 2 && !await ask(`Only ${gap} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('stamina', 'diamonds'), { ok: r => `+${r.gain} stamina` }) }}>💎 {cfg.refill_diamonds}</Btn>
+            {catalog.commodities.map(c => {
+              const units = refillUnits(c.refill_stamina)
+              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill('stamina', c.code), { ok: r => `+${r.gain} stamina${r.full_left == null ? '' : r.full_left > 0 ? ` · ${r.full_left} full ${c.name} refill${r.full_left > 1 ? 's' : ''} left today` : ` · ${c.name} restores half your stamina until 00:00 UTC`}` })}>{commodityIcon[c.code]} {num(units)}</Btn>
+            })}
+          </>}
+        </div>
+        <div className="row small refill-left">
+          <span className="muted">Full refills left today</span>
+          {catalog.commodities.map(c => { const d = drugRefill(me, catalog, c.code); return <span key={c.code} className={`pill ${d.left ? '' : 'red'}`}>{commodityIcon[c.code]} {d.left}/{d.full}</span> })}
+        </div>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <div className="grow t">Health <span className="muted small">{num(me.health)}/{num(me.health_max)}</span></div>
+          {me.health >= me.health_max ? <button className="btn sm" disabled>Full</button>
+            : <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.health_max - me.health; if (gap < me.health_max / 2 && !await ask(`Only ${gap} health is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('health', 'diamonds'), { ok: r => `+${r.gain} health` }) }}>💎 {cfg.refill_diamonds}</Btn>}
+        </div>
+        {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, on top of the drug ones.</div>}
+        <div className="row small muted refill-next"><div>
+          Each drug fills your stamina {fullN} times a day{subscribed ? ' (5 with your Daily Drop)' : <> — {subFull} with the <Link to="/store#drop">Daily Drop</Link></>}. After that, a refill of that drug restores half your stamina bar ({num(lateGain)}).
+          {' '}They come back at 00:00 UTC{usedAny ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Drugs don't heal: health comes from the Hospital or diamonds. Diamond and free refills always fill you up.
+        </div></div>
       </Card>
     ),
     upgrades: (

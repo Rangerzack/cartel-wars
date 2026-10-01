@@ -1,12 +1,10 @@
 -- Turning the Daily Drop's paid plan on (#16). NOT applied yet: copy this file to supabase/migrations/2026100400000N_drop_paid.sql
 -- (next free N) and ship it on the day the io.rangelab.cartelwars.drop.monthly subscription is approved and live in App
--- Store Connect. It is the newest _cfg (20261004000005_jail_until_bail.sql) with drop_free set to 0: from then on
+-- Store Connect. It is the newest _cfg (20261004000016_drug_refills.sql) with drop_free set to 0: from then on
 -- subscribe_drop refuses ("Subscribe through the store"), the app's Subscribe button is the App Store purchase and the
 -- web says it's an iPhone subscription. Players already on the free plan keep it, open-ended, until they cancel; to end
 -- them at the switch instead (their unopened crates stay) uncomment the last statement.
--- Before copying, check that no later migration has redefined _cfg (grep "create or replace function _cfg(key text)").
-
-create or replace function _cfg(key text) returns numeric language sql immutable set search_path = public as $$
+-- Before copying, check that no later migration has redefined _cfg (grep "create or replace function _cfg(key text) returns numeric language sql immutable set search_path = public as $$
   select case key
     when 'regen_minutes'      then 10     -- heat cools 1 point every 10 min
     -- Regen boost (10x): stamina +2 every minute (was every 10), health +10 every minute (was +5 every 5).
@@ -30,7 +28,9 @@ create or replace function _cfg(key text) returns numeric language sql immutable
     when 'hospital_per_point' then 40     -- base $ per health point
     when 'health_price_scale' then 100    -- price per point grows by 1x for every 100 points bought in 24h
     when 'refill_diamonds'    then 6
-    when 'refill_full'        then 3      -- full-strength product refills a game day; each one after restores half the last
+    when 'refill_full'        then 3      -- full stamina refills per drug (herb, dust, pills) a game day
+    when 'refill_sub_extra'   then 2      -- Daily Drop subscribers get this many more of each
+    when 'refill_late_share'  then 0.5    -- past those, a drug refill restores this share of max stamina
     when 'hustler_price'      then 400    -- per hustler, for players who haven't picked a path (Traders pay a cut instead)
     when 'hustler_hours'      then 4
     when 'trader_cut_pct'     then 10     -- Traders: their hustlers keep this % of the take, nothing up front

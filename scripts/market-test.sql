@@ -1,4 +1,4 @@
--- Tests for the market overhaul: refills that keep halving, paths you can pick any time (and must past grow level 5),
+-- Tests for the market overhaul: refills (per drug since 0016), paths you can pick any time (and must past grow level 5),
 -- Trader terms, street price that answers to hustler dumping, the 150% listing cap, the 5% seller fee and buy orders.
 -- Run after the other suites (reuses their helpers): scripts/local-db.sh test
 \set ON_ERROR_STOP on
@@ -14,31 +14,56 @@ create or replace function stock(u uuid, com text, n int) returns void language 
   insert into storage as st (player_id, commodity, qty) values (u, com, n)
     on conflict (player_id, commodity) do update set qty = n $$;
 
--- Refills: three full, then each restores half the one before ---------------------------------------------------
+-- Refills (20261004000016_drug_refills): drugs refill stamina only; each drug is full 3 times a game day (5 on the
+-- Daily Drop), then restores half the stamina bar. (Until that migration product refills halved again each time.)
 select as_user('aa111111-1111-1111-1111-111111111111');
-do $$ declare u uuid := auth.uid(); r jsonb; gains int[] := '{}'; i int; begin
+do $$ declare u uuid := auth.uid(); r jsonb; gains int[] := '{}'; i int; m jsonb; begin
   perform get_me();
-  update profiles set stamina_max = 150, diamonds = 100 where id = u;
-  perform stock(u, 'herb', 100000);
-  assert (get_me()->>'refill_share')::numeric = 1;
-  for i in 1..7 loop
-    update profiles set stamina = 0 where id = u;
+  update profiles set stamina_max = 150, diamonds = 100, drop_since = null, drop_until = null where id = u;
+  perform stock(u, 'herb', 100000); perform stock(u, 'dust', 100000); perform stock(u, 'pills', 100000);
+  m := get_me()->'refills';
+  assert (m->>'full')::int = 3 and m->'used' = '{}'::jsonb and (m->>'late_share')::numeric = 0.5, 'get_me refills: ' || m::text;
+  for i in 1..5 loop
+    update profiles set stamina = 0, stamina_tick = now() where id = u;
     r := refill('stamina', 'herb');
     gains := gains || (r->>'gain')::int;
   end loop;
-  assert gains = '{150,150,150,75,38,19,10}', 'halves again each time: ' || gains::text;
-  assert (r->>'next_share')::numeric = 1 / 32.0 and (get_me()->>'refill_share')::numeric = 1 / 32.0, 'next is 1/32: ' || r::text;
-  -- health refills share the count
+  assert gains = '{150,150,150,75,75}', 'three full, then half the bar: ' || gains::text;
+  assert (r->>'full_left')::int = 0 and (r->>'full')::int = 3, 'none left: ' || r::text;
+  assert (get_me()->'refills'->'used'->>'herb')::int = 5, 'counted per drug';
+  -- half the bar never overfills
+  update profiles set stamina = 120, stamina_tick = now() where id = u;
+  assert (refill('stamina', 'herb')->>'gain')::int = 30, 'half the bar, up to full';
+  -- dust has its own three
+  update profiles set stamina = 0, stamina_tick = now() where id = u;
+  r := refill('stamina', 'dust');
+  assert (r->>'gain')::int = 150 and (r->>'full_left')::int = 2, 'dust is still full: ' || r::text;
+  -- drugs don't heal
   update profiles set health = 0, health_max = 100 where id = u;
-  assert (refill('health', 'herb')->>'gain')::int = 4, '8th product refill: 100/32 rounds up';
-  -- diamonds are always full and don't count
-  update profiles set stamina = 0 where id = u;
+  perform expect_error('select refill(''health'', ''herb'')', 'Drugs refill stamina');
+  assert (refill('health', 'diamonds')->>'gain')::int = 100, 'diamonds still heal';
+  -- diamonds are always full and don't count against a drug
+  update profiles set stamina = 0, stamina_tick = now() where id = u;
   r := refill('stamina', 'diamonds');
-  assert (r->>'gain')::int = 150 and (select refills_used from profiles where id = u) = 8, 'diamonds: ' || r::text;
-  -- the rollover resets it
-  update profiles set refills_reset_at = now() - interval '2 days' where id = u;
-  update profiles set stamina = 0 where id = u;
-  assert (refill('stamina', 'herb')->>'gain')::int = 150, 'full again after the rollover';
+  assert (r->>'gain')::int = 150 and (get_me()->'refills'->'used'->>'herb')::int = 6, 'diamonds: ' || r::text;
+  -- Daily Drop subscribers: 5 full of each
+  update profiles set drop_since = now() - interval '1 day', drop_until = null where id = u;
+  assert (get_me()->'refills'->>'full')::int = 5;
+  gains := '{}';
+  for i in 1..6 loop
+    update profiles set stamina = 0, stamina_tick = now() where id = u;
+    gains := gains || (refill('stamina', 'pills')->>'gain')::int;
+  end loop;
+  assert gains = '{150,150,150,150,150,75}', 'five full on the Daily Drop: ' || gains::text;
+  -- a lapsed subscription is back to three: pills has used 6, so half
+  update profiles set drop_until = now() - interval '1 minute', stamina = 0, stamina_tick = now() where id = u;
+  assert (refill('stamina', 'pills')->>'gain')::int = 75, 'lapsed: back to three';
+  -- the 00:00 UTC rollover: yesterday's counts don't count
+  update profiles set drug_refills = jsonb_set(drug_refills, '{day}', to_jsonb((_game_day() - 1)::text)), stamina = 0, stamina_tick = now() where id = u;
+  assert get_me()->'refills'->'used' = '{}'::jsonb, 'a new day starts at zero';
+  r := refill('stamina', 'herb');
+  assert (r->>'gain')::int = 150 and (r->>'full_left')::int = 2, 'full again after the rollover: ' || r::text;
+  update profiles set drop_since = null, drop_until = null where id = u;
 end $$;
 
 -- Paths: pick any time -----------------------------------------------------------------------------------------

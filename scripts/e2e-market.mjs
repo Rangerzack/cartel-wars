@@ -1,6 +1,6 @@
 // Browser walkthrough for the market overhaul: picking a path early (and the level-5 wall without one), Trader
 // hustler terms with the street-price push, the Prices board, the 150% listing cap and 5% fee, posting a buy order,
-// filling it from another account, the buyer's feed line, cancelling, and refills that keep halving.
+// filling it from another account, the buyer's feed line, cancelling, and drug refills (3 full each, then half the bar).
 // Usage (local stack running): node scripts/e2e-market.mjs [--shots dir]
 import { chromium } from 'playwright'
 import fs from 'node:fs'
@@ -152,15 +152,22 @@ try {
   await b.getByText('Order cancelled — $45,000 back on hand').waitFor()
   if ((await one(`select qty from storage where player_id = $1 and commodity = 'dust'`, [bId])).qty !== 200) throw new Error('dust landed')
 
-  // Refills: after three, each restores half the one before
-  await db.query(`update profiles set stamina_max = 150, stamina = 0, stamina_tick = now() + interval '5 minutes', refills_used = 3, refills_reset_at = now() where id = $1`, [bId])
+  // Refills (since 0016): each drug is full 3 times a day, then half the stamina bar; drugs don't refill health
+  await db.query(`update profiles set stamina_max = 150, stamina = 0, stamina_tick = now() + interval '5 minutes', health = 10,
+                  drug_refills = jsonb_build_object('day', _game_day()::text, 'herb', 2) where id = $1`, [bId])
   await stock(bId, 'herb', 5000)
   await b.goto(`${BASE}/services?focus=refills`)
   const refills = b.locator('#refills')
-  await refills.getByText('restores half of what\'s missing').waitFor()
-  await refills.locator('.row', { hasText: /^stamina/i }).getByRole('button', { name: /🌿/ }).click()
-  await b.getByText('+75 stamina · the next one restores a quarter').waitFor()
-  await refills.getByText('restores a quarter of what\'s missing').waitFor()
+  await refills.locator('.refill-left .pill', { hasText: '🌿 1/3' }).waitFor()
+  if (await refills.locator('.row', { hasText: /^Health/ }).getByRole('button', { name: /🌿|❄️|💊/ }).count()) throw new Error('drugs should not refill health')
+  const herb = refills.locator('.row', { hasText: /^Stamina/ }).getByRole('button', { name: /🌿/ })
+  await herb.click()
+  await b.getByText('+150 stamina · Herb restores half your stamina until 00:00 UTC').waitFor()
+  await refills.locator('.refill-left .pill.red', { hasText: '🌿 0/3' }).waitFor()
+  await db.query(`update profiles set stamina = 0, stamina_tick = now() + interval '5 minutes' where id = $1`, [bId])
+  await b.reload(); await refills.locator('.refill-left').waitFor()
+  await herb.click()
+  await b.getByText('+75 stamina · Herb restores half your stamina until 00:00 UTC').waitFor()
   await snap(b, 'refills')
 
   console.log('E2E MARKET PASSED')

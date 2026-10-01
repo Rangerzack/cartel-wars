@@ -92,7 +92,9 @@ export interface Me {
   /** An admin muted me: no chat, forum posts or bio changes until then (null when not muted). */
   muted_until?: string | null
   orders?: MyOrder[]
-  refill_share?: number
+  /** Today's drug refills: full ones per drug (3, or 5 on the Daily Drop), how many of each are used, and the share of
+   *  max stamina one restores past those. */
+  refills?: { full: number; used: Partial<Record<Commodity, number>>; late_share: number; sub_full: number }
   /** What the next setup slot costs (it climbs with every slot past the free six). */
   slot_cost?: { diamonds: number; cash: number }
   /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
