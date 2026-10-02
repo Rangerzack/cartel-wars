@@ -21,12 +21,16 @@ export const priceCap = (catalog: Catalog | null, street: number) => Math.floor(
 export const afterFee = (catalog: Catalog | null, gross: number) => gross - Math.floor(gross * pct(catalog, 'market_fee_pct', 5))
 
 /** What refill number `used + 1` of the day restores, as a share of what's missing. */
-export function refillShare(me: Me, catalog: Catalog | null): number {
-  if (me.refill_share != null) return me.refill_share
-  const full = catalog?.config?.refill_full ?? 3
-  return me.refills_used < full ? 1 : Math.pow(0.5, me.refills_used - full + 1)
+/** What a drug refill of `code` does right now (mirrors refill() in 20261004000016_drug_refills.sql): each drug fills
+ *  stamina `full` times a game day (3, or 5 on the Daily Drop), then restores `late_share` of max stamina, up to full. */
+export function drugRefill(me: Me, catalog: Catalog | null, code: Commodity): { full: number; left: number; gain: number; late: number } {
+  const r = me.refills
+  const full = r?.full ?? catalog?.config?.refill_full ?? 3
+  const left = Math.max(0, full - (r?.used?.[code] ?? 0))
+  const missing = Math.max(0, me.stamina_max - me.stamina)
+  const late = Math.min(missing, Math.ceil(me.stamina_max * (r?.late_share ?? 0.5)))
+  return { full, left, gain: left > 0 ? missing : late, late }
 }
-export const shareLabel = (s: number) => (s >= 1 ? 'full' : s === 0.5 ? 'half' : s === 0.25 ? 'a quarter' : `1/${Math.round(1 / s)}`)
 
 export interface HustleQuote {
   trader: boolean; units: number; comped: number; cost: number

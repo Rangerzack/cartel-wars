@@ -56,23 +56,25 @@ do $$ declare u uuid := auth.uid(); m jsonb; r jsonb; begin
 end $$;
 
 -- Milestones: a longer ladder, paid once each, and caught up for players already past a step ------------------------
+-- (since 0017 the repeating steps and the total-fights ladder pay too; the casino and turf ones stay at 0 here)
 do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; d0 int; begin
   perform as_user(u::text);
   perform get_me();
-  delete from milestones where player_id = u;
-  update profiles set actions_done = 20000, fights_won = 5000, diamonds = 0 where id = u;
+  delete from milestones where player_id = u; delete from milestone_repeats where player_id = u;
+  update profiles set actions_done = 20000, fights_won = 5000, fights_lost = 0, turf_attacks = 0, casino_wagered = 0, diamonds = 0 where id = u;
   perform _award_milestones(u);
-  -- every action step up to 20,000 (💎580) and every win step up to 5,000 (💎280)
-  assert (select diamonds from profiles where id = u) = 580 + 280, 'ladder: ' || (select diamonds from profiles where id = u);
-  assert (select count(*) from milestones where player_id = u) = 10 + 7;
+  -- every action step up to 20,000 (💎580), every win step up to 5,000 (💎280), every total-fights step up to 5,000
+  -- (💎175), and the repeats: 80 × 250 actions and 10 × 500 wins at 💎30 (💎2,700)
+  assert (select diamonds from profiles where id = u) = 580 + 280 + 175 + 2700, 'ladder: ' || (select diamonds from profiles where id = u);
+  assert (select count(*) from milestones where player_id = u) = 10 + 7 + 5;
   perform _award_milestones(u);
-  assert (select diamonds from profiles where id = u) = 860, 'paid once';
+  assert (select diamonds from profiles where id = u) = 3735, 'paid once';
   update profiles set actions_done = 100000 where id = u;
   perform _award_milestones(u);
-  assert (select diamonds from profiles where id = u) = 860 + 150 + 200 + 250, 'the rest of the action ladder';
+  assert (select diamonds from profiles where id = u) = 3735 + 150 + 200 + 250 + 320 * 30, 'the rest of the action ladder and 320 more repeats';
   -- the page gets the ladder
-  assert jsonb_array_length(get_catalog()->'milestones') = 22;
-  assert (select count(*) from milestone_defs) = 22 and not has_function_privilege('authenticated', '_award_milestones(uuid)', 'execute');
+  assert jsonb_array_length(get_catalog()->'milestones') = 43;
+  assert (select count(*) from milestone_defs) = 43 and not has_function_privilege('authenticated', '_award_milestones(uuid)', 'execute');
   perform as_user('c8888888-8888-8888-8888-888888888888');
 end $$;
 

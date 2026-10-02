@@ -91,7 +91,7 @@ try {
   // a turf attack needs at least 51 thugs
   await p.locator('#hoodlums .qty input').fill('60')
   await p.getByRole('button', { name: /Hire · / }).click()
-  await toast(p, /Hired for/)
+  await toast(p, /Hired 60 thugs for/)
   // make the first block deterministic: unclaimed, no garrison (resistance 250 vs 51 thugs ≈ 510)
   await db.query(`delete from block_garrison where block_id = (select min(id) from blocks)`)
   await db.query(`delete from block_siege where block_id = (select min(id) from blocks)`)

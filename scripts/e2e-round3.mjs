@@ -113,16 +113,16 @@ try {
   await a.locator('.row.activity', { hasText: 'Daily cash' }).getByText('+$50,000').waitFor()
   await snap(a, 'daily-cash')
 
-  // Refills: used up yesterday → back after the rollover; used today → countdown to 00:00 UTC
-  await db.query(`update profiles set refills_used = 3, refills_reset_at = now() where id = $1`, [aId])
+  // Refills: used today → countdown to 00:00 UTC; yesterday's counts → full again (per drug since 0016)
+  await db.query(`update profiles set drug_refills = jsonb_build_object('day', _game_day()::text, 'herb', 3) where id = $1`, [aId])
   await a.goto(`${BASE}/services?focus=refills`)
-  await a.getByText('3/3 full product refills today').waitFor()
-  await a.getByText(/The full ones come back at 00:00 UTC — in \d+h \d+m|The full ones come back at 00:00 UTC — in \d+m/).waitFor()
+  await a.locator('#refills .refill-left .pill', { hasText: '🌿 0/3' }).waitFor()
+  await a.getByText(/They come back at 00:00 UTC — in \d+h \d+m|They come back at 00:00 UTC — in \d+m/).waitFor()
   await a.locator('#bank').getByText(/Everyone gets \$50,000 on hand at 00:00 UTC/).waitFor()
   await snap(a, 'refills')
-  await db.query(`update profiles set refills_reset_at = date_trunc('day', now() at time zone 'utc') at time zone 'utc' - interval '1 hour' where id = $1`, [aId])
+  await db.query(`update profiles set drug_refills = jsonb_build_object('day', (_game_day() - 1)::text, 'herb', 3) where id = $1`, [aId])
   await a.reload()
-  await a.getByText('0/3 full product refills today').waitFor()
+  await a.locator('#refills .refill-left .pill', { hasText: '🌿 3/3' }).waitFor()
 
   console.log('E2E ROUND 3 PASSED')
 } catch (e) {

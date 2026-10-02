@@ -100,7 +100,7 @@ try {
   const btn = hood.getByRole('button', { name: /Hire · / })
   const shown = (await btn.textContent()).replace(/^.*Hire · /, '')
   await btn.click()
-  await a.getByText(`Hired for ${shown}`).waitFor()
+  await a.locator('.toast', { hasText: new RegExp(`^Hired \\d+ \\w+ for ${shown.replace(/[$]/g, '\\$')}$`) }).waitFor()
   await snap(a, 'services-gym')
 
   // Items: weapons show the Pawn Shop tag and a struck-through full price; buying charges the discounted one

@@ -22,12 +22,16 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
 | Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop, or bought in the iOS app (see Store). |
 
-Refills *(wiki)*: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills.
-Full Health for 6 Diamonds or 200 Herb / 100 Dust / 50 Pills. Commodity refills
-halve in effect after 3 in a game day *(wiki)* — and each one after that halves again
-(½, ¼, ⅛ … of what's missing) *(ours, 2026-09-30: unlimited half refills made product
-worth far more burned than sold)*. The count resets at the 00:00 UTC rollover; diamond
-and Daily Drop refills are always full and don't count.
+Refills: full Stamina for 6 Diamonds or 400 Herb / 280 Dust / 100 Pills *(wiki)*;
+full Health for 6 Diamonds *(wiki)*. **Drug refills** *(Zack, 2026-10-01)*: herb, dust
+and pills refill stamina only (health comes from the Hospital or diamonds). Each drug
+fills your stamina all the way **3 times a game day**, counted per drug, so 9 a day if
+you hold all three; **Daily Drop subscribers get 5 of each** (`refill_sub_extra` = 2).
+Past those, a refill of that drug restores **half your stamina bar** (50% of max, up to
+full; `refill_late_share`). The counts reset at the 00:00 UTC rollover; diamond and
+Daily Drop (free) refills are always full and don't count. *(Until 2026-10-01: 3 full
+product refills a day across all drugs, health included, then ½, ¼, ⅛ … of what's
+missing.)*
 
 The **game day** rolls over at 00:00 UTC, the same clock as the weekly boards: refills
 come back and daily cash lands.
@@ -123,6 +127,24 @@ longer than the cash does)*:
 | Fight wins | 10 | 100 | 250 | 500 | 1k | 2.5k | 5k | 10k | 25k |
 |---|---|---|---|---|---|---|---|---|---|
 | 💎 | 5 | 20 | 25 | 30 | 75 | 50 | 75 | 100 | 150 |
+
+| All fights (won or lost) | 100 | 500 | 1k | 2.5k | 5k | 10k | 25k | 50k |
+|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 15 | 30 | 50 | 75 | 100 | 150 | 200 |
+
+| Casino wagered | $1M | $5M | $10M | $25M | $50M | $100M | $250M | $500M | $1B |
+|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 10 | 20 | 30 | 50 | 75 | 100 | 150 | 250 |
+
+**Repeating milestones** *(Zack, 2026-10-01)* pay **💎30 every time**, forever, on
+top of the ladders: every **250 actions**, every **500 fight wins**, every **500
+turf attacks** (any attack on a block, won or lost; spying isn't one) and every
+**$10,000,000 wagered at the casino** (every game, poker included). Players already
+past a step were paid for it when this shipped. Each payout puts one 🏅 line in the
+activity feed per count (the highest step reached and the diamonds). The
+Milestones card on Services shows each repeating step with a bar to the next one,
+and the ladders on tap. Turf attacks and casino wagered are counted on the profile
+by triggers on `territory_log` and `casino_bets`.
 
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
 Offensive setup or +50 Defense in the Defensive setup (never jail). One side at
@@ -247,7 +269,7 @@ with a button on Home or in the Store.
 - Product goes into storage even past the cap (you just can't add more until
   you're back under). Cash lands on hand, with a Bank button on the reveal.
 - Free Refills are stamina refill credits: a full refill each that doesn't count
-  toward the three product refills a day. Hustlers are credits, one hustler each:
+  toward the drug refills a day. Hustlers are credits, one hustler each:
   they waive the $400 hire fee, or for a Trader that hustler's cut.
 - The card shows this table, with each prize's odds, above the Subscribe button
   (Apple's rule for paid random prizes).
@@ -642,6 +664,9 @@ Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,
 diamonds, or product, each priced with what it restores), and so does any server
 refusal for stamina (crew fights). The server still checks every refill.
+Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
+Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
+that is short of thugs offers the missing ones, which join that attack.
 
 ## iOS app *(Zack, 2026-10-01)*
 

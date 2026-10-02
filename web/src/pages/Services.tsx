@@ -2,14 +2,16 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, hoodlumIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
+import { commodityIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
+import { HireHoodlums } from '../components/Hire'
 import { perk } from '../lib/perks'
-import { refillShare, shareLabel } from '../lib/market'
-import type { BusinessCode, MilestoneDef } from '../lib/types'
+import { drugRefill } from '../lib/market'
+import type { MilestoneKind } from '../lib/types'
+import { milestoneLabel, milestoneTotal, nextRepeat } from '../lib/milestones'
 
 export default function Services() {
   const me = useMe()
@@ -23,12 +25,14 @@ export default function Services() {
   // link here too, and the location key changes on every tap, so tapping the same chip again scrolls again
   useEffect(() => {
     if (!focus) return
-    const t = setTimeout(() => focusCard(focus), 150)
+    // on a cold load (a link from outside, the Pages 404 bounce) the cards wait for the catalog: keep trying for 3 s
+    let tries = 0, t = 0
+    const go = () => { if (!focusCard(focus) && ++tries < 20) t = window.setTimeout(go, 150) }
+    t = window.setTimeout(go, 150)
     return () => clearTimeout(t)
   }, [focus, key])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
-  const [hood, setHood] = useState<{ code: string; n: number }>({ code: 'thug', n: 10 })
   const [heal, setHeal] = useState(20)
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const cfg = catalog.config
@@ -37,16 +41,16 @@ export default function Services() {
   // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
   const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
   const bail = Math.ceil(cfg.bail_base * (1 - law))   // jail has no timer: you're in until you post this
-  const owned = me.hoodlums[hood.code] ?? 0
-  const hdef = catalog.hoodlums.find(h => h.code === hood.code)!
-  const hoodPerk: BusinessCode | null = hood.code === 'thug' ? 'gym' : hood.code === 'mercenary' || hood.code === 'enforcer' ? 'shooting_range' : null
-  const hoodCost = Math.ceil(Math.round(hdef.base_price * hood.n * (1 + (owned + hood.n / 2) / 2000)) * (1 - (hoodPerk ? perk(me, hoodPerk) : 0)))
   // mirrors _health_price: per-point price climbs with points bought in the last 24h
   const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
   const refillUnits = (units: number) => Math.ceil(units * (1 - pharmacy))
-  const fullRefills = cfg.refill_full ?? 3
-  const nextShare = refillShare(me, catalog)
+  // drug refills: each drug is full this many times a day (more on the Daily Drop), then half the stamina bar
+  const fullN = me.refills?.full ?? cfg.refill_full ?? 3
+  const subFull = me.refills?.sub_full ?? fullN + 2
+  const subscribed = !!me.drop?.subscribed
+  const lateGain = Math.ceil(me.stamina_max * (me.refills?.late_share ?? 0.5))
+  const usedAny = Object.values(me.refills?.used ?? {}).some(n => (n ?? 0) > 0)
   const missing = me.health_max - me.health
   const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
@@ -134,27 +138,34 @@ export default function Services() {
       </Card>
     ),
     refills: (
-      <Card id="refills" title="⚡ Refills" right={<small>{Math.min(fullRefills, me.refills_used)}/{fullRefills} full product refills today</small>}>
+      <Card id="refills" title="⚡ Refills" right={<small>{fullN} full per drug a day</small>}>
         {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
-        {(['stamina', 'health'] as const).map(kind => {
-          const cur = kind === 'stamina' ? me.stamina : me.health, max = kind === 'stamina' ? me.stamina_max : me.health_max
-          return (
-            <div key={kind} className="row" style={{ flexWrap: 'wrap' }}>
-              <div className="grow t" style={{ textTransform: 'capitalize' }}>{kind} <span className="muted small">{num(cur)}/{num(max)}</span></div>
-              {/* nothing to refill: one disabled "Full" instead of four live price buttons */}
-              {cur >= max ? <button className="btn sm" disabled>Full</button> : <>
-                {kind === 'stamina' && (me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
-                <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { if (max - cur < max / 2 && !await ask(`Only ${max - cur} ${kind} is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill(kind, 'diamonds'), { ok: r => `+${r.gain} ${kind}` }) }}>💎 {cfg.refill_diamonds}</Btn>
-                {catalog.commodities.map(c => {
-                  const units = refillUnits(kind === 'stamina' ? c.refill_stamina : c.refill_health)
-                  return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill(kind, c.code), { ok: r => `+${r.gain} ${kind}${r.next_share != null && r.next_share < 1 ? ` · the next one restores ${shareLabel(r.next_share)}` : ''}` })}>{commodityIcon[c.code]} {units}</Btn>
-                })}
-              </>}
-            </div>
-          )
-        })}
-        {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, and they don't count toward the three a day.</div>}
-        <div className="row small muted refill-next"><div>After {fullRefills} product refills in a day, each one restores half as much as the one before (½, ¼, ⅛ …). Your next product refill restores <b>{nextShare >= 1 ? 'everything missing' : `${shareLabel(nextShare)} of what's missing`}</b>. The full ones come back at 00:00 UTC{me.refills_used > 0 ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Diamond and free refills are always full.</div></div>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <div className="grow t">Stamina <span className="muted small">{num(me.stamina)}/{num(me.stamina_max)}</span></div>
+          {/* nothing to refill: one disabled "Full" instead of live price buttons */}
+          {me.stamina >= me.stamina_max ? <button className="btn sm" disabled>Full</button> : <>
+            {(me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
+            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.stamina_max - me.stamina; if (gap < me.stamina_max / 2 && !await ask(`Only ${gap} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('stamina', 'diamonds'), { ok: r => `+${r.gain} stamina` }) }}>💎 {cfg.refill_diamonds}</Btn>
+            {catalog.commodities.map(c => {
+              const units = refillUnits(c.refill_stamina)
+              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill('stamina', c.code), { ok: r => `+${r.gain} stamina${r.full_left == null ? '' : r.full_left > 0 ? ` · ${r.full_left} full ${c.name} refill${r.full_left > 1 ? 's' : ''} left today` : ` · ${c.name} restores half your stamina until 00:00 UTC`}` })}>{commodityIcon[c.code]} {num(units)}</Btn>
+            })}
+          </>}
+        </div>
+        <div className="row small refill-left">
+          <span className="muted">Full refills left today</span>
+          {catalog.commodities.map(c => { const d = drugRefill(me, catalog, c.code); return <span key={c.code} className={`pill ${d.left ? '' : 'red'}`}>{commodityIcon[c.code]} {d.left}/{d.full}</span> })}
+        </div>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <div className="grow t">Health <span className="muted small">{num(me.health)}/{num(me.health_max)}</span></div>
+          {me.health >= me.health_max ? <button className="btn sm" disabled>Full</button>
+            : <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.health_max - me.health; if (gap < me.health_max / 2 && !await ask(`Only ${gap} health is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('health', 'diamonds'), { ok: r => `+${r.gain} health` }) }}>💎 {cfg.refill_diamonds}</Btn>}
+        </div>
+        {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, on top of the drug ones.</div>}
+        <div className="row small muted refill-next"><div>
+          Each drug fills your stamina {fullN} times a day{subscribed ? ' (5 with your Daily Drop)' : <> — {subFull} with the <Link to="/store#drop">Daily Drop</Link></>}. After that, a refill of that drug restores half your stamina bar ({num(lateGain)}).
+          {' '}They come back at 00:00 UTC{usedAny ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Drugs don't heal: health comes from the Hospital or diamonds. Diamond and free refills always fill you up.
+        </div></div>
       </Card>
     ),
     upgrades: (
@@ -174,31 +185,22 @@ export default function Services() {
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <Milestones />
+        <div className="row small muted"><div>Diamonds come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
       </Card>
     ),
+    milestones: <Milestones />,
     boost: me.boost && <BoostCard />,
     hoodlums: (
       <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
-        <div className="bd stack">
-          <div className="seg">
-            {catalog.hoodlums.map(h => <button key={h.code} className={hood.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}>{hoodlumIcon[h.code]} {h.name}</button>)}
-          </div>
-          <div className="small muted">{hdef.att ? `${hdef.att} attack` : ''}{hdef.att && hdef.def ? ' · ' : ''}{hdef.def ? `${hdef.def} defense` : ''}{hdef.intel ? 'Reveals a block\'s garrison before you attack' : ''} · base {money(hdef.base_price)} — price climbs with how many you hold. You have {num(owned)}.</div>
-          {hoodPerk && <PerkTag code={hoodPerk} />}
-          <div className="spread">
-            <Qty value={hood.n} onChange={n => setHood({ ...hood, n })} min={1} max={1000} />
-            <Btn className="doit" disabled={me.cash < hoodCost} onClick={() => run(() => api.buyHoodlums(hood.code, hood.n), { ok: r => `Hired for ${money(r.cost)}` })}>Hire · {money(hoodCost)}</Btn>
-          </div>
-        </div>
+        <div className="bd"><HireHoodlums /></div>
       </Card>
     ),
   }
   // What you came for first (P2-13): jail when you're in it, the hospital when you're hurt, the police when heat is
   // red; otherwise Bank, the card used most. The rest keep their order.
   const urgent = [me.jailed && 'jail', hurt && 'hospital', hot && 'police'].filter((k): k is string => !!k)
-  const order = [...urgent, ...['bank', 'refills', 'upgrades', 'boost', 'hoodlums', 'police', 'hospital'].filter(k => !urgent.includes(k) && cards[k])]
-  const label: Record<string, string> = { bank: 'Bank', refills: 'Refills', upgrades: 'Upgrades', boost: 'Boost', hoodlums: 'Hoodlums', police: 'Police', hospital: 'Hospital', jail: 'Jail' }
+  const order = [...urgent, ...['bank', 'refills', 'upgrades', 'milestones', 'boost', 'hoodlums', 'police', 'hospital'].filter(k => !urgent.includes(k) && cards[k])]
+  const label: Record<string, string> = { bank: 'Bank', refills: 'Refills', upgrades: 'Upgrades', milestones: 'Milestones', boost: 'Boost', hoodlums: 'Hoodlums', police: 'Police', hospital: 'Hospital', jail: 'Jail' }
 
   return (
     <div className="page">
@@ -253,35 +255,49 @@ function BoostCard() {
   )
 }
 
-/** Diamonds come from milestones: the next action and fight-win steps, and the whole ladder on tap. */
+/** Diamonds from milestones (20261004000017): the repeating steps (💎30 every 250 actions, 500 wins, 500 turf attacks,
+ *  $10M wagered), each with how far you are toward the next one, then the lifetime ladders on tap. */
 function Milestones() {
   const me = useMe()
   const { catalog } = useGame()
-  const ladder = catalog?.milestones ?? []
-  if (ladder.length === 0) return null
-  const have = (m: MilestoneDef) => (m.kind === 'actions' ? me.actions_done : me.fights_won)
-  const next = (kind: MilestoneDef['kind']) => ladder.filter(m => m.kind === kind && have(m) < m.n).sort((a, b) => a.n - b.n)[0]
-  const line = (m: MilestoneDef | undefined, label: string) => m
-    ? <span className="nowrap">{num(m.n)} {label} → 💎 {m.reward} <span className="muted">({num(have(m))}/{num(m.n)})</span></span>
-    : <span className="nowrap">every {label} milestone done</span>
+  const defs = catalog?.milestones ?? []
+  if (defs.length === 0) return null
+  const order: MilestoneKind[] = ['actions', 'wins', 'fights', 'turf', 'wagered']
+  const repeats = defs.filter(m => m.repeat).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+  const kinds: MilestoneKind[] = ['actions', 'wins', 'fights', 'wagered']
+  const ladder = (k: MilestoneKind) => defs.filter(m => !m.repeat && m.kind === k).sort((a, b) => a.n - b.n)
+  const amount = (k: MilestoneKind, n: number) => (k === 'wagered' ? money(n) : num(n))
   return (
-    <div className="row small muted milestones">
-      <div className="grow stack" style={{ gap: 4 }}>
-        <div>Diamonds come from milestones. Next: {line(next('actions'), 'actions')} · {line(next('wins'), 'fight wins')}</div>
-        <details>
-          <summary>All milestones</summary>
+    <Card id="milestones" title="🏅 Milestones" right={<small>💎 {num(me.diamonds)}</small>}>
+      {repeats.map(m => {
+        const total = milestoneTotal(me, m.kind), { at, from } = nextRepeat(m, total)
+        return (
+          <div key={m.key} className="row milestone-row">
+            <div className="grow">
+              <div className="t">Every {amount(m.kind, m.n)} {m.kind === 'wagered' ? 'wagered at the casino' : milestoneLabel[m.kind]}</div>
+              <div className="s tabular">{amount(m.kind, total)} so far · next at {amount(m.kind, at)}</div>
+              <div className="track"><div className="fill" style={{ width: `${Math.min(100, ((total - from) / m.n) * 100)}%` }} /></div>
+            </div>
+            <b className="dia nowrap">💎 {m.reward}</b>
+          </div>
+        )
+      })}
+      <div className="row small muted milestones">
+        <details className="grow">
+          <summary>Lifetime milestones, once each</summary>
           <div className="grid2 milestone-ladder">
-            {(['actions', 'wins'] as const).map(kind => (
-              <div key={kind} className="stack" style={{ gap: 2 }}>
-                <b>{kind === 'actions' ? 'Actions' : 'Fight wins'}</b>
-                {ladder.filter(m => m.kind === kind).sort((a, b) => a.n - b.n).map(m => (
-                  <span key={m.key} className={have(m) >= m.n ? 'done' : ''}>{have(m) >= m.n ? '✓' : '·'} {num(m.n)} → 💎 {m.reward}</span>
-                ))}
+            {kinds.filter(k => ladder(k).length).map(k => (
+              <div key={k} className="stack" style={{ gap: 2 }}>
+                <b>{k === 'actions' ? 'Actions' : k === 'wins' ? 'Fight wins' : k === 'fights' ? 'All fights' : 'Casino wagered'}</b>
+                {ladder(k).map(m => {
+                  const done = milestoneTotal(me, k) >= m.n
+                  return <span key={m.key} className={done ? 'done' : ''}>{done ? '✓' : '·'} {k === 'wagered' ? money(m.n) : num(m.n)} → 💎 {m.reward}</span>
+                })}
               </div>
             ))}
           </div>
         </details>
       </div>
-    </div>
+    </Card>
   )
 }

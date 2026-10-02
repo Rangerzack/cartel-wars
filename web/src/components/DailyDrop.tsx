@@ -114,7 +114,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           ) : pitch && (
             <div className="crate-pitch">
               <div className="crate-hero">📦</div>
-              <div>A crate every day at 00:00 UTC — product, diamonds, cash, thugs, hustlers or free refills. Miss a day and it waits: unopened crates stack up to {d.max}.</div>
+              <div>A crate every day at 00:00 UTC — product, diamonds, cash, thugs, hustlers or free refills. Miss a day and it waits: unopened crates stack up to {d.max}. Subscribers also get {me.refills?.sub_full ?? 5} full stamina refills of each drug a day instead of {catalog?.config.refill_full ?? 3}.</div>
               <div className="small">Jackpots: {jack.map((p, i) => <span key={p.code}>{i ? ' or ' : ''}<b className="gold">{dropIcon[p.kind]} {p.label}</b></span>)}</div>
             </div>
           )}
@@ -220,7 +220,7 @@ function Prize({ r, onOpen, onGo }: { r: DropResult; onOpen: () => void; onGo: (
         return <>Into storage — {num(me.storage_used)}/{num(me.storage_cap)}.{over ? ' That puts you over your cap: sell or use some before you can store more.' : ''}</>
       case 'diamonds': return <>You have 💎 {num(me.diamonds)}.</>
       case 'cash': return banked ? <>Banked. It's safe.</> : <>It's on hand — bank it so nobody takes it off you in a fight.</>
-      case 'refills': return <>A full stamina refill each, on top of your three a day. You have {me.free_refills ?? r.amount}.</>
+      case 'refills': return <>A full stamina refill each, on top of your drug refills. You have {me.free_refills ?? r.amount}.</>
       case 'thugs': return <>They're with you now — {hoodlumIcon.thug} {num(me.hoodlums.thug ?? 0)} thugs.</>
       case 'hustlers': return <>Each one skips the hustler fee on your next hires (for a Trader, that hustler's cut). You have {num(me.free_hustlers ?? r.amount)}.</>
     }

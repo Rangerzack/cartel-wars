@@ -1067,3 +1067,15 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .confirm-msg { margin: 0; line-height: 1.45; }
 .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
 .confirm-actions .btn { min-height: 46px; }
+
+/* hiring hoodlums where they're used (components/Hire.tsx): Territory's tiles are the hire buttons, and a block's
+   attack sheet hires the missing thugs in place */
+.stat-btn { appearance: none; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.stat-btn .stat-add { position: absolute; top: 7px; right: 9px; font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: .3px; }
+.stat-btn.on { border-color: rgba(227,179,65,.55); box-shadow: 0 0 0 1px rgba(227,179,65,.25), 0 2px 5px rgba(0,0,0,.55) inset; }
+.stat-btn:active { filter: brightness(1.12); }
+.hire-inline { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; background: rgba(227,179,65,.06); border: 1px solid rgba(227,179,65,.22); }
+
+/* the Milestones card on Services: a repeating step with its progress bar toward the next one */
+.milestone-row .track { height: 6px; margin-top: 6px; border-radius: 4px; overflow: hidden; background: linear-gradient(#040405, #121216); border: 1px solid #000; }
+.milestone-row .track .fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #2d6fb8, var(--diamond)); }
