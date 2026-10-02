@@ -290,7 +290,7 @@ with a button on Home or in the Store.
 - Police Station (Services): **Bribe** to lower Heat at $40 per point *(wiki)*.
 - Getting Busted: when Heat is Red, every action/attack rolls
   `P(bust) = (heat − red + 1) / 40` *(ours; red is 75 plus any heat upgrades)*.
-  Busted = jailed until you post bail *(Zack)* and Heat drops to your yellow line (40 at base).
+  Busted = jailed until you post bail *(Zack)*.
 - **Heat upgrades** *(Zack)*: 💎30 buys +50 max heat and moves the yellow and red lines
   up 50 — 50 more heat before any bust risk. Flat price, no cap.
 - **Going to jail on purpose**: the Bribe Police To Get In Jail job (10 stamina, $1,000),
@@ -303,6 +303,11 @@ with a button on Home or in the Store.
   from cash on hand, less the Law Office (up to 30% off). (It used to be 2 hours, with
   bail at $2,000 + $50 a minute left.) Since only inmates can hit inmates, jail also
   works as a hideout for anyone willing to sit in it.
+- **Heat in and out of jail** *(Zack, 2026-10-02)*: going in by any of those ways sets
+  your heat to your max (100, or more with heat upgrades), and posting bail sets it to 0.
+  (A bust used to drop you to your yellow line.) Heat keeps cooling while you're inside,
+  and jail jobs and jail fights add their usual heat, so there's no point bribing the
+  police in jail: bail clears it anyway.
 
 ## Economy
 

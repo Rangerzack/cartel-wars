@@ -93,9 +93,9 @@ export default function Services() {
     jail: me.jailed && (
       <Card id="jail" title="🔒 County Jail" right={<small>until you post bail</small>}>
         <div className="bd stack">
-          <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only.</div>
+          <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only. Your heat maxed out when you went in; bail walks you out with zero heat.</div>
           <PerkTag code="law_office" />
-          <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)}` })}>Post Bail · {money(bail)}</Btn>
+          <Btn className="doit block" disabled={me.cash < bail} onClick={() => run(api.bailOut, { ok: r => `Bailed out for ${money(r.cost)} · heat back to 0` })}>Post Bail · {money(bail)}</Btn>
           {me.cash < bail && <div className="why">Bail comes out of cash on hand — you have {money(me.cash)}.</div>}
         </div>
       </Card>
@@ -109,12 +109,13 @@ export default function Services() {
           </div>
           <PerkTag code="bent_cop" />
           <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeCost(bribeN)} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeCost(bribeN))}</Btn>
+          {me.jailed && <div className="small muted">You're inside: posting bail clears your heat to 0, so there's no need to bribe it down first.</div>}
           <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (💎 {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
           {!me.jailed && (
             <div className="spread turn-in">
-              <div className="small">Want in? Turn yourself in to run jail jobs and fight other inmates — no stamina or cash needed. You stay until you post bail ({money(bail)}).</div>
+              <div className="small">Want in? Turn yourself in to run jail jobs and fight other inmates — no stamina or cash needed. You stay until you post bail ({money(bail)}). Going in maxes your heat; bail clears it to 0.</div>
               <Btn className="sm" disabled={me.hospital || me.diamonds < (cfg.jail_diamonds ?? 50)}
-                onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup.`, { title: `Go to jail for 💎 ${cfg.jail_diamonds ?? 50}?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
+                onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup. Your heat goes to max (${me.heat_max}) while you're in, and back to 0 when you bail.`, { title: `Go to jail for 💎 ${cfg.jail_diamonds ?? 50}?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
             </div>
           )}
         </div>
