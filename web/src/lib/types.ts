@@ -185,6 +185,13 @@ export interface PlayerSummary {
   id: string; name: string; avatar: string; crew: { name: string; emblem: string } | null
   fights: number; fights_won: number; hospital: boolean; jailed: boolean; immune: boolean; last_seen: string
 }
+/** Fight › Players filters (find_fighters): who you can fight right now, who's online (seen in 5 minutes), who's laid
+ *  up or locked up; and the sorts. */
+export type FighterStatus = 'all' | 'fight' | 'online' | 'hospital' | 'jail'
+export type FighterSort = 'seen' | 'wins' | 'rep' | 'name'
+export interface Fighter extends PlayerSummary { reputation: number; online: boolean; can_fight: boolean }
+/** One page of the list, and how many the whole search has under each filter (for the chips). */
+export interface FighterList { players: Fighter[]; counts: Record<FighterStatus, number> }
 export interface PublicPlayer {
   id: string; name: string; created_at: string; avatar: string; bio: string; reputation: number; fights: number; fights_won: number; actions: number
   health: number; health_max: number; heat_level: HeatLevel; jailed: boolean; hospital: boolean; immune: boolean

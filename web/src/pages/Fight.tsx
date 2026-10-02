@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Card, Empty, RowLink, Seg } from '../components/ui'
-import type { ComboMeta, FightLog, PlayerSummary, StyleCode, ThugRow, TopUsers } from '../lib/types'
+import type { ComboMeta, FightLog, FighterList, FighterSort, FighterStatus, StyleCode, ThugRow, TopUsers } from '../lib/types'
 import { ComboPill, StyleLine } from '../components/Combo'
 import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
 
@@ -28,34 +28,97 @@ export default function Fight() {
   )
 }
 
+const FILTERS: { v: FighterStatus; l: string }[] = [
+  { v: 'all', l: 'All' }, { v: 'fight', l: '⚔️ Can fight' }, { v: 'online', l: '🟢 Online' },
+  { v: 'hospital', l: '🏥 Hospital' }, { v: 'jail', l: '🔒 Jail' },
+]
+const SORTS: { v: FighterSort; l: string }[] = [
+  { v: 'seen', l: 'Last seen' }, { v: 'wins', l: 'Most wins' }, { v: 'rep', l: 'Most rep' }, { v: 'name', l: 'Name' },
+]
+const LIMIT = 50
+// the last filter and sort you picked come back next time you open the tab (this device only)
+const recall = (k: string) => { try { return localStorage.getItem(`fight.${k}`) } catch { return null } }
+const remember = (k: string, v: string) => { try { localStorage.setItem(`fight.${k}`, v) } catch { /* private mode */ } }
+
+/** Everyone you could fight: search by name, filter to who you can hit right now, who's online, who's in the hospital
+ *  or in jail (find_fighters counts each), and sort. The search, filter and sort live in the URL, so Back from a
+ *  player's page lands on the same list. */
 function Players() {
+  const me = useMe()
   const { toast } = useGame()
   const now = useNow(10_000)
-  const [q, setQ] = useState('')
-  const [list, setList] = useState<PlayerSummary[] | null>(null)
+  const [sp, setSp] = useSearchParams()
+  const q = sp.get('q') ?? ''
+  const pick = <T extends string>(k: string, opts: { v: T }[], d: T): T => {
+    const v = sp.get(k) ?? recall(k)
+    return opts.some(o => o.v === v) ? (v as T) : d
+  }
+  const show = pick<FighterStatus>('show', FILTERS, 'all')
+  const sort = pick<FighterSort>('sort', SORTS, 'seen')
+  const set = (k: string, v: string) => setSp(prev => {
+    const n = new URLSearchParams(prev)
+    if (v) n.set(k, v); else n.delete(k)
+    return n
+  }, { replace: true })
+  // the last answer and the search it answers: while a new one is on its way the old list stays up, dimmed
+  const key = `${q.trim()}|${show}|${sort}`
+  const [res, setRes] = useState<{ key: string; data: FighterList } | null>(null)
   useEffect(() => {
-    const t = setTimeout(() => api.findPlayers(q).then(setList).catch(e => toast(e.message, 'bad')), 200)
-    return () => clearTimeout(t)
-  }, [q, toast])
+    let live = true
+    const t = setTimeout(() => api.findFighters(q.trim(), show, sort, LIMIT)
+      .then(data => { if (live) setRes({ key, data }) })
+      .catch(e => { if (live) toast(e.message, 'bad') }), 200)
+    return () => { live = false; clearTimeout(t) }
+  }, [key, q, show, sort, toast])
+  const data = res?.data
+  const loading = res?.key !== key
+  const list = data?.players
+  const empty = q.trim()
+    ? <>Nobody named like “{q.trim()}”{show !== 'all' ? ' here' : ''}.</>
+    : show === 'fight' ? (me.jailed ? 'No other inmates to fight right now.' : 'Nobody you can fight right now: everyone else is laid up or locked up.')
+      : show === 'online' ? 'Nobody else is online right now.'
+        : show === 'hospital' ? 'Nobody\'s in the hospital.'
+          : show === 'jail' ? 'Nobody\'s locked up.'
+            : 'Nobody\'s around. Quiet city.'
   return (
     <>
-      <input className="input" placeholder="Search by name…" value={q} onChange={e => setQ(e.target.value)} />
-      <Card>
+      <div className="fight-find">
+        <input className="input" type="search" placeholder="Search by name…" aria-label="Search players by name" value={q}
+          onChange={e => set('q', e.target.value)} />
+        <select className="input" value={sort} aria-label="Sort players" onChange={e => { set('sort', e.target.value); remember('sort', e.target.value) }}>
+          {SORTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        </select>
+      </div>
+      <nav className="chip-nav" aria-label="Show players">
+        {FILTERS.map(f => (
+          <button key={f.v} type="button" className={show === f.v ? 'on' : ''} aria-pressed={show === f.v}
+            onClick={() => { set('show', f.v); remember('show', f.v) }}>
+            {f.l}{data && <span className="n tabular">{num(data.counts[f.v] ?? 0)}</span>}
+          </button>
+        ))}
+      </nav>
+      <Card className={loading && list ? 'stale' : ''}>
         {!list && <Empty><span className="spin" /></Empty>}
-        {list?.length === 0 && <Empty>Nobody's around. Quiet city.</Empty>}
+        {list?.length === 0 && (
+          <Empty>
+            {empty}
+            {show !== 'all' && <> <button type="button" className="linkbtn" onClick={() => set('show', 'all')}>Show everyone</button></>}
+          </Empty>
+        )}
         {list?.map(p => (
-          <RowLink key={p.id} to={`/player/${p.id}`}>
+          <RowLink key={p.id} to={`/player/${p.id}`} className={p.can_fight ? '' : 'cant'}>
             <span className="ico">{p.avatar}</span>
             <div className="grow">
-              <div className="t">{p.name} {p.crew && <span className="muted small">{p.crew.emblem} {p.crew.name}</span>}</div>
-              <div className="s">{p.fights_won}W · {p.fights - p.fights_won}L · seen {ago(p.last_seen, now)}</div>
+              <div className="t">{p.online && <span className="online-dot" title="Online now" />}{p.name} {p.crew && <span className="muted small">{p.crew.emblem} {p.crew.name}</span>}</div>
+              <div className="s">{p.fights_won}W · {p.fights - p.fights_won}L · {p.online ? <span className="green">online now</span> : <>seen {ago(p.last_seen, now)}</>}</div>
             </div>
-            {p.hospital && <span className="pill red">🏥</span>}
-            {p.jailed && <span className="pill red">🔒</span>}
+            {p.hospital && <span className="pill red nowrap">🏥 Hospital</span>}
+            {p.jailed && <span className="pill red nowrap">🔒 Jail</span>}
             <span className="chev">›</span>
           </RowLink>
         ))}
       </Card>
+      {list && list.length >= LIMIT && <div className="small muted center">Showing the first {LIMIT}. Search a name to find anyone else.</div>}
     </>
   )
 }
