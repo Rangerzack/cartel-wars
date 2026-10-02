@@ -10,7 +10,8 @@ import { PerkTag } from '../components/Perk'
 import { HireHoodlums } from '../components/Hire'
 import { perk } from '../lib/perks'
 import { drugRefill } from '../lib/market'
-import type { MilestoneDef } from '../lib/types'
+import type { MilestoneKind } from '../lib/types'
+import { milestoneLabel, milestoneTotal, nextRepeat } from '../lib/milestones'
 
 export default function Services() {
   const me = useMe()
@@ -184,9 +185,10 @@ export default function Services() {
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <Milestones />
+        <div className="row small muted"><div>Diamonds come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
       </Card>
     ),
+    milestones: <Milestones />,
     boost: me.boost && <BoostCard />,
     hoodlums: (
       <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
@@ -197,8 +199,8 @@ export default function Services() {
   // What you came for first (P2-13): jail when you're in it, the hospital when you're hurt, the police when heat is
   // red; otherwise Bank, the card used most. The rest keep their order.
   const urgent = [me.jailed && 'jail', hurt && 'hospital', hot && 'police'].filter((k): k is string => !!k)
-  const order = [...urgent, ...['bank', 'refills', 'upgrades', 'boost', 'hoodlums', 'police', 'hospital'].filter(k => !urgent.includes(k) && cards[k])]
-  const label: Record<string, string> = { bank: 'Bank', refills: 'Refills', upgrades: 'Upgrades', boost: 'Boost', hoodlums: 'Hoodlums', police: 'Police', hospital: 'Hospital', jail: 'Jail' }
+  const order = [...urgent, ...['bank', 'refills', 'upgrades', 'milestones', 'boost', 'hoodlums', 'police', 'hospital'].filter(k => !urgent.includes(k) && cards[k])]
+  const label: Record<string, string> = { bank: 'Bank', refills: 'Refills', upgrades: 'Upgrades', milestones: 'Milestones', boost: 'Boost', hoodlums: 'Hoodlums', police: 'Police', hospital: 'Hospital', jail: 'Jail' }
 
   return (
     <div className="page">
@@ -253,35 +255,49 @@ function BoostCard() {
   )
 }
 
-/** Diamonds come from milestones: the next action and fight-win steps, and the whole ladder on tap. */
+/** Diamonds from milestones (20261004000017): the repeating steps (💎30 every 250 actions, 500 wins, 500 turf attacks,
+ *  $10M wagered), each with how far you are toward the next one, then the lifetime ladders on tap. */
 function Milestones() {
   const me = useMe()
   const { catalog } = useGame()
-  const ladder = catalog?.milestones ?? []
-  if (ladder.length === 0) return null
-  const have = (m: MilestoneDef) => (m.kind === 'actions' ? me.actions_done : me.fights_won)
-  const next = (kind: MilestoneDef['kind']) => ladder.filter(m => m.kind === kind && have(m) < m.n).sort((a, b) => a.n - b.n)[0]
-  const line = (m: MilestoneDef | undefined, label: string) => m
-    ? <span className="nowrap">{num(m.n)} {label} → 💎 {m.reward} <span className="muted">({num(have(m))}/{num(m.n)})</span></span>
-    : <span className="nowrap">every {label} milestone done</span>
+  const defs = catalog?.milestones ?? []
+  if (defs.length === 0) return null
+  const order: MilestoneKind[] = ['actions', 'wins', 'fights', 'turf', 'wagered']
+  const repeats = defs.filter(m => m.repeat).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+  const kinds: MilestoneKind[] = ['actions', 'wins', 'fights', 'wagered']
+  const ladder = (k: MilestoneKind) => defs.filter(m => !m.repeat && m.kind === k).sort((a, b) => a.n - b.n)
+  const amount = (k: MilestoneKind, n: number) => (k === 'wagered' ? money(n) : num(n))
   return (
-    <div className="row small muted milestones">
-      <div className="grow stack" style={{ gap: 4 }}>
-        <div>Diamonds come from milestones. Next: {line(next('actions'), 'actions')} · {line(next('wins'), 'fight wins')}</div>
-        <details>
-          <summary>All milestones</summary>
+    <Card id="milestones" title="🏅 Milestones" right={<small>💎 {num(me.diamonds)}</small>}>
+      {repeats.map(m => {
+        const total = milestoneTotal(me, m.kind), { at, from } = nextRepeat(m, total)
+        return (
+          <div key={m.key} className="row milestone-row">
+            <div className="grow">
+              <div className="t">Every {amount(m.kind, m.n)} {m.kind === 'wagered' ? 'wagered at the casino' : milestoneLabel[m.kind]}</div>
+              <div className="s tabular">{amount(m.kind, total)} so far · next at {amount(m.kind, at)}</div>
+              <div className="track"><div className="fill" style={{ width: `${Math.min(100, ((total - from) / m.n) * 100)}%` }} /></div>
+            </div>
+            <b className="dia nowrap">💎 {m.reward}</b>
+          </div>
+        )
+      })}
+      <div className="row small muted milestones">
+        <details className="grow">
+          <summary>Lifetime milestones, once each</summary>
           <div className="grid2 milestone-ladder">
-            {(['actions', 'wins'] as const).map(kind => (
-              <div key={kind} className="stack" style={{ gap: 2 }}>
-                <b>{kind === 'actions' ? 'Actions' : 'Fight wins'}</b>
-                {ladder.filter(m => m.kind === kind).sort((a, b) => a.n - b.n).map(m => (
-                  <span key={m.key} className={have(m) >= m.n ? 'done' : ''}>{have(m) >= m.n ? '✓' : '·'} {num(m.n)} → 💎 {m.reward}</span>
-                ))}
+            {kinds.filter(k => ladder(k).length).map(k => (
+              <div key={k} className="stack" style={{ gap: 2 }}>
+                <b>{k === 'actions' ? 'Actions' : k === 'wins' ? 'Fight wins' : k === 'fights' ? 'All fights' : 'Casino wagered'}</b>
+                {ladder(k).map(m => {
+                  const done = milestoneTotal(me, k) >= m.n
+                  return <span key={m.key} className={done ? 'done' : ''}>{done ? '✓' : '·'} {k === 'wagered' ? money(m.n) : num(m.n)} → 💎 {m.reward}</span>
+                })}
               </div>
             ))}
           </div>
         </details>
       </div>
-    </div>
+    </Card>
   )
 }

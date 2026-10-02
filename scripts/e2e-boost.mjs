@@ -55,10 +55,13 @@ try {
   await slotBtn.getByText('💎 1 + $40,000').waitFor()
   const p1 = await one('select inventory_slots, diamonds, cash from profiles where id = $1', [aId])
   if (p1.inventory_slots !== 7 || p1.diamonds !== 199 || Number(p1.cash) !== 980000) throw new Error('charged: ' + JSON.stringify(p1))
-  // diamonds come from milestones: the next steps, and the whole ladder
-  await up.getByText(/Next: 50 actions → 💎 5 \(\d+\/50\) · 10 fight wins → 💎 5/).waitFor()
-  await up.getByText('All milestones').click()
-  await up.getByText('100,000 → 💎 250').waitFor()
+  // diamonds come from milestones (own card since 0017): the repeating steps with progress, and the lifetime ladders
+  const ms = a.locator('#milestones')
+  await ms.locator('.milestone-row', { hasText: 'Every 250 actions' }).getByText(/next at 250/).waitFor()
+  await ms.locator('.milestone-row', { hasText: 'Every $10,000,000 wagered at the casino' }).getByText('💎 30').waitFor()
+  await ms.getByText('Lifetime milestones, once each').click()
+  await ms.getByText('100,000 → 💎 250').waitFor()
+  await ms.getByText('$1,000,000,000 → 💎 250').waitFor()
   await snap(a, 'slots')
 
   // Heat: 💎30 a time for +50 max heat, and the red line moves up with it

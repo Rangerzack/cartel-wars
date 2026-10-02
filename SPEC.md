@@ -128,6 +128,24 @@ longer than the cash does)*:
 |---|---|---|---|---|---|---|---|---|---|
 | 💎 | 5 | 20 | 25 | 30 | 75 | 50 | 75 | 100 | 150 |
 
+| All fights (won or lost) | 100 | 500 | 1k | 2.5k | 5k | 10k | 25k | 50k |
+|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 15 | 30 | 50 | 75 | 100 | 150 | 200 |
+
+| Casino wagered | $1M | $5M | $10M | $25M | $50M | $100M | $250M | $500M | $1B |
+|---|---|---|---|---|---|---|---|---|---|
+| 💎 | 5 | 10 | 20 | 30 | 50 | 75 | 100 | 150 | 250 |
+
+**Repeating milestones** *(Zack, 2026-10-01)* pay **💎30 every time**, forever, on
+top of the ladders: every **250 actions**, every **500 fight wins**, every **500
+turf attacks** (any attack on a block, won or lost; spying isn't one) and every
+**$10,000,000 wagered at the casino** (every game, poker included). Players already
+past a step were paid for it when this shipped. Each payout puts one 🏅 line in the
+activity feed per count (the highest step reached and the diamonds). The
+Milestones card on Services shows each repeating step with a bar to the next one,
+and the ladders on tap. Turf attacks and casino wagered are counted on the profile
+by triggers on `territory_log` and `casino_bets`.
+
 **Boost** *(Zack)*: 50 Diamonds buys +50 for 24 hours — +50 Attack in the
 Offensive setup or +50 Defense in the Defensive setup (never jail). One side at
 a time: while a boost runs the other side is locked out and buying the same side

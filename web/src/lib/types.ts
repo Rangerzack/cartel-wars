@@ -95,6 +95,8 @@ export interface Me {
   /** Today's drug refills: full ones per drug (3, or 5 on the Daily Drop), how many of each are used, and the share of
    *  max stamina one restores past those. */
   refills?: { full: number; used: Partial<Record<Commodity, number>>; late_share: number; sub_full: number }
+  /** Milestone counts the profile didn't already carry: turf attacks made, cash wagered at the casino. */
+  turf_attacks?: number; casino_wagered?: number
   /** What the next setup slot costs (it climbs with every slot past the free six). */
   slot_cost?: { diamonds: number; cash: number }
   /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
@@ -168,7 +170,7 @@ export interface Catalog {
   drop_prizes?: DropPrize[]
   combo_styles?: ComboStyle[]
   combos?: ComboDef[]
-  /** The diamond milestone ladder: n actions or fight wins pays reward diamonds, once. */
+  /** Diamond milestones: lifetime ladder steps (once each) and repeating steps (`repeat`: every n, forever). */
   milestones?: MilestoneDef[]
   /** In-app purchases: the diamond packs on sale and the Daily Drop's product id. Prices come from StoreKit. */
   store?: { packs: StorePack[]; drop_product: string }
@@ -176,7 +178,8 @@ export interface Catalog {
 }
 /** A diamond pack: its App Store product id and how many diamonds it credits. */
 export interface StorePack { id: string; diamonds: number }
-export interface MilestoneDef { key: string; kind: 'actions' | 'wins'; n: number; reward: number }
+export type MilestoneKind = 'actions' | 'wins' | 'fights' | 'turf' | 'wagered'
+export interface MilestoneDef { key: string; kind: MilestoneKind; n: number; reward: number; repeat?: boolean }
 
 export interface PlayerSummary {
   id: string; name: string; avatar: string; crew: { name: string; emblem: string } | null
@@ -335,12 +338,14 @@ export interface Message { id: number; sender_id: string; sender_name: string; b
 export interface Conversation { channel: string; other_id: string; other: string; last: string; at: string; unread?: number }
 
 export type ActivityKind = 'attacked' | 'crew_fight' | 'siege' | 'block_lost' | 'block_taken' | 'sold' | 'filled' | 'applied' | 'joined' | 'kicked' | 'daily_cash' | 'moderated'
-  | 'purchase' | 'purchase_refunded'
+  | 'purchase' | 'purchase_refunded' | 'milestone'
 export interface ActivityItem {
   id: number; kind: ActivityKind; at: string; seen: boolean
   data: { n?: number; held?: number | boolean; cash_won?: number; cash_lost?: number; hospital?: boolean; cash?: number; commodity?: Commodity; units?: number; days?: number; combo?: string | null; action?: string; until?: string
           /** purchase: diamonds credited; purchase_refunded: diamonds taken back, of the `bought` the refunded pack gave */
-          diamonds?: number; bought?: number }
+          diamonds?: number; bought?: number
+          /** milestone: which count reached n (the highest step paid), and the diamonds it paid */
+          what?: MilestoneKind }
   actor_id: string | null; actor: string | null
   crew_id: string | null; crew: string | null; crew_emblem: string | null
   block_id: number | null; block: string | null; hood_id: number | null
