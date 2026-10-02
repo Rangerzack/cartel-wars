@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import type {
   ActionResult, ActivityItem, RecentFind, DropResult, RecentDrop, ComboMeta, SetupCombos, ThugRow, CartelDetail, CartelSummary, Catalog, Conversation, CrewDetail, CrewFightResult, CrewSummary, FightLog, FightPreview, FightResult, Territory, BlockDetail, AttackBlockResult, LedgerEntry, Path,
-  Accolades, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
+  Accolades, FighterList, FighterSort, FighterStatus, Market, Me, Message, PlayerSummary, PublicPlayer, SetupKind, TerritoryLog, TopUsers,
   BannedWord, BlockedPlayer, ContentReason, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
@@ -55,6 +55,8 @@ export const api = {
   comboMeta: () => rpc<ComboMeta>('combo_meta'),
   player: (pid: string) => rpc<PublicPlayer>('get_player', { pid }),
   findPlayers: (q = '', limit_n = 40) => rpc<PlayerSummary[]>('find_players', { q, limit_n }),
+  findFighters: (q: string, status: FighterStatus, sort: FighterSort, limit_n = 50) =>
+    rpc<FighterList>('find_fighters', { q, status, sort, limit_n }),
   topUsers: () => rpc<TopUsers>('top_users'),
   accolades: () => rpc<Accolades>('get_accolades'),
 

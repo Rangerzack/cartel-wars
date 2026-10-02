@@ -1079,3 +1079,21 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 /* the Milestones card on Services: a repeating step with its progress bar toward the next one */
 .milestone-row .track { height: 6px; margin-top: 6px; border-radius: 4px; overflow: hidden; background: linear-gradient(#040405, #121216); border: 1px solid #000; }
 .milestone-row .track .fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #2d6fb8, var(--diamond)); }
+
+/* Fight › Players: the name search beside the sort, the filter chips (with how many each would show), and the list —
+   a green dot for who's online, and a dimmed row for anyone you can't hit right now (laid up, or across the bars) */
+.fight-find { display: flex; gap: 8px; }
+.fight-find .input[type=search] { flex: 1; min-width: 0; }
+.fight-find select.input { width: auto; flex: none; max-width: 42%; }
+.chip-nav { display: flex; flex-wrap: wrap; gap: 6px; }   /* wraps rather than scrolls: every filter in sight */
+.chip-nav button {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: #c9c9d3; white-space: nowrap; cursor: pointer;
+  background: linear-gradient(#1c1c22, #141418); border: 1px solid var(--line);
+}
+.chip-nav button.on { color: var(--gold-hi); border-color: #6b5520; }
+.chip-nav .n { font-size: 11.5px; font-weight: 700; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(255,255,255,.08); color: #a9a9b6; text-align: center; }
+.chip-nav button.on .n { background: rgba(227,179,65,.16); color: var(--gold-hi); }
+.online-dot { display: inline-block; width: 8px; height: 8px; margin: 0 6px 1px 0; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 0 6px rgba(80,200,120,.6); vertical-align: middle; }
+.row.cant .ico, .row.cant .t, .row.cant .s { opacity: .55; }
+.card.stale { opacity: .7; transition: opacity .15s; }

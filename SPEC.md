@@ -99,6 +99,15 @@ Player page shows exact odds (every roll enumerated) and both sides' edges; the
 Fight page's **Thugs** tab ranks all 200 by what a hit is worth to you. Thugs don't
 appear on Top Users, the weekly boards or ribbons, and the **Players** tab lists them
 only when you search for one by name (an empty search is real players only).
+The Players tab *(Zack, 2026-10-02)* searches by name and filters with chips:
+**All**, **Can fight** (out of the hospital and on your side of the bars, the same
+checks as Attack), **Online** (seen in the last 5 minutes), **Hospital** and
+**Jail**. Each chip shows how many players the search would list under it. It
+sorts by last seen, most wins, most rep or name. Anyone you can't hit right now
+is dimmed and says why, and the online ones have a green dot. The search, filter
+and sort stay in the URL, so Back from a profile lands on the same list. The last
+filter and sort you picked come back the next time you open the tab, on that
+device. The list shows 50 at a time.
 The winner takes 5–10% of the loser's cash on hand *(ours)*;
 after three hits on the same target within an hour the cash dries up (fights
 still happen, no money moves) *(ours, anti-farming)*. Anyone dropping to ≤19 Health lands in
