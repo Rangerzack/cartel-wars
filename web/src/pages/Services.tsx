@@ -8,7 +8,7 @@ import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
 import { PerkTag } from '../components/Perk'
 import { HireHoodlums } from '../components/Hire'
-import { perk } from '../lib/perks'
+import { bailCost, perk } from '../lib/perks'
 import { drugRefill } from '../lib/market'
 import type { MilestoneKind } from '../lib/types'
 import { milestoneLabel, milestoneTotal, nextRepeat } from '../lib/milestones'
@@ -40,7 +40,7 @@ export default function Services() {
   const heatRed = me.heat_red ?? cfg.heat_red
   // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
   const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
-  const bail = Math.ceil(cfg.bail_base * (1 - law))   // jail has no timer: you're in until you post this
+  const bail = bailCost(me, cfg)   // jail has no timer: you're in until you post this
   // mirrors _health_price: per-point price climbs with points bought in the last 24h
   const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))

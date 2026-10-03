@@ -674,6 +674,11 @@ that is irreversible or costs over half your cash asks first, in the game's own
 sheet (title, one line, Cancel beside the action it names), never the browser's
 `confirm()`, which some browsers and embedded web views mute or answer no by
 themselves.
+Getting busted offers **Post Bail** right where it happened *(Zack, 2026-10-02)*: the
+bust sheet after a job, a fight's result and a crew fight's result pay bail on the spot
+(the same price as the jail card, from cash on hand) and leave you where you were. Short
+of cash, the button is off and points at the bank. After the Bribe Police job, a
+deliberate trip in, **Stay inside** is the main button and bail is the quiet one.
 A fight's result sheet has Attack again under the result, with the same checks as
 Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,

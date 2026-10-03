@@ -4,6 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, every, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { BailButton } from '../components/Bail'
 import { Ribbons } from '../components/Ribbons'
 import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
 import { BackBar } from '../components/BackBar'
@@ -147,6 +148,7 @@ export default function Player() {
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
             {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
+            {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
             <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
             {cantFight ? <div className="why">{

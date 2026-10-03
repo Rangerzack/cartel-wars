@@ -4,6 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, RowLink, Stat } from '../components/ui'
+import { BailButton } from '../components/Bail'
 import { Ledger } from '../components/Ledger'
 import { useNow } from '../lib/useNow'
 import { timeLeft } from '../lib/format'
@@ -249,6 +250,7 @@ function CrewPage({ id }: { id: string }) {
             <div className="grid2"><Stat k="Your attack" v={num(fight.attack)} cls="green" /><Stat k="Their defense" v={num(fight.defense)} cls="red" /></div>
             <p style={{ margin: 0 }} className={fight.won ? 'gold' : 'red'}>{fight.won ? `${money(fight.cash)} moved from their crew bank to yours.` : `${money(fight.cash)} moved from your crew bank to theirs.`}</p>
             {fight.busted && <div className="notice red">The heat caught up with you — you're in jail.</div>}
+            {fight.busted && me.jailed && <BailButton />}
           </div>
         </Modal>
       )}

@@ -19,3 +19,6 @@ export function perkLabel(code: BusinessCode, v: number): string {
 /** Price after a discount perk, rounded the way the server rounds it. */
 export const discounted = (price: number, v: number, round: 'round' | 'ceil' = 'round') =>
   v > 0 ? Math[round](price * (1 - v)) : price
+
+/** Bail, the way bail_out prices it: the flat bail less the Law Office, rounded up. */
+export const bailCost = (me: Me, cfg: Record<string, number>) => Math.ceil((cfg.bail_base ?? 8000) * (1 - perk(me, 'law_office')))
