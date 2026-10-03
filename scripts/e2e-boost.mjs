@@ -150,6 +150,9 @@ try {
   const jailCard = a.locator('.card', { has: a.locator('.hd', { hasText: 'County Jail' }) })
   await jailCard.getByText('until you post bail').first().waitFor()
   await a.locator('.status-strip').getByText('🔒 In jail · until bail').waitFor()
+  // the top bar's heat corner says Jail while you're inside
+  await a.locator('.topbar .jail-tag', { hasText: 'Jail' }).waitFor()
+  if (await a.locator('.topbar .bar.heat').count()) throw new Error('no heat bar in the top bar while jailed')
   if (await police.getByRole('button', { name: /Go to Jail/ }).count()) throw new Error('no second trip while inside')
   const pj = await one(`select diamonds, jail_until = 'infinity' as ok, heat = heat_max as maxed from profiles where id = $1`, [aId])
   if (pj.diamonds !== 50 || !pj.ok || !pj.maxed) throw new Error('jailed for diamonds, heat maxed: ' + JSON.stringify(pj))
@@ -167,6 +170,8 @@ try {
   await a.getByText('Bailed out for $8,000 · heat back to 0').waitFor()
   const out = await one('select jail_until, heat from profiles where id = $1', [aId])
   if (out.jail_until !== null || out.heat !== 0) throw new Error('out on bail with zero heat: ' + JSON.stringify(out))
+  await a.locator('.topbar .bar.heat').waitFor()
+  if (await a.locator('.topbar .jail-tag').count()) throw new Error('the Jail tag goes once you bail')
   // out and unhurt: Bank leads again
   await a.locator('#jail').waitFor({ state: 'detached' })
   if ((await a.locator('.page > .card').first().getAttribute('id')) !== 'bank') throw new Error('Bank comes first once out')

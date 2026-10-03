@@ -654,7 +654,8 @@ Home shows the notices, the stats (heat, bank, reputation, attack, defense,
 storage), then a 3×3 grid to everything with no tab: Items, Crew, Cartel,
 Territory, Casino, Forum, Activity, Accolades, Store. The top bar is tappable:
 cash opens the bank, diamonds the store, heat the police, stamina the refills,
-health the hospital, the name your profile.
+health the hospital, the name your profile. In jail the heat bar's corner is a red
+**JAIL** tag instead (heat is maxed inside), which opens the jail card *(Zack, 2026-10-02)*.
 
 **Interface rules** *(Zack, 2026-10-01)*: the thing a screen is for sits on its
 first screen at 375 × 667 (Attack above the odds, the market offers above the
