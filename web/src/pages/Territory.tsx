@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, hoodlumIcon, money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Btn, Card, Empty, Modal, Qty, RowLink } from '../components/ui'
+import { Btn, Card, Empty, Loading, Modal, Qty, RowLink } from '../components/ui'
 import { HireHoodlums } from '../components/Hire'
 import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
+import { useLoad } from '../lib/useLoad'
 
 const ROWS = 'ABCDEFGHI'
 const coord = (h: { gx: number; gy: number }) => `${ROWS[h.gy - 1]}${h.gx}`
@@ -17,10 +18,7 @@ const slotName = (b: { slot: number }) => `Block ${String.fromCharCode(64 + b.sl
 
 export default function Territory() {
   const me = useMe()
-  const { toast } = useGame()
   const [sp, setSp] = useSearchParams()
-  const [data, setData] = useState<TerritoryData | null>(null)
-  const [log, setLog] = useState<TerritoryLog[] | null>(null)
   // ?hood=12 opens a hood; &block=70 also opens that block (links from the activity feed)
   const [blockId, setBlockId] = useState<number | null>(() => Number(sp.get('block')) || null)
   // which hoodlum the hire panel under the tiles is open on (?hire=thug opens it from a link)
@@ -30,10 +28,11 @@ export default function Territory() {
   const biz = (sp.get('biz') as BusinessCode | null) || null
   const { catalog } = useGame()
 
-  const load = useCallback(() => Promise.all([api.territory(), api.territoryLog(15)]).then(([t, l]) => { setData(t); setLog(l) }).catch(e => toast(e.message, 'bad')), [toast])
-  useEffect(() => { load() }, [load])
+  // the map and the log load together; a failed load gets a Retry rather than a spinner that stays
+  const { data: both, error, reload: load } = useLoad(() => Promise.all([api.territory(), api.territoryLog(15)]))
+  const data = both?.[0] ?? null, log = both?.[1] ?? null
 
-  if (!data) return <Empty><span className="spin" /></Empty>
+  if (!data) return <div className="page"><BackBar fallback="/" /><Loading error={error} onRetry={load} /></div>
   const hood = hoodId ? data.hoods.find(h => h.id === hoodId) ?? null : null
   const thugs = me.hoodlums.thug ?? 0, mercs = me.hoodlums.mercenary ?? 0, spies = me.hoodlums.spy ?? 0
   const openHood = (id: number) => setSp({ hood: String(id), ...(biz ? { biz } : {}) })
@@ -187,16 +186,14 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
   id: number; rules: TerritoryData['rules']; thugs: number; mercs: number; spies: number; onClose: () => void; onChanged: () => void
 }) {
   const me = useMe()
-  const { run, toast, askRefill } = useGame()
+  const { run, askRefill } = useGame()
   const now = useNow()
-  const [b, setB] = useState<BlockDetail | null>(null)
   const [force, setForce] = useState({ thugs: Math.min(thugs, rules.min_thugs), mercs: 0 })
   const [station, setStation] = useState({ code: 'thug', n: 1 })
   const [intel, setIntel] = useState<{ garrison: Record<string, number>; resistance: number } | null>(null)
   const [result, setResult] = useState<AttackBlockResult | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
-  const load = useCallback(() => api.block(id).then(setB).catch(e => toast(e.message, 'bad')), [id, toast])
-  useEffect(() => { load() }, [load])
+  const { data: b, error, reload: load } = useLoad(() => api.block(id), String(id))
   const refresh = () => { load(); onChanged() }
   const boss = !!(me.crew?.is_capo || me.crew?.is_co_capo)
   const attackPower = force.thugs * 10 + force.mercs * 60
@@ -225,7 +222,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, onClose, onChanged }: {
 
   return (
     <Modal title={b ? `${b.hood} — ${slotName(b)}` : 'Block'} onClose={onClose}>
-      {!b ? <Empty><span className="spin" /></Empty> : (
+      {!b ? <Loading error={error} onRetry={load} /> : (
         <div className="stack">
           <div className="small muted">
             {b.owner ? <>Held by {b.owner.emblem} <b>{b.owner.name}</b>{b.taken_at ? ` · taken ${ago(b.taken_at)}` : ''}.{!b.mine && (b.garrisoned ? ' There is a garrison — send a spy to size it up.' : ' No garrison.')}</>

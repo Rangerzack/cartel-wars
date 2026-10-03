@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
-import type { CrapsBetKind, CrapsEvent, CrapsLogLine, CrapsRoll, CrapsState } from '../../lib/types'
-import { Card, Empty } from '../ui'
+import type { CrapsBetKind, CrapsEvent, CrapsLogLine, CrapsRoll } from '../../lib/types'
+import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Die, Net, useBet } from './shared'
+import { useLoad } from '../../lib/useLoad'
 
 const NUMBERS = [4, 5, 6, 8, 9, 10] as const
 const NUM_LABEL: Record<number, string> = { 4: '4', 5: '5', 6: 'SIX', 8: '8', 9: 'NINE', 10: '10' }
@@ -63,17 +64,17 @@ export default function Craps() {
   const me = useMe()
   const { run, toast } = useGame()
   const [chip, setChip] = useBet('craps')
-  const [st, setSt] = useState<CrapsState | null>(null)
+  const { data: st, error, reload, set: setSt } = useLoad(() => api.crapsState())
   const [roll, setRoll] = useState<CrapsRoll | null>(null)
   const [rolling, setRolling] = useState(false)
-  const [dice, setDice] = useState<[number, number]>([5, 2])
+  const [placing, setPlacing] = useState(false)   // a chip is on its way to the server
+  // the faces on the table: the roll in progress or the last one, else the last roll the server remembers
+  const [shownDice, setDice] = useState<[number, number] | null>(null)
   const [flash, setFlash] = useState<Flash>({})
   const [session, setSession] = useState({ rolls: 0, net: 0 })
   const flashTimer = useRef<number | null>(null)
-  useEffect(() => {
-    api.crapsState().then(s => { setSt(s); if (s.last) setDice(s.last.dice) }).catch(e => toast(e.message, 'bad'))
-    return () => { if (flashTimer.current) window.clearTimeout(flashTimer.current) }
-  }, [toast])
+  const dice: [number, number] = shownDice ?? st?.last?.dice ?? [5, 2]
+  useEffect(() => () => { if (flashTimer.current) window.clearTimeout(flashTimer.current) }, [])
 
   const bets = st?.bets ?? {}
   const onFelt = Object.values(bets).reduce((a, b) => a + (b ?? 0), 0)
@@ -90,15 +91,15 @@ export default function Craps() {
   const dcomePoints = NUMBERS.filter(n => (bets[`dcome${n}`] ?? 0) > 0)
 
   async function bet(k: CrapsBetKind) {
-    if (rolling) return
+    if (rolling || placing) return   // one bet at a time: two in flight can land out of order on the felt
     let amt = chip
     if (isOdds(k)) {
       const left = oddsLeft(k)
       if (left < 100) { toast(left > 0 ? 'Odds are full' : 'Odds need a bet to sit behind', 'info'); return }
       amt = Math.min(chip, left)
     }
-    const s = await run(() => api.crapsBet(k, amt), { silent: true })
-    if (s) setSt(s)
+    setPlacing(true)
+    try { const s = await run(() => api.crapsBet(k, amt), { silent: true }); if (s) setSt(s) } finally { setPlacing(false) }
   }
 
   async function doRoll() {
@@ -120,12 +121,12 @@ export default function Craps() {
       setFlash(f)
       if (flashTimer.current) window.clearTimeout(flashTimer.current)
       flashTimer.current = window.setTimeout(() => setFlash({}), 2600)
-    } else if (st?.last) setDice(st.last.dice)
+    } else setDice(null)   // a failed roll: back to the last real roll, not a random frame
     setRolling(false)
   }
   async function takeDown() { const s = await run(() => api.crapsClear(), { silent: true }); if (s) setSt(s) }
 
-  const sp = (k: CrapsBetKind) => ({ amount: bets[k] ?? 0, flash: flash[k], busy: rolling, onBet: bet })
+  const sp = (k: CrapsBetKind) => ({ amount: bets[k] ?? 0, flash: flash[k], busy: rolling || placing, onBet: bet })
 
   const history = st?.history ?? []
   const lastCall = roll ? call(roll, roll.point) : point ? `Point is ${point}` : st?.last ? call({ ...st.last, event: st.last.event }, point) : 'Place your bets — come-out roll'
@@ -134,7 +135,7 @@ export default function Craps() {
   return (
     <Card title="🎲 Craps" className="table-card" right={<small>{point ? `Point is ${point}` : 'Come-out roll'}</small>}>
       <div className="bd stack">
-        {!st ? <Empty><span className="spin" /></Empty> : (
+        {!st ? <Loading error={error} onRetry={reload} /> : (
           <div className="cr-table">
             <div className="cr-rail">
               <div className="cr-dice">
@@ -258,7 +259,7 @@ export default function Craps() {
         <div className="table-bar">
           <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip — tap the felt to bet" />
           <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-            <button type="button" className="btn gold flex1 cr-roll" disabled={rolling || onFelt === 0} onClick={doRoll}>
+            <button type="button" className="btn gold flex1 cr-roll" disabled={rolling || placing || onFelt === 0} onClick={doRoll}>
               {rolling ? <span className="spin" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
             </button>
             <button type="button" className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} aria-label="Take down everything except Pass / Don't Pass once the point is on, and come bets">Take down</button>

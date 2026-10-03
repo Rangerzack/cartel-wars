@@ -38,11 +38,14 @@ export default function Casino() {
         <div className="notice gold">The slot machine is open. Tables — poker, blackjack, craps and roulette — are coming soon.</div>
       )}
       {locked && <div className="notice red">{me.jailed ? 'No gambling from a cell.' : 'The casino won\'t seat you from a hospital bed.'} Come back when you're out.</div>}
-      {g === 'poker' && <PokerLobby />}
-      {g === 'blackjack' && <Blackjack />}
-      {g === 'craps' && <Craps />}
-      {g === 'roulette' && <Roulette />}
-      {g === 'slots' && <Slots />}
+      {/* locked, every control in the game is off (a disabled fieldset disables everything inside it), not just told off by the server */}
+      <fieldset className="lockable" disabled={locked} aria-disabled={locked}>
+        {g === 'poker' && <PokerLobby />}
+        {g === 'blackjack' && <Blackjack />}
+        {g === 'craps' && <Craps />}
+        {g === 'roulette' && <Roulette />}
+        {g === 'slots' && <Slots />}
+      </fieldset>
       <History />
       <div className="small muted">Wins of {money(10000)} or more draw attention: +2 heat. Big gamblers make the weekly Accolades board.</div>
     </div>

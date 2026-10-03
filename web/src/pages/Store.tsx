@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLoad } from '../lib/useLoad'
 import { useLocation } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { num } from '../lib/format'
@@ -7,7 +8,7 @@ import { buyPack, getOfferings, restorePurchases, storeReady, waitForDelivery, t
 import { focusCard } from '../lib/scroll'
 import { BackBar } from '../components/BackBar'
 import { DailyDrop } from '../components/DailyDrop'
-import { Btn, Card } from '../components/ui'
+import { Btn, Card, Loading } from '../components/ui'
 
 /**
  * The store (#15): diamond packs, then the Daily Drop. Purchases go through Apple in the iOS app only (guideline
@@ -18,9 +19,10 @@ export default function Store() {
   const me = useMe()
   const { catalog, toast, refresh } = useGame()
   const packs = catalog?.store?.packs ?? []
-  const [products, setProducts] = useState<Record<string, StoreProduct> | null>(null)
   const [delivering, setDelivering] = useState<string | null>(null)
   const ids = packs.map(p => p.id).join(' ')
+  // StoreKit's prices; a failed ask (no connection to the App Store) gets a Retry, not an empty shop
+  const { data: products, error, reload } = useLoad<Record<string, StoreProduct>>(() => (storeReady && ids ? getOfferings(ids.split(' ')) : Promise.resolve({})), ids)
   const { hash } = useLocation()
   const ready = !!catalog
   useEffect(() => {
@@ -29,12 +31,9 @@ export default function Store() {
     return () => clearTimeout(t)
   }, [hash, ready])
   // In the app, once StoreKit has answered, only what the App Store actually sells (a pack whose product isn't live yet
-  // would be a dead button). Until then, and on the web, every pack.
-  const shown = storeReady && products ? packs.filter(p => products[p.id]) : packs
-  useEffect(() => {
-    if (!storeReady || !ids) return
-    getOfferings(ids.split(' ')).then(setProducts).catch(e => { setProducts({}); toast((e as Error).message, 'bad') })
-  }, [ids, toast])
+  // would be a dead button); until then every pack, with its price still to come. On the web there is nothing to buy,
+  // so the list stays out: the one line says where diamonds are sold.
+  const shown = !storeReady ? [] : products ? packs.filter(p => products[p.id]) : packs
 
   const buy = async (id: string, diamonds: number) => {
     const before = me.diamonds
@@ -59,7 +58,8 @@ export default function Store() {
       <BackBar fallback="/" />
       <h2>Store</h2>
       <Card id="diamonds" title="💎 Diamonds" right={<small className="dia tabular">💎 {num(me.diamonds)}</small>}>
-        {!storeReady && <div className="bd"><div className="notice blue">{isNative ? 'Purchases aren\'t available in this build.' : 'Diamonds are sold in the iPhone app.'}</div></div>}
+        {!storeReady && <div className="bd"><div className="notice blue">{isNative ? 'Purchases aren\'t available in this build.' : 'Diamonds are sold in the iPhone app. Everything they buy can also be earned: milestones, the Daily Drop and the casino pay out in diamonds.'}</div></div>}
+        {storeReady && error && !products && <Loading error={error} onRetry={reload} />}
         {shown.map(p => (
           <div key={p.id} className={`row store-pack${storeReady ? '' : ' off'}`}>
             <span className="ico">💎</span>
@@ -70,7 +70,7 @@ export default function Store() {
           </div>
         ))}
         <div className="bd stack">
-          {storeReady && products && !shown.length && <div className="notice blue">Nothing's on sale right now. Try again later.</div>}
+          {storeReady && products && !error && !shown.length && <div className="notice blue">Nothing's on sale right now. Try again later.</div>}
           <div className="small muted">Diamonds buy refills, upgrades, setup slots, boosts and extra grow houses. Diamonds you buy never expire. Only diamonds you earn in the game can be sent to other players.</div>
           {storeReady && <Btn className="ghost sm" onClick={restore}>Restore purchases</Btn>}
         </div>

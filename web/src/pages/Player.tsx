@@ -3,36 +3,35 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, every, money, num } from '../lib/format'
-import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { Btn, Card, Loading, Modal, Stat } from '../components/ui'
 import { BailButton } from '../components/Bail'
 import { HealButton } from '../components/Heal'
 import { Ribbons } from '../components/Ribbons'
-import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
+import type { FightEdge, FightPreview, FightResult } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { ComboPill } from '../components/Combo'
 import { matchup, matchupText } from '../lib/combos'
 import { ReportModal } from '../components/Report'
 import { ModButtons } from './Admin'
+import { useLoad } from '../lib/useLoad'
 
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, toast, catalog, askRefill, ask } = useGame()
+  const { run, catalog, askRefill, ask } = useGame()
   const nav = useNavigate()
-  const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
   const [amount, setAmount] = useState(0)
   const [dia, setDia] = useState(0)
   const [reporting, setReporting] = useState(false)
 
-  const load = useCallback(() => api.player(id).then(setP).catch(e => toast(e.message, 'bad')), [id, toast])
-  useEffect(() => { load() }, [load])
+  const { data: p, error, reload: load } = useLoad(() => api.player(id), id)
   // odds before you swing; quietly absent if the preview isn't available
   const [pv, setPv] = useState<FightPreview | null>(null)
   const loadPreview = useCallback(() => { if (id && id !== me.id) api.fightPreview(id).then(setPv).catch(() => setPv(null)) }, [id, me.id])
   useEffect(() => { loadPreview() }, [loadPreview])
 
-  if (!p) return <Empty><span className="spin" /></Empty>
+  if (!p) return <div className="page"><BackBar fallback="/fight" /><Loading error={error} onRetry={load} /></div>
   const isMe = p.id === me.id
   // jail is its own room: inmates only fight inmates
   const jailWall = me.jailed !== p.jailed

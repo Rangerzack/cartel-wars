@@ -50,8 +50,13 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   const [menu, setMenu] = useState<Message | null>(null)
   const [reporting, setReporting] = useState<Message | null>(null)
   const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
   const [other, setOther] = useState<PublicPlayer | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
+  // the log follows new lines only while you're reading the end of it; scrolled up to read history, it stays put
+  const atEnd = useRef(true)
+  // a dropped connection is said once, not on every poll
+  const failing = useRef(false)
   const isDm = channel.startsWith('dm:')
   // Blocking: in group chats the lines of players I've blocked never render, whether they came with the history or
   // arrived live (the server already leaves them out of get_messages). A DM keeps its history, but either side's block
@@ -63,7 +68,9 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   const now = useNow(30_000)
   const mutedUntil = me.muted_until && new Date(me.muted_until).getTime() > now ? me.muted_until : null
 
-  const load = useCallback(() => api.messages(channel).then(setMsgs).catch(e => toast(e.message, 'bad')), [channel, toast])
+  const load = useCallback(() => api.messages(channel)
+    .then(m => { setMsgs(m); failing.current = false })
+    .catch(e => { if (!failing.current) toast(e.message, 'bad'); failing.current = true }), [channel, toast])
   useEffect(() => {
     load()
     const otherId = channel.startsWith('dm:') ? channel.split(':').slice(1).find(x => x !== me.id) : undefined
@@ -77,10 +84,13 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `channel=eq.${channel}` },
         payload => setMsgs(m => m && m.map(x => (x.id === (payload.new as Message).id ? { ...x, ...(payload.new as Message) } : x))))
       .subscribe(status => { live = status === 'SUBSCRIBED' })
-    const poll = setInterval(() => { if (!live || document.visibilityState === 'visible') load() }, 4_000)
+    // nothing polls in the background; with realtime up, a slow poll (every 32 s) catches anything it dropped
+    let n = 0
+    const poll = setInterval(() => { if (document.visibilityState !== 'visible') return; if (!live || ++n % 8 === 0) load() }, 4_000)
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [channel, load, me.id])
-  useEffect(() => { logRef.current?.scrollTo({ top: 1e9 }) }, [msgs])
+  useEffect(() => { if (atEnd.current) logRef.current?.scrollTo({ top: 1e9 }) }, [msgs])
+  const onLogScroll = (el: HTMLDivElement) => { atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
   // Reading a DM clears its unread badge: mark it read whenever a message from them shows up here.
   const markedUpTo = useRef(0)
   useEffect(() => {
@@ -95,9 +105,10 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   async function send(e: React.FormEvent) {
     e.preventDefault()
     const body = text.trim()
-    if (!body) return
-    setText('')
-    try { await api.sendMessage(channel, body); load() } catch (err) { toast((err as Error).message, 'bad') }
+    if (!body || sending) return
+    setSending(true)
+    // the line clears only once it's through: a refused or dropped send leaves it in the box to fix or retry
+    try { await api.sendMessage(channel, body); setText(''); atEnd.current = true; load() } catch (err) { toast((err as Error).message, 'bad') } finally { setSending(false) }
   }
   async function block(m: Message) {
     setMenu(null)
@@ -111,7 +122,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
       {/* Live Chat, Crew and Cartel are named by the seg above them, so their card has no header and the log gets its
           room; a DM names who it's with, and table talk has no seg */}
       <Card className={`chat ${compact ? 'compact' : ''}`} title={title}>
-        <div className="log" ref={logRef}>
+        <div className="log" ref={logRef} onScroll={e => onLogScroll(e.currentTarget)}>
           {!shown && <Empty><span className="spin" /></Empty>}
           {shown?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}
           {shown?.map(m => (
@@ -126,8 +137,8 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
         {mutedUntil ? <div className="chat-cut small muted">You're muted until {new Date(mutedUntil).toLocaleString()}.</div>
           : cut ? <div className="chat-cut small muted">You can't message each other.</div> : (
           <form onSubmit={send}>
-            <input className="input" placeholder="Say something…" value={text} maxLength={500} onChange={e => setText(e.target.value)} />
-            <button className="btn doit" type="submit">Send</button>
+            <input className="input" placeholder="Say something…" aria-label="Message" value={text} maxLength={500} onChange={e => setText(e.target.value)} />
+            <button className="btn doit" type="submit" disabled={sending || !text.trim()}>{sending ? <span className="spin" /> : 'Send'}</button>
           </form>
         )}
       </Card>

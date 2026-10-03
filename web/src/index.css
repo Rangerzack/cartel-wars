@@ -48,6 +48,10 @@ button { font: inherit; }
 input, select, textarea { font: inherit; }
 ::selection { background: rgba(227,179,65,.35); }
 
+/* a fieldset used only to switch everything inside it off at once (the casino while jailed, a felt mid-spin): no box of its own */
+fieldset.lockable { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+fieldset.lockable:disabled { pointer-events: none; }
+
 /* App shell -------------------------------------------------------------- */
 .app { max-width: 520px; margin: 0 auto; min-height: 100dvh; padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px); }
 @media (min-width: 540px) {
@@ -265,15 +269,16 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 .btn.ghost.red { color: #ff968d; border-color: #5a2320; }
 
 /* Forms ------------------------------------------------------------------ */
+/* 16 px in every field: iOS zooms the page into any focused field set smaller, and the zoom stays after typing */
 .input, select.input, textarea.input {
-  width: 100%; color: var(--text); padding: 9px 11px; min-height: 38px; outline: none; border-radius: 8px;
+  width: 100%; color: var(--text); padding: 9px 11px; min-height: 38px; outline: none; border-radius: 8px; font-size: 16px;
   background: linear-gradient(#070709, #0f0f12); border: 1px solid #2c2c35;
   box-shadow: 0 2px 4px rgba(0,0,0,.6) inset, 0 1px 0 rgba(255,255,255,.045);
   transition: border-color .15s, box-shadow .15s;
 }
 .input::placeholder { color: #7c7c8a; }
 .input:focus { border-color: rgba(227,179,65,.6); box-shadow: 0 2px 4px rgba(0,0,0,.6) inset, 0 0 0 3px rgba(227,179,65,.13); }
-.input.sm { min-height: 30px; padding: 4px 8px; font-size: 13px; width: 84px; }
+.input.sm { min-height: 30px; padding: 4px 8px; width: 84px; }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .qty { display: inline-flex; align-items: center; gap: 4px; }
 .qty input { width: 64px; text-align: center; font-variant-numeric: tabular-nums; }

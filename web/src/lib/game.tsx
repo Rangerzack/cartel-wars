@@ -16,6 +16,8 @@ interface GameState {
   session: Session | null
   authReady: boolean
   me: Me | null
+  /** When `me` arrived (Date.now()): pages that count forward from its server snapshot measure from here. */
+  meAt: number
   catalog: Catalog | null
   toasts: Toast[]
   refresh: () => Promise<void>
@@ -63,6 +65,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [me, setMe] = useState<Me | null>(null)
+  const [meAt, setMeAt] = useState(0)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
@@ -140,16 +143,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     markNet(true)
   }, [toast, markNet])
 
+  // Each refresh takes a number; an answer older than the newest request is dropped, so the minute poll (or a
+  // visibility refresh) that was already in flight when an action landed can't put the pre-action state back on screen.
+  const seq = useRef(0)
   const refresh = useCallback(async () => {
+    const n = ++seq.current
+    const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setMeAt(gotAt.current); setMe(m) }
     try {
-      const m = await api.me()
-      gotAt.current = Date.now()
-      setMe(m)
+      land(await api.me())
       if (netDownRef.current) markNet(false)
     } catch (e) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
-        try { const m = await api.ensureProfile(); gotAt.current = Date.now(); setMe(m) } catch (e2) { failed(e2, 'me') }
+        try { land(await api.ensureProfile()) } catch (e2) { failed(e2, 'me') }
       } else {
         failed(e, 'me')
       }
@@ -230,8 +236,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
+    [session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }

@@ -687,6 +687,20 @@ Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,
 diamonds, or product, each priced with what it restores), and so does any server
 refusal for stamina (crew fights). The server still checks every refill.
+**Reliability rules** *(Zack, 2026-10-02, Phase 2)*: a screen's first fetch never leaves
+a spinner that stays: a failed load shows what went wrong and a Try again where the
+spinner was (`useLoad`), and an older answer never overwrites a newer one (the minute poll
+can't put pre-action cash back on screen; a fast filter change can't leave the old list
+under the new heading). A crew or cartel that no longer exists sends you back to the hub
+replacing the URL, so Back doesn't loop. Chat follows new lines only while you're reading
+the end of the log, and a refused send leaves the draft in the box. Poker takes one action
+at a time and a stale poll can't bring the buttons back. Jailed or hospitalized, every
+casino control is off (not just refused by the server); roulette holds the $500k table
+max client-side; craps places one chip at a time. A button is disabled, with a reason,
+wherever the server would refuse (Build without the diamonds, Expand or Buy without the
+cash or storage, Sell with every unit equipped). Every text field is 16 px so iOS doesn't
+zoom into it. Purchases never go out under RevenueCat's anonymous id: a login that failed
+is retried before any purchase, or the purchase is refused with a reason.
 Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
 Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
 that is short of thugs offers the missing ones, which join that attack.

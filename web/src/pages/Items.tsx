@@ -110,6 +110,10 @@ export default function Items() {
           <Card>
             {catalog.items.filter(i => i.category === cat).map(i => {
               const have = inv.get(i.id)?.qty ?? 0
+              // what the server will sell (sell_item): units beyond the most any one setup equips, since one unit can sit in
+              // every setup at once
+              const equippedMost = Math.max(0, ...(['offense', 'defense', 'jail'] as const).map(s => (me.setups[s] ?? []).find(x => x.item_id === i.id)?.qty ?? 0))
+              const loose = Math.max(0, have - equippedMost)
               const drop = !!i.drop_only
               const cost = discounted(i.price, perk(me, shopPerk))
               const resale = Math.floor(i.price * (0.5 + perk(me, 'repo')))
@@ -119,7 +123,7 @@ export default function Items() {
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
-                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
+                  {loose > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
                     // it sits next to the gold Buy and goes back at about half price: ask first
                     if (!await ask(`It goes back for about half what it costs to buy.`, { title: `Sell one ${i.name} for ${money(resale)}?`, yes: `Sell · ${money(resale)}`, tone: 'gold' })) return
                     return run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })

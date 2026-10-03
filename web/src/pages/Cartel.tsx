@@ -1,28 +1,30 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money } from '../lib/format'
-import { Btn, Card, Empty, RowLink, Stat } from '../components/ui'
+import { Btn, Card, Empty, Loading, RowLink, Stat } from '../components/ui'
 import { Ledger } from '../components/Ledger'
-import type { CartelDetail, CartelSummary, CrewSummary } from '../lib/types'
+import type { CrewSummary } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { CrewLink } from '../components/Linked'
+import { useLoad } from '../lib/useLoad'
 
 export default function Cartel() {
   const { id } = useParams()
-  return id ? <CartelPage id={id} /> : <CartelHub />
+  return id ? <CartelPage key={id} id={id} /> : <CartelHub />
 }
 
 function CartelHub() {
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run } = useGame()
   const nav = useNavigate()
-  const [list, setList] = useState<CartelSummary[] | null>(null)
+  const { data: list, error, reload } = useLoad(() => api.listCartels())
   const [name, setName] = useState('')
   const [invites, setInvites] = useState<{ id: string; name: string }[]>([])
-  useEffect(() => { api.listCartels().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
-  useEffect(() => { if (me.crew?.is_capo) api.crew(me.crew.id).then(c => setInvites(c.invites ?? [])).catch(() => {}) }, [me.crew, toast])
+  // the Capo's pending invites: asked once per crew, not on every poll (me.crew is a new object each time)
+  const crewId = me.crew?.is_capo ? me.crew.id : null
+  useEffect(() => { if (crewId) api.crew(crewId).then(c => setInvites(c.invites ?? [])).catch(() => {}) }, [crewId])
   useEffect(() => { if (me.cartel) nav(`/cartel/${me.cartel.id}`, { replace: true }) }, [me.cartel, nav])
   return (
     <div className="page">
@@ -52,7 +54,7 @@ function CartelHub() {
       )}
       <h2>Cartels</h2>
       <Card>
-        {!list && <Empty><span className="spin" /></Empty>}
+        {!list && <Loading error={error} onRetry={reload} />}
         {list?.length === 0 && <Empty>No cartels yet. A crew's Capo can found one.</Empty>}
         {list?.map(c => (
           <RowLink key={c.id} to={`/cartel/${c.id}`}>
@@ -70,14 +72,14 @@ function CartelPage({ id }: { id: string }) {
   const me = useMe()
   const { run, toast, ask } = useGame()
   const nav = useNavigate()
-  const [c, setC] = useState<CartelDetail | null>(null)
   const [amount, setAmount] = useState(0)
   const [crews, setCrews] = useState<CrewSummary[] | null>(null)
   const [ledgerV, setLedgerV] = useState(0)
-  const load = useCallback(() => api.cartel(id).then(setC).catch(e => { toast(e.message, 'bad'); nav('/cartel') }), [id, toast, nav])
-  useEffect(() => { load() }, [load])
+  const { data: c, error, reload: load } = useLoad(() => api.cartel(id), id)
+  const gone = !!error && /No such cartel|invalid input syntax/.test(error)
+  useEffect(() => { if (gone) { toast('That cartel is gone', 'info'); nav('/cartel', { replace: true }) } }, [gone, toast, nav])
   useEffect(() => { if (c?.is_don) api.listCrews().then(setCrews).catch(() => {}) }, [c?.is_don])
-  if (!c) return <Empty><span className="spin" /></Empty>
+  if (!c) return <div className="page"><BackBar fallback="/cartel" /><Loading error={gone ? null : error} onRetry={load} /></div>
   const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { const r = await run(fn, { ok }); load(); setLedgerV(v => v + 1); return r }
   // a deposit or withdrawal empties the field, so a second tap doesn't move the same amount again
   const bank = async (n: number) => { if (await act(() => api.cartelBank(n), r => `Cartel bank: ${money(r.bank)}`)) setAmount(0) }
@@ -96,7 +98,7 @@ function CartelPage({ id }: { id: string }) {
           {c.member && (
             <div className="hstack">
               <Btn className="sm" onClick={() => nav(`/chat/cartel:${c.id}`)}>💬 Cartel Chat</Btn>
-              {me.crew?.is_capo && <Btn className="sm ghost red" onClick={async () => { if (await ask('Your crew stops sharing the cartel\'s bonuses, and its crews can fight yours again.', { title: 'Pull your crew out of the cartel?', yes: 'Leave cartel', tone: 'red' })) return act(api.cartelLeave, () => 'Your crew left the cartel') }}>Leave Cartel</Btn>}
+              {me.crew?.is_capo && <Btn className="sm ghost red" onClick={async () => { if (await ask('Your crew stops sharing the cartel\'s bonuses, and its crews can fight yours again.', { title: 'Pull your crew out of the cartel?', yes: 'Leave cartel', tone: 'red' })) return run(api.cartelLeave, { ok: () => 'Your crew left the cartel' }).then(r => { if (r) nav('/cartel', { replace: true }) }) }}>Leave Cartel</Btn>}
             </div>
           )}
           <div className="small muted">Every block pays its bonus once a day: 80% to the crew holding it, 20% to its cartel's bank.</div>

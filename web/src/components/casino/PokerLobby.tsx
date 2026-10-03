@@ -15,7 +15,9 @@ export default function PokerLobby() {
   const [join, setJoin] = useState<PokerTableInfo | null>(null)
   const [buyin, setBuyin] = useState(0)
   useEffect(() => {
-    const load = () => api.pokerLobby().then(setTables).catch(e => toast(e.message, 'bad'))
+    // a dropped connection is said once, not every 5 s
+    let failing = false
+    const load = () => api.pokerLobby().then(t => { setTables(t); failing = false }).catch(e => { if (!failing) toast(e.message, 'bad'); failing = true })
     load()
     const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 5000)
     return () => clearInterval(t)

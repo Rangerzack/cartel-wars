@@ -21,24 +21,32 @@ export type BuyResult = 'bought' | 'cancelled' | 'pending'
 const MANAGE_URL = 'https://apps.apple.com/account/subscriptions'
 const rc = () => import('@revenuecat/purchases-capacitor')
 let configured: Promise<void> | null = null
-let user: string | null = null
+let user: string | null = null        // who RevenueCat is signed in as right now
+let wanted: string | null = null      // who it should be: the signed-in player
+let switching: Promise<void> | null = null
 const products = new Map<string, StoreProduct>()
 
-/** Sign RevenueCat in as the player: purchases carry this id to the webhook, which credits that Supabase user. */
+/** Sign RevenueCat in as the player: purchases carry this id to the webhook, which credits that Supabase user.
+ *  `user` moves only once the SDK has confirmed, so a login that fails (a dropped connection right after sign-in) is
+ *  known to have failed, and sdk() tries it again before any purchase goes out. */
 export async function initStore(userId: string) {
   if (!storeReady) return
+  wanted = userId
   const { Purchases } = await rc()
   if (!configured) {
-    user = userId
-    configured = Purchases.configure({ apiKey: KEY!, appUserID: userId }).catch(e => { configured = null; user = null; throw e })
+    configured = Purchases.configure({ apiKey: KEY!, appUserID: userId }).then(() => { user = userId }, e => { configured = null; throw e })
     return configured
   }
   await configured
-  if (user !== userId) { await Purchases.logIn({ appUserID: userId }); user = userId }
+  if (user === userId) return
+  if (!switching) switching = Purchases.logIn({ appUserID: userId }).then(() => { user = userId }).finally(() => { switching = null })
+  await switching
+  if (user !== userId) return initStore(userId)   // the switch that just finished was for someone else
 }
 
 /** On sign-out: RevenueCat forgets the player, so the next purchase can't land on their account. */
 export async function logOutStore() {
+  wanted = null
   if (!storeReady || !configured || !user) return
   const { Purchases } = await rc()
   await configured
@@ -46,10 +54,14 @@ export async function logOutStore() {
   await Purchases.logOut()
 }
 
+/** The SDK, signed in as the current player, or an error: never a purchase under the anonymous id (the webhook would
+ *  credit nobody while Apple still charges). A failed earlier configure or login is retried here. */
 async function sdk() {
   if (!storeReady) throw new Error('Purchases are only in the iPhone app')
-  if (!configured) throw new Error("The store isn't ready yet. Try again in a moment.")
-  await configured
+  if (!wanted) throw new Error('Sign in to buy')
+  if (!configured || user !== wanted) {
+    try { await initStore(wanted) } catch { throw new Error("The store can't reach Apple right now. Check your connection and try again.") }
+  }
   return rc()
 }
 

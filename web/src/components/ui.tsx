@@ -78,13 +78,19 @@ export function Seg<T extends string>({ value, onChange, options }: { value: T; 
   )
 }
 
+/** A count with − and +. The field can be emptied and retyped (clearing "10" to type 5 gives 5, not 15): what's typed
+ *  is held as text and clamped into range when the field is left or a step button is tapped; the value handed up is
+ *  always a whole number in range, so a half-typed field never reaches a purchase. */
 export function Qty({ value, onChange, min = 1, max = 999999 }: { value: number; onChange: (n: number) => void; min?: number; max?: number }) {
   const clamp = (n: number) => Math.max(min, Math.min(max, Math.floor(n) || min))
+  const [text, setText] = useState<string | null>(null)   // what's being typed, until the field is left
   return (
     <span className="qty">
-      <button type="button" className="btn sm" aria-label="One less" onClick={() => onChange(clamp(value - 1))}>−</button>
-      <input className="input sm" inputMode="numeric" aria-label="Quantity" value={value} onChange={e => onChange(clamp(Number(e.target.value)))} />
-      <button type="button" className="btn sm" aria-label="One more" onClick={() => onChange(clamp(value + 1))}>+</button>
+      <button type="button" className="btn sm" aria-label="One less" onClick={() => { setText(null); onChange(clamp(value - 1)) }}>−</button>
+      <input className="input sm" inputMode="numeric" aria-label="Quantity" value={text ?? value}
+        onChange={e => { const t = e.target.value.replace(/[^0-9]/g, ''); setText(t); if (t) onChange(clamp(Number(t))) }}
+        onBlur={() => setText(null)} />
+      <button type="button" className="btn sm" aria-label="One more" onClick={() => { setText(null); onChange(clamp(value + 1)) }}>+</button>
     </span>
   )
 }
@@ -127,6 +133,20 @@ export function Stat({ k, v, cls = '' }: { k: string; v: ReactNode; cls?: string
 }
 
 export function Empty({ children }: { children: ReactNode }) { return <div className="empty">{children}</div> }
+
+/** Where a list or screen is still loading, or its load failed: a spinner, or what went wrong with a way to try again
+ *  (never a spinner that stays forever). `useLoad` supplies `error` and `onRetry`. */
+export function Loading({ error, onRetry }: { error: string | null; onRetry: () => void }) {
+  if (!error) return <Empty><span className="spin" /></Empty>
+  return (
+    <Empty>
+      <div className="stack center load-fail">
+        <span className="small muted">{error}</span>
+        <button type="button" className="btn sm" onClick={onRetry}>Try again</button>
+      </div>
+    </Empty>
+  )
+}
 
 /** A list row that navigates: a real link (with `to`) or button (with `onClick`), so it takes keyboard focus and
  *  VoiceOver calls it a link or button, not text. Looks exactly like `div.row.link` did. Only for rows without their own

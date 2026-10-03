@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, num } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Card, Empty, RowLink, Seg } from '../components/ui'
-import type { ComboMeta, FightLog, FighterList, FighterSort, FighterStatus, StyleCode, ThugRow, TopUsers } from '../lib/types'
+import { Card, Empty, Loading, RowLink, Seg } from '../components/ui'
+import type { FighterSort, FighterStatus, StyleCode, ThugRow } from '../lib/types'
 import { ComboPill, StyleLine } from '../components/Combo'
 import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
+import { useLoad } from '../lib/useLoad'
 
 type Tab = 'players' | 'thugs' | 'log' | 'combos' | 'top'
 
@@ -45,7 +46,6 @@ const remember = (k: string, v: string) => { try { localStorage.setItem(`fight.$
  *  player's page lands on the same list. */
 function Players() {
   const me = useMe()
-  const { toast } = useGame()
   const now = useNow(10_000)
   const [sp, setSp] = useSearchParams()
   const q = sp.get('q') ?? ''
@@ -60,18 +60,9 @@ function Players() {
     if (v) n.set(k, v); else n.delete(k)
     return n
   }, { replace: true })
-  // the last answer and the search it answers: while a new one is on its way the old list stays up, dimmed
-  const key = `${q.trim()}|${show}|${sort}`
-  const [res, setRes] = useState<{ key: string; data: FighterList } | null>(null)
-  useEffect(() => {
-    let live = true
-    const t = setTimeout(() => api.findFighters(q.trim(), show, sort, LIMIT)
-      .then(data => { if (live) setRes({ key, data }) })
-      .catch(e => { if (live) toast(e.message, 'bad') }), 200)
-    return () => { live = false; clearTimeout(t) }
-  }, [key, q, show, sort, toast])
-  const data = res?.data
-  const loading = res?.key !== key
+  // while a new search is on its way the old list stays up, dimmed; a short wait folds fast typing into one search
+  const { data, error, reload, stale: loading } = useLoad(
+    () => new Promise(r => setTimeout(r, 200)).then(() => api.findFighters(q.trim(), show, sort, LIMIT)), `${q.trim()}|${show}|${sort}`, { keep: true })
   const list = data?.players
   const empty = q.trim()
     ? <>Nobody named like “{q.trim()}”{show !== 'all' ? ' here' : ''}.</>
@@ -98,7 +89,7 @@ function Players() {
         ))}
       </nav>
       <Card className={loading && list ? 'stale' : ''}>
-        {!list && <Empty><span className="spin" /></Empty>}
+        {!list && <Loading error={error} onRetry={reload} />}
         {list?.length === 0 && (
           <Empty>
             {empty}
@@ -125,12 +116,11 @@ function Players() {
 
 /** The 200 NPC thugs, ranked by what a hit is worth to you right now: your odds × their stash × the 7.5% average take. */
 function Thugs() {
-  const { toast, catalog } = useGame()
+  const { catalog } = useGame()
   const cfg = catalog?.config ?? {}
-  const [list, setList] = useState<ThugRow[] | null>(null)
+  const { data: list, error, reload } = useLoad(() => api.findThugs())
   const [all, setAll] = useState(false)
-  useEffect(() => { api.findThugs().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
-  if (!list) return <Card><Empty><span className="spin" /></Empty></Card>
+  if (!list) return <Card><Loading error={error} onRetry={reload} /></Card>
   const worth = (t: ThugRow) => (t.dry || t.hospital ? 0 : t.win_pct / 100 * t.stash * 0.075)
   const beatable = list.filter(t => t.win_pct >= 60)
   const shown = all ? list : [...beatable].sort((a, b) => worth(b) - worth(a)).slice(0, 30)
@@ -169,13 +159,11 @@ function Thugs() {
 }
 
 function Log() {
-  const { toast } = useGame()
   const now = useNow(10_000)
-  const [list, setList] = useState<FightLog[] | null>(null)
-  useEffect(() => { api.fights().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
+  const { data: list, error, reload } = useLoad(() => api.fights())
   return (
     <Card>
-      {!list && <Empty><span className="spin" /></Empty>}
+      {!list && <Loading error={error} onRetry={reload} />}
       {list?.length === 0 && <Empty>No fights yet. The <Link to="/fight?tab=thugs">Thugs tab</Link> lists easy first wins.</Empty>}
       {list?.map(f => {
         const otherId = f.i_attacked ? f.defender_id : f.attacker_id
@@ -201,10 +189,8 @@ function Log() {
 }
 
 function Top() {
-  const { toast } = useGame()
-  const [top, setTop] = useState<TopUsers | null>(null)
-  useEffect(() => { api.topUsers().then(setTop).catch(e => toast(e.message, 'bad')) }, [toast])
-  if (!top) return <Empty><span className="spin" /></Empty>
+  const { data: top, error, reload } = useLoad(() => api.topUsers())
+  if (!top) return <Loading error={error} onRetry={reload} />
   const board = (title: string, rows: { id: string; name: string; value: number; emblem?: string }[], fmt: (n: number) => string, link: (id: string) => string) => (
     <Card title={title}>
       {(rows ?? []).length === 0 && <Empty>Nobody on the board yet.</Empty>}
@@ -230,9 +216,8 @@ function Top() {
 /** The counter wheel, every combo and what it takes, and what the city runs. */
 function Combos() {
   const me = useMe()
-  const { catalog, toast } = useGame()
-  const [meta, setMeta] = useState<ComboMeta | null>(null)
-  useEffect(() => { api.comboMeta().then(setMeta).catch(e => toast(e.message, 'bad')) }, [toast])
+  const { catalog } = useGame()
+  const { data: meta, error: metaError, reload: reloadMeta } = useLoad(() => api.comboMeta())
   if (!catalog?.combo_styles || !catalog.combos) return <Card><Empty><span className="spin" /></Empty></Card>
   const styles = catalog.combo_styles
   const cfg = catalog.config
@@ -261,7 +246,7 @@ function Combos() {
       </Card>
 
       <Card title="What the city runs" right={meta && <small>{num(meta.players)} active this week</small>}>
-        {!meta && <Empty><span className="spin" /></Empty>}
+        {!meta && <Loading error={metaError} onRetry={reloadMeta} />}
         {meta && styles.map(st => {
           const o = byStyle(meta.offense, st.code), d = byStyle(meta.defense, st.code)
           const att = Object.entries(meta.attacks).filter(([code]) => comboDef(catalog, code)?.style === st.code)

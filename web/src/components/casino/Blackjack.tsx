@@ -3,9 +3,10 @@ import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { BlackjackHand, BlackjackOutcome, BlackjackState } from '../../lib/types'
-import { Card, Empty } from '../ui'
+import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Net, PlayingCard, useBet } from './shared'
 import { basicStrategy, type BjMove } from './strategy'
+import { useLoad } from '../../lib/useLoad'
 
 const TAG: Record<BlackjackOutcome, { t: string; cls: string }> = {
   blackjack: { t: 'Blackjack', cls: 'gold' }, win: { t: 'Win', cls: 'green' }, dealer_bust: { t: 'Win', cls: 'green' },
@@ -25,9 +26,9 @@ function readHint(): boolean { try { return localStorage.getItem('cw.bj.hint') =
 
 export default function Blackjack() {
   const me = useMe()
-  const { run, toast } = useGame()
+  const { run } = useGame()
   const [wager, setWager] = useBet('blackjack')
-  const [g, setG] = useState<BlackjackState | null>(null)
+  const { data: g, error, reload, set: setG } = useLoad(() => api.blackjackState())
   const [round, setRound] = useState(0)
   const [fresh, setFresh] = useState(false)          // opening-deal animation in progress
   const [hint, setHintRaw] = useState(readHint)
@@ -35,8 +36,6 @@ export default function Blackjack() {
   const [busy, setBusy] = useState(false)
   const counted = useRef(-1)
   const setHint = (v: boolean) => { setHintRaw(v); try { localStorage.setItem('cw.bj.hint', v ? '1' : '0') } catch { /* private mode */ } }
-
-  useEffect(() => { api.blackjackState().then(setG).catch(e => toast(e.message, 'bad')) }, [toast])
 
   const tally = useCallback((r: BlackjackState, rnd: number) => {
     if (r.status === 'done' && r.result && counted.current !== rnd) {
@@ -63,7 +62,7 @@ export default function Blackjack() {
       window.setTimeout(() => setFresh(false), 900)
     }
     setBusy(false)
-  }, [busy, run, wager, round, tally])
+  }, [busy, run, wager, round, tally, setG])
 
   const act = useCallback(async (a: BjMove) => {
     if (busy) return
@@ -71,7 +70,7 @@ export default function Blackjack() {
     const r = await run(() => api.blackjackAction(a), { silent: true })
     if (r) { setG(r); tally(r, round) }
     setBusy(false)
-  }, [busy, run, round, tally])
+  }, [busy, run, round, tally, setG])
 
   // keyboard: H hit · S stand · D double · P split · Enter/Space deal
   useEffect(() => {
@@ -97,7 +96,7 @@ export default function Blackjack() {
   return (
     <Card title="🃏 Blackjack" className="table-card" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
       <div className="bd stack">
-        {!g ? <Empty><span className="spin" /></Empty> : (
+        {!g ? <Loading error={error} onRetry={reload} /> : (
           <div className={`bj-felt ${done && g.result ? (g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : 'push') : ''}`}>
             <div className="bj-arc">Blackjack pays 3 to 2</div>
 
