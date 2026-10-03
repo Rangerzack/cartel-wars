@@ -85,9 +85,12 @@ export default function Layout() {
           <div className="money tabular">
             <TopLink to="/services?focus=bank" className="cash" label={`${money(me.cash)} cash: bank`}>{money(me.cash)}</TopLink>
             <TopLink to="/store" className="dia" label={`${num(me.diamonds)} diamonds: store`}>💎 {num(me.diamonds)}</TopLink>
-            <TopLink to="/services?focus=police" label={`Heat ${num(me.heat)} of ${num(me.heat_max)}: police`}>
-              <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} mark={me.heat_red ?? catalog?.config.heat_red} />
-            </TopLink>
+            {/* locked up, the heat corner says so (heat is maxed inside anyway) and takes you to bail */}
+            {me.jailed
+              ? <TopLink to="/services?focus=jail" className="jail-tag" label="In jail until you post bail: jail">🔒 Jail</TopLink>
+              : <TopLink to="/services?focus=police" label={`Heat ${num(me.heat)} of ${num(me.heat_max)}: police`}>
+                  <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} mark={me.heat_red ?? catalog?.config.heat_red} />
+                </TopLink>}
           </div>
           <div className="bars">
             <TopLink to="/services?focus=refills" label={`Stamina ${num(me.stamina)} of ${num(me.stamina_max)}: refills`}>

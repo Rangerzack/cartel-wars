@@ -80,6 +80,13 @@ input, select, textarea { font: inherit; }
 .topbar .money { display: flex; align-items: center; justify-content: flex-end; gap: 9px; font-variant-numeric: tabular-nums; }
 .topbar .cash { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: .3px; color: var(--gold); text-shadow: 0 0 14px rgba(227,179,65,.3), 0 1px 0 #000; }
 .topbar .dia { font-family: var(--display); font-weight: 500; font-size: 16px; color: var(--diamond); text-shadow: 0 0 10px rgba(143,211,255,.25), 0 1px 0 #000; white-space: nowrap; }
+/* in jail, the heat corner is a red JAIL tag the same width as the heat bar it stands in for */
+.topbar .jail-tag {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 70px; height: 26px; border-radius: 999px;
+  font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: #ffb3ab;
+  border: 1px solid #8a2c25; background: linear-gradient(#4a1a16, #2a0e0c); box-shadow: 0 0 10px rgba(243,106,95,.35), 0 1px 0 rgba(255,255,255,.06) inset;
+  text-shadow: 0 1px 0 #000; white-space: nowrap;
+}
 .bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .bar { font-size: 11px; color: var(--muted); }
 .bar .lbl { display: flex; justify-content: space-between; margin-bottom: 3px; font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: .3px; }

@@ -169,10 +169,10 @@ do $$ declare u uuid := 'c8888888-8888-8888-8888-888888888888'; m jsonb; r jsonb
   h.heat := 124;
   for i in 1..300 loop h := _bust_roll(h); end loop;
   assert h.jail_until is null, 'no bust under 125';
-  -- ... and above it a bust drops you to your yellow line
-  h.heat := 150;
+  -- ... and above it a bust jails you with your heat maxed out (150 with the upgrade: 20261004000019_jail_heat)
+  h.heat := 130;
   for i in 1..300 loop exit when h.jail_until is not null; h := _bust_roll(h); end loop;
-  assert h.jail_until is not null and h.heat = 90, 'bust at 150 → 90: ' || h.heat;
+  assert h.jail_until is not null and h.heat = 150, 'bust at 130 → max 150: ' || h.heat;
   -- the fight preview's bust warning uses the moved line (an attack adds 4 heat)
   t := (select id from profiles where is_bot order by bot_level limit 1);
   update profiles set health = health_max, in_hospital = false, jail_until = null where id = t;
@@ -199,8 +199,10 @@ do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; r jsonb; n int; 
   perform expect_error('select go_to_jail()', 'Costs 50 diamonds');
   update profiles set diamonds = 60, stamina = 0, cash = 0 where id = u;
   select actions_done into n from profiles where id = u;
+  update profiles set heat = 12 where id = u;
   r := go_to_jail();
   assert (r->>'cost')::int = 50 and (r->>'bail')::int = 8000 and (select diamonds from profiles where id = u) = 10, r::text;
+  assert (select heat = heat_max from profiles where id = u), 'going in maxes your heat: ' || (select heat from profiles where id = u);
   assert (get_me()->>'jailed')::boolean and get_me()->>'jail_until' is null, 'inside, no end time';
   assert (select jail_until from profiles where id = u) = 'infinity';
   assert (select actions_done from profiles where id = u) = n, 'not an action';
@@ -213,11 +215,19 @@ do $$ declare u uuid := 'c9999999-9999-9999-9999-999999999999'; r jsonb; n int; 
   update profiles set cash = 10000 where id = u;
   r := bail_out();
   assert (r->>'cost')::int = 8000 and (select cash from profiles where id = u) = 2000 and not (get_me()->>'jailed')::boolean, r::text;
-  -- the Bribe Police job and a bust from red heat are open-ended too
-  update profiles set stamina = 25, cash = 5000 where id = u;
+  assert (select heat from profiles where id = u) = 0, 'bail clears your heat';
+  -- the Bribe Police job and a bust from red heat are open-ended too, and max your heat the same way
+  update profiles set stamina = 25, cash = 5000, heat = 3 where id = u;
   perform do_action((select id from action_defs where effect = 'go_to_jail'));
   assert (select jail_until from profiles where id = u) = 'infinity', 'bribe job: until bail';
+  assert (select heat = heat_max from profiles where id = u), 'bribe job: max heat';
+  -- inside, a jail job writes jail_until unchanged: your heat moves only by the job's own heat
+  update profiles set heat = 30, stamina = 25, last_tick = now() where id = u;
+  perform do_action((select id from action_defs where is_jail order by sort limit 1));
+  assert (select heat from profiles where id = u) = 30 + (select heat_gain from action_defs where is_jail order by sort limit 1),
+    'a jail job leaves heat alone: ' || (select heat from profiles where id = u);
   update profiles set jail_until = null where id = u;
+  assert (select heat from profiles where id = u) = 0, 'out by any door: heat 0';
   -- not from a hospital bed
   update profiles set jail_until = null, health = 5, in_hospital = true, health_tick = now(), diamonds = 60 where id = u;
   perform expect_error('select go_to_jail()', 'in the hospital');

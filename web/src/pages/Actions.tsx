@@ -151,11 +151,11 @@ export default function Actions() {
       {bust && (
         <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted'} onClose={() => setBust(null)}>
           {bust.a.effect === 'go_to_jail' ? (
-            <p>The cops took the money and the hint. You're in jail until you post bail — check your jail setup.</p>
+            <p>The cops took the money and the hint. You're in jail with your heat maxed out until you post bail, which clears it to 0 — check your jail setup.</p>
           ) : (
             <>
               {bust.pay > 0 && <p className="gold" style={{ fontSize: 22, fontWeight: 800, margin: '4px 0' }}>+{money(bust.pay)}</p>}
-              <p className="red">Your heat was in the red and a patrol caught you. You're in jail until you post bail — regular weapons are confiscated, jail setup is active.</p>
+              <p className="red">Your heat was in the red and a patrol caught you. You're in jail with your heat maxed out until you post bail, which clears it to 0 — regular weapons are confiscated, jail setup is active.</p>
             </>
           )}
           <Btn className="gold block" onClick={() => { setBust(null); nav('/services?focus=jail') }}>Post bail</Btn>
