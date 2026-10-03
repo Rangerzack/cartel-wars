@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { ago, every, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
 import { BailButton } from '../components/Bail'
+import { HealButton } from '../components/Heal'
 import { Ribbons } from '../components/Ribbons'
 import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
 import { BackBar } from '../components/BackBar'
@@ -82,6 +83,7 @@ export default function Player() {
               {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
             </div>
           )}
+          {!isMe && me.hospital && <><div className="why">You're in the hospital — heal to full to fight again, or wait it out.</div><HealButton /></>}
           {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
           {!isMe && !cantFight && tired && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}, or tap Attack to refill.</div>}
           {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
@@ -146,14 +148,15 @@ export default function Player() {
               {' '}Their health is now {result.their_health}; yours {result.my_health}.
             </div>
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
-            {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}
+            {result.hospitalized_me && <div className="notice red">You're in the hospital.</div>}
+            {me.hospital && <HealButton />}
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
             {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
             <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
             {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
-              : me.hospital ? "You're in the hospital. Check out at Services."
+              : me.hospital ? "You're in the hospital — heal to full above, or wait it out."
               : me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."
             }</div> : tired && <div className="why">You're out of stamina — Attack again offers a refill.</div>}
           </div>

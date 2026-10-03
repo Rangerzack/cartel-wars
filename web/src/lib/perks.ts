@@ -22,3 +22,8 @@ export const discounted = (price: number, v: number, round: 'round' | 'ceil' = '
 
 /** Bail, the way bail_out prices it: the flat bail less the Law Office, rounded up. */
 export const bailCost = (me: Me, cfg: Record<string, number>) => Math.ceil((cfg.bail_base ?? 8000) * (1 - perk(me, 'law_office')))
+
+/** n points of health, the way buy_health prices them: the per-point price climbs with what you've bought in the last
+ *  24 hours (_health_price), less the Clinic, rounded up at each step like the server. */
+export const healthCost = (me: Me, cfg: Record<string, number>, n: number) =>
+  Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - perk(me, 'clinic')))

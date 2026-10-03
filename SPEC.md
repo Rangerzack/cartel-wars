@@ -17,7 +17,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Resource | Base | Max | Regen | Notes |
 |---|---|---|---|---|
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
-| Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
+| Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. Health is sold **to full only** *(Zack, 2026-10-02)*: one Heal to Full price, or wait till you have the cash (or heal on your own). No point picker and no partial check-out. |
 | Heat | 0 | 100 (+50 per 💎30 upgrade, no cap *(Zack)*) | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+ at base; each heat upgrade moves both lines up 50 with the max (one upgrade: max 150, yellow 90, red 125). Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
 | Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop, or bought in the iOS app (see Store). |
@@ -674,6 +674,9 @@ that is irreversible or costs over half your cash asks first, in the game's own
 sheet (title, one line, Cancel beside the action it names), never the browser's
 `confirm()`, which some browsers and embedded web views mute or answer no by
 themselves.
+Landing in the hospital works the same way *(Zack, 2026-10-02)*: Actions from a hospital
+bed, a player's page and a fight's result offer **Heal to Full** in place, at the
+hospital's price. Short of cash, the button is off and says what you have.
 Getting busted offers **Post Bail** right where it happened *(Zack, 2026-10-02)*: the
 bust sheet after a job, a fight's result and a crew fight's result pay bail on the spot
 (the same price as the jail card, from cash on hand) and leave you where you were. Short
