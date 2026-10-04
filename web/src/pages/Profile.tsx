@@ -26,7 +26,7 @@ export default function Profile() {
           {edit ? (
             <div className="stack">
               <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
-                <input className="input" value={edit.avatar} maxLength={4} onChange={e => setEdit({ ...edit, avatar: e.target.value })} />
+                <input className="input" value={edit.avatar} maxLength={8} aria-label="Avatar" onChange={e => setEdit({ ...edit, avatar: e.target.value })} />
                 <textarea className="input" rows={2} maxLength={200} placeholder="Say something about yourself" value={edit.bio} onChange={e => setEdit({ ...edit, bio: e.target.value })} />
               </div>
               <div className="hstack"><Btn className="sm gold" onClick={async () => { if (await run(() => api.updateProfile(edit.avatar, edit.bio), { ok: () => 'Profile saved' })) setEdit(null) }}>Save</Btn><Btn className="sm ghost" onClick={() => setEdit(null)}>Cancel</Btn></div>

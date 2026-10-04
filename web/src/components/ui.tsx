@@ -162,7 +162,7 @@ export function RowLink({ to, onClick, className = '', label, children }:
 export function Btn({ onClick, children, className = '', disabled }: { onClick: () => Promise<unknown> | void; children: ReactNode; className?: string; disabled?: boolean }) {
   const [busy, setBusy] = useState(false)
   return (
-    <button className={`btn ${className}`} disabled={disabled || busy} onClick={async () => { setBusy(true); try { await onClick() } finally { setBusy(false) } }}>
+    <button type="button" className={`btn ${className}`} disabled={disabled || busy} aria-busy={busy || undefined} onClick={async () => { setBusy(true); try { await onClick() } finally { setBusy(false) } }}>
       {busy ? <span className="spin" /> : children}
     </button>
   )

@@ -24,8 +24,8 @@ const TABLE_MAX = 500_000
 
 export default function Roulette() {
   const me = useMe()
-  const { run } = useGame()
-  const [chip, setChip] = useBet('roulette')
+  const { run, refresh } = useGame()
+  const [chip, setChip] = useBet('roulette', me.cash)
   const [bets, setBets] = useState<Record<string, RouletteBet>>({})
   const [last, setLast] = useState<RouletteResult | null>(null)
   const [spinning, setSpinning] = useState(false)
@@ -44,11 +44,14 @@ export default function Roulette() {
   async function spin() {
     if (!list.length) return
     setSpinning(true); setLast(null)
-    const r = await run(() => api.rouletteSpin(list), { silent: true })
+    const r = await run(() => api.rouletteSpin(list), { silent: true, refresh: false })
     await new Promise(res => setTimeout(res, r ? 900 : 0))
     if (r) setLast(r)
     setSpinning(false)
+    if (r) await refresh()
   }
+  // which of the bets on the felt paid on the last spin, by key
+  const won = new Set((last?.bets ?? []).filter(b => b.win > 0).map(b => key(b)))
   const hit = last?.number
   const amt = (type: RouletteBetType, value?: number) => bets[key({ type, value })]?.amount
 
@@ -96,7 +99,7 @@ export default function Roulette() {
           <BetPicker part="amount" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} />
           {list.length > 0 && (
             <div className="betlist">
-              {list.map(b => <button type="button" key={key(b)} className="pill" aria-label={`Take back ${label(b)} ${money(b.amount)}`} onClick={() => remove(key(b))}>{label(b)} {money(b.amount)} ✕</button>)}
+              {list.map(b => <button type="button" key={key(b)} className={`pill ${won.has(key(b)) ? 'gold' : ''}`} aria-label={`Take back ${label(b)} ${money(b.amount)}${won.has(key(b)) ? ', paid on the last spin' : ''}`} onClick={() => remove(key(b))}>{won.has(key(b)) ? '✓ ' : ''}{label(b)} {money(b.amount)} ✕</button>)}
             </div>
           )}
           <div className="small muted">Straight 35:1 · dozens & columns 2:1 · even-money bets 1:1. Table max {money(500000)} per spin.</div>

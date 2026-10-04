@@ -98,11 +98,13 @@ export const buyPack = (productId: string) => buy(productId)
 /** Subscribe to the Daily Drop (the catalog's store.drop_product). */
 export const buyDrop = (productId: string) => buy(productId)
 
-/** Ask Apple again for what this Apple ID bought: brings back a Daily Drop subscription. Packs are used up when bought. */
-export async function restorePurchases() {
+/** Ask Apple again for what this Apple ID bought: brings back a Daily Drop subscription. Packs are used up when bought.
+ *  Says whether anything is active to restore, so the Store can tell the player the truth. */
+export async function restorePurchases(): Promise<{ active: number }> {
   const { Purchases, PURCHASES_ERROR_CODE: E } = await sdk()
   try {
-    await Purchases.restorePurchases()
+    const { customerInfo } = await Purchases.restorePurchases()
+    return { active: customerInfo.activeSubscriptions.length }
   } catch (e) {
     const x = e as { code?: unknown; message?: string }
     if (String(x?.code) === E.RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR || String(x?.code) === E.RECEIPT_ALREADY_IN_USE_ERROR) {
@@ -125,9 +127,9 @@ export function manageSubscriptions() {
  * After StoreKit says yes, the diamonds or the subscription come through the webhook, not the purchase call: ask the
  * server every 1.5 s, for up to 20 s, until `arrived` holds. False if it's still on its way.
  */
-export async function waitForDelivery(arrived: (m: Me) => boolean): Promise<boolean> {
+export async function waitForDelivery(arrived: (m: Me) => boolean, keepGoing: () => boolean = () => true): Promise<boolean> {
   const end = Date.now() + 20_000
-  while (Date.now() < end) {
+  while (Date.now() < end && keepGoing()) {   // the screen that asked has gone: stop asking
     try { if (arrived(await api.me())) return true } catch { /* a dropped request: ask again */ }
     await new Promise(r => setTimeout(r, 1500))
   }

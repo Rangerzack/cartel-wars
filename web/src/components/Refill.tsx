@@ -33,7 +33,8 @@ export function RefillSheet() {
           You have <b className="tabular">⚡ {num(me.stamina)}/{num(me.stamina_max)}</b>{need > 0 && <> and this takes <b className="tabular">⚡ {need}</b></>}.
           {' '}It comes back {cfg.stamina_regen_amount ?? 2} {every(cfg.stamina_regen_minutes ?? 10)}, or refill now.
         </div>
-        {missing <= 0 ? <div className="small muted">You're full.</div> : (
+        {need > me.stamina_max ? <div className="small muted">This takes more than your bar holds. <Link to="/services?focus=upgrades" onClick={closeRefill}>Raise max stamina ›</Link></div>
+          : missing <= 0 ? <div className="small muted">You're full.</div> : (
           <div className="card refill-sheet">
             {(me.free_refills ?? 0) > 0 && (
               <RefillRow icon="🎁" label="Free refill" sub={`${me.free_refills} left from the Daily Drop · fills you up`} gain={missing}

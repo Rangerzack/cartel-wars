@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLoad } from '../lib/useLoad'
 import { useLocation } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
@@ -20,6 +20,8 @@ export default function Store() {
   const { catalog, toast, refresh } = useGame()
   const packs = catalog?.store?.packs ?? []
   const [delivering, setDelivering] = useState<string | null>(null)
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
   const ids = packs.map(p => p.id).join(' ')
   // StoreKit's prices; a failed ask (no connection to the App Store) gets a Retry, not an empty shop
   const { data: products, error, reload } = useLoad<Record<string, StoreProduct>>(() => (storeReady && ids ? getOfferings(ids.split(' ')) : Promise.resolve({})), ids)
@@ -42,15 +44,18 @@ export default function Store() {
     if (r === 'cancelled') { toast('Purchase cancelled', 'info'); return }
     if (r === 'pending') { toast('Waiting for approval. Your diamonds arrive once Apple approves it.', 'info'); return }
     setDelivering(id)
-    const ok = await waitForDelivery(m => m.diamonds > before)
+    const ok = await waitForDelivery(m => m.diamonds > before, () => alive.current)
+    if (!alive.current) return
     setDelivering(null)
     await refresh()
     toast(ok ? `+${num(diamonds)} diamonds` : "Your diamonds are on their way. They'll show up in a minute.", ok ? 'ok' : 'info')
   }
   const restore = async () => {
-    try { await restorePurchases() } catch (e) { toast((e as Error).message, 'bad'); return }
+    let r
+    try { r = await restorePurchases() } catch (e) { toast((e as Error).message, 'bad'); return }
     await refresh()
-    toast('Purchases restored', 'ok')
+    // diamond packs are used up when bought, so only a subscription can come back
+    toast(r.active > 0 ? 'Your Daily Drop is back' : 'Nothing to restore: diamond packs are spent when bought, and no subscription is active', r.active > 0 ? 'ok' : 'info')
   }
 
   return (
@@ -72,7 +77,7 @@ export default function Store() {
         <div className="bd stack">
           {storeReady && products && !error && !shown.length && <div className="notice blue">Nothing's on sale right now. Try again later.</div>}
           <div className="small muted">Diamonds buy refills, upgrades, setup slots, boosts and extra grow houses. Diamonds you buy never expire. Only diamonds you earn in the game can be sent to other players.</div>
-          {storeReady && <Btn className="ghost sm" onClick={restore}>Restore purchases</Btn>}
+          {storeReady && <div className="hstack"><Btn className="ghost sm" onClick={restore}>Restore purchases</Btn><span className="small muted">Brings back a Daily Drop bought on this Apple ID.</span></div>}
         </div>
       </Card>
       <DailyDrop />

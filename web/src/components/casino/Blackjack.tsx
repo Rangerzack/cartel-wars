@@ -27,7 +27,7 @@ function readHint(): boolean { try { return localStorage.getItem('cw.bj.hint') =
 export default function Blackjack() {
   const me = useMe()
   const { run } = useGame()
-  const [wager, setWager] = useBet('blackjack')
+  const [wager, setWager] = useBet('blackjack', me.cash)
   const { data: g, error, reload, set: setG } = useLoad(() => api.blackjackState())
   const [round, setRound] = useState(0)
   const [fresh, setFresh] = useState(false)          // opening-deal animation in progress
@@ -50,7 +50,7 @@ export default function Blackjack() {
   const extra = cur?.bet ?? 0
   const canDouble = !!g?.can_double && me.cash >= extra
   const canSplit = !!g?.can_split && me.cash >= extra
-  const book: BjMove | null = playing && hint && cur && g?.dealer?.[0] ? basicStrategy(cur.cards, g.dealer[0], !!g.can_double, !!g.can_split) : null
+  const book: BjMove | null = playing && hint && cur && g?.dealer?.[0] ? basicStrategy(cur.cards, g.dealer[0], canDouble, canSplit) : null
 
   const deal = useCallback(async () => {
     if (busy) return

@@ -13,19 +13,23 @@ function NewPasswordFields({ onDone, submitLabel }: { onDone: () => void; submit
   const { toast } = useGame()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
+  const [saving, setSaving] = useState(false)
   const bad = pw.length > 0 && pw.length < 6 ? 'At least 6 characters' : pw2.length > 0 && pw !== pw2 ? "Passwords don't match" : null
   return (
     <form className="stack" onSubmit={async e => {
       e.preventDefault()
-      if (bad || !pw) return
-      const { error } = await supabase.auth.updateUser({ password: pw })
-      if (error) { toast(error.message, 'bad'); return }
-      toast('Password updated', 'ok'); setPw(''); setPw2(''); onDone()
+      if (bad || !pw || saving) return
+      setSaving(true)
+      try {
+        const { error } = await supabase.auth.updateUser({ password: pw })
+        if (error) { toast(error.message, 'bad'); return }
+        toast('Password updated', 'ok'); setPw(''); setPw2(''); onDone()
+      } finally { setSaving(false) }
     }}>
       <label className="f">New password<input className="input" type="password" autoComplete="new-password" minLength={6} value={pw} onChange={e => setPw(e.target.value)} /></label>
       <label className="f">Confirm new password<input className="input" type="password" autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} /></label>
       {bad && <div className="small red">{bad}</div>}
-      <button className="btn gold block" type="submit" disabled={!!bad || !pw || pw !== pw2}>{submitLabel}</button>
+      <button className="btn gold block" type="submit" disabled={!!bad || !pw || pw !== pw2 || saving}>{saving ? <span className="spin" /> : submitLabel}</button>
     </form>
   )
 }

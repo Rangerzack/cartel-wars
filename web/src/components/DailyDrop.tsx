@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
@@ -30,6 +30,8 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const [jackpots, setJackpots] = useState<RecentDrop[] | null>(null)
   const [reveal, setReveal] = useState<{ r?: DropResult } | null>(null)
   const [product, setProduct] = useState<StoreProduct | null>(null)
+  const [priceFailed, setPriceFailed] = useState(false)
+  const [priceTry, setPriceTry] = useState(0)
   const [delivering, setDelivering] = useState(false)
   const d = me.drop
   const prizes = catalog?.drop_prizes
@@ -40,8 +42,11 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const wantPrice = viaStore && !d?.subscribed
   useEffect(() => {
     if (!wantPrice) return
-    getOfferings([dropProduct]).then(r => setProduct(r[dropProduct] ?? null)).catch(() => setProduct(null))
-  }, [wantPrice, dropProduct])
+    getOfferings([dropProduct]).then(r => { setProduct(r[dropProduct] ?? null); setPriceFailed(false) }).catch(() => { setProduct(null); setPriceFailed(true) })
+  }, [wantPrice, dropProduct, priceTry])
+  const opening = useRef(0)   // which open is in progress; closing the sheet during the shake retires it
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
   if (!d || !prizes?.length || !catalog) return null
   const price = product?.priceString
   const total = prizes.reduce((s, p) => s + p.weight, 0)
@@ -74,7 +79,8 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
     if (r === 'cancelled') { toast('Purchase cancelled', 'info'); return }
     if (r === 'pending') { toast('Waiting for approval. The Daily Drop starts once Apple approves it.', 'info'); return }
     setDelivering(true)
-    const ok = await waitForDelivery(m => !!m.drop?.subscribed && !!m.drop.drop_paid)
+    const ok = await waitForDelivery(m => !!m.drop?.subscribed && !!m.drop.drop_paid, () => alive.current)
+    if (!alive.current) return
     setDelivering(false)
     await refresh()
     toast(ok ? 'Subscribed to the Daily Drop' : "Your subscription is on its way. It'll show up in a minute.", ok ? 'ok' : 'info')
@@ -85,14 +91,16 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   }
   // Shake the crate while the server rolls, for at least a beat, then show what came out.
   const open = async () => {
+    const n = ++opening.current
     setReveal({})
     const t0 = Date.now()
     const r = await run(api.openCrate, { silent: true })
-    if (!r) { setReveal(null); return }
+    if (!r) { if (n === opening.current) setReveal(null); return }
     await new Promise(res => setTimeout(res, Math.max(0, 1100 - (Date.now() - t0))))
-    setReveal({ r })
+    if (n === opening.current) setReveal({ r })
     if (r.jackpot) api.recentDrops(5).then(setJackpots).catch(() => {})
   }
+  const closeReveal = () => { opening.current++; setReveal(null) }
 
   return (
     <>
@@ -127,7 +135,9 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           {pitch && (
             viaStore ? <>
                 <Btn className="gold block" disabled={!price || delivering} onClick={subscribePaid}>{delivering ? 'Starting your Daily Drop…' : 'Subscribe'}</Btn>
-                <div className="small muted center">{price ?? '—'} per month, renews until cancelled. Cancel any time in your device settings.</div>
+                {priceFailed
+                  ? <div className="why">Couldn't get the price from the App Store. <button type="button" className="linkbtn" onClick={() => setPriceTry(n => n + 1)}>Try again</button></div>
+                  : <div className="small muted center">{price ? `${price} per month, renews until cancelled. Cancel any time in your device settings.` : 'Getting the price from the App Store…'}</div>}
                 <PolicyLinks />
               </>
             : free ? <>
@@ -141,7 +151,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           {credits && (
             <div className="hstack drop-credits">
               {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}>⚡ {me.free_refills} free refill{me.free_refills === 1 ? '' : 's'} ›</button>}
-              {(me.free_hustlers ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
+              {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
             </div>
           )}
         </div>}
@@ -157,16 +167,16 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
             <div className="grow">Subscribed {d.since ? ago(d.since, now) : ''}{d.opened ? ` · ${num(d.opened)} crate${d.opened > 1 ? 's' : ''} opened` : ''}{d.drop_paid ? (d.until ? ` · paid through ${new Date(d.until).toLocaleDateString()}` : '') : ' · free plan'}</div>
             {d.drop_paid
               ? <button className="btn sm ghost" onClick={manageSubscriptions}>Manage subscription</button>
-              : <button className="btn sm ghost" onClick={cancel}>Cancel</button>}
+              : <Btn className="sm ghost" onClick={cancel}>Cancel</Btn>}
           </div>
         </>}
       </Card>
       {reveal && (
-        <Modal title={reveal.r?.jackpot ? 'Jackpot' : 'Daily Drop'} onClose={() => setReveal(null)}>
+        <Modal title={reveal.r?.jackpot ? 'Jackpot' : 'Daily Drop'} onClose={closeReveal}>
           {!reveal.r ? (
             <div className="crate-open"><div className="crate-shake">📦</div><div className="small muted">Cracking it open…</div></div>
           ) : (
-            <Prize r={reveal.r} onOpen={open} onGo={to => { setReveal(null); nav(to) }} />
+            <Prize r={reveal.r} onOpen={open} onGo={to => { closeReveal(); nav(to) }} />
           )}
         </Modal>
       )}
@@ -226,7 +236,7 @@ function Prize({ r, onOpen, onGo }: { r: DropResult; onOpen: () => void; onGo: (
     }
   })()
   const go = r.kind === 'refills' ? { to: '/services?focus=refills', l: 'Use a Refill' }
-    : r.kind === 'hustlers' ? { to: '/economy?tab=hustlers', l: 'Send Hustlers' }
+    : r.kind === 'hustlers' && me.path !== 'producer' ? { to: '/economy?tab=hustlers', l: 'Send Hustlers' }
     : r.kind === 'thugs' ? { to: '/territory', l: 'Territory' }
     : null
   return (

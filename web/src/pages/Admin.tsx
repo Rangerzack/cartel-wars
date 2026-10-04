@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago } from '../lib/format'
@@ -9,6 +9,7 @@ import { BackBar } from '../components/BackBar'
 import { BOARDS } from './Forum'
 import type { BannedWord, ModAction, ModQueueItem, ModReport, ReportKind, WordMatch } from '../lib/types'
 import { useLoad } from '../lib/useLoad'
+import { useParam } from '../lib/useParam'
 
 type Tab = 'reports' | 'log' | 'words'
 
@@ -41,13 +42,12 @@ const when = (at: string) => new Date(at).toLocaleString()
 /** Admin tools: reported profiles, the moderation log and the word filter. */
 export default function Admin() {
   const me = useMe()
-  const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'reports'
+  const [tab, setTab] = useParam<Tab>('tab', ['reports', 'log', 'words'], 'reports')
   if (!me.is_admin) return <div className="page"><BackBar fallback="/" /><Empty>Admins only.</Empty></div>
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Seg value={tab} onChange={t => setSp({ tab: t })} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }]} />
+      <Seg value={tab} onChange={setTab} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }]} />
       {tab === 'reports' && <Reports />}
       {tab === 'log' && <Log />}
       {tab === 'words' && <Words />}

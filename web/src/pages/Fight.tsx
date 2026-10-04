@@ -9,16 +9,16 @@ import type { FighterSort, FighterStatus, StyleCode, ThugRow } from '../lib/type
 import { ComboPill, StyleLine } from '../components/Combo'
 import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
 import { useLoad } from '../lib/useLoad'
+import { useParam } from '../lib/useParam'
 
 type Tab = 'players' | 'thugs' | 'log' | 'combos' | 'top'
 
 export default function Fight() {
   const me = useMe()
-  const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'players'
+  const [tab, setTab] = useParam<Tab>('tab', ['players', 'thugs', 'log', 'combos', 'top'], 'players')
   return (
     <div className="page">
-      <Seg value={tab} onChange={t => setSp({ tab: t })} options={[{ v: 'players', l: 'Players' }, { v: 'thugs', l: 'Thugs' }, { v: 'log', l: 'My Fights' }, { v: 'combos', l: 'Combos' }, { v: 'top', l: 'Top' }]} />
+      <Seg value={tab} onChange={setTab} options={[{ v: 'players', l: 'Players' }, { v: 'thugs', l: 'Thugs' }, { v: 'log', l: 'My Fights' }, { v: 'combos', l: 'Combos' }, { v: 'top', l: 'Top' }]} />
       {me.jailed && tab !== 'combos' && <div className="notice red">You're locked up: you can only fight other inmates, with your jail setup.</div>}
       {tab === 'players' && <Players />}
       {tab === 'thugs' && <Thugs />}

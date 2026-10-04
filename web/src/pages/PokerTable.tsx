@@ -198,7 +198,7 @@ export default function PokerTable() {
           ) : (
             <div className="hstack" style={{ justifyContent: 'space-between' }}>
               <span className="small muted">{my ? (my.folded ? 'You folded.' : hand?.finished ? 'Next hand in a moment…' : 'Waiting for others…') : hand && !hand.finished ? "You'll be dealt in next hand." : 'Waiting…'}</span>
-              <button className="btn sm" disabled={stack >= t.max_buyin || me.cash <= 0} onClick={() => { setBuyin(Math.min(me.cash, t.max_buyin - stack)); setPick(mine.seat) }}>Rebuy</button>
+              <button type="button" className="btn sm" disabled={t.max_buyin - stack < 100 || me.cash < 100} onClick={() => { setBuyin(Math.min(me.cash, t.max_buyin - stack)); setPick(mine.seat) }}>Rebuy</button>
             </div>
           )}
         </div>
@@ -210,8 +210,10 @@ export default function PokerTable() {
         <Modal title={mine ? 'Rebuy' : `Seat ${pick + 1} · buy in`} onClose={() => setPick(null)}>
           <div className="stack">
             <div className="small muted">{mine ? `Top up to at most ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.` : `Bring ${money(t.min_buyin)} to ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.`}</div>
-            <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin)} label={mine ? 'Add' : 'Buy-in'} />
-            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
+            <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.max(100, Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin))} label={mine ? 'Add' : 'Buy-in'} />
+            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin) || (!!mine && buyin > t.max_buyin - stack)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
+            {!mine && me.cash < t.min_buyin && <div className="why">The table takes at least {money(t.min_buyin)} — you have {money(me.cash)} on hand.</div>}
+            {mine && buyin > t.max_buyin - stack && <div className="why">Your stack can't go past {money(t.max_buyin)} here — room for {money(t.max_buyin - stack)}.</div>}
           </div>
         </Modal>
       )}

@@ -31,7 +31,7 @@ export default function Chat() {
       {/* the seg switches channels in place; the forum is another page, so it's a link beside it rather than a tab in it */}
       <div className="chat-tabs">
         <div className="seg">
-          {tabs.map(t => <button key={t.v} type="button" className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} onClick={() => nav(`/chat/${t.v}`)}>
+          {tabs.map(t => <button key={t.v} type="button" className={channel === t.v || (isDm && t.v === 'dms') ? 'on' : ''} aria-pressed={channel === t.v || (isDm && t.v === 'dms')} onClick={() => nav(`/chat/${t.v}`, { replace: true })}>
             {t.l}{t.v === 'dms' && (me.unread_dms ?? 0) > 0 && <span className="tbadge red inline">{me.unread_dms}</span>}
           </button>)}
         </div>

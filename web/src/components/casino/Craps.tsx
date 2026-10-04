@@ -62,8 +62,8 @@ function BetSpot({ k, className = '', children, disabled, label, amount, flash, 
 
 export default function Craps() {
   const me = useMe()
-  const { run, toast } = useGame()
-  const [chip, setChip] = useBet('craps')
+  const { run, toast, refresh } = useGame()
+  const [chip, setChip] = useBet('craps', me.cash)
   const { data: st, error, reload, set: setSt } = useLoad(() => api.crapsState())
   const [roll, setRoll] = useState<CrapsRoll | null>(null)
   const [rolling, setRolling] = useState(false)
@@ -105,7 +105,7 @@ export default function Craps() {
   async function doRoll() {
     setRolling(true); setRoll(null); setFlash({})
     const t = window.setInterval(() => setDice([1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]), 70)
-    const r = await run(() => api.crapsRoll(), { silent: true })
+    const r = await run(() => api.crapsRoll(), { silent: true, refresh: false })
     await new Promise(res => setTimeout(res, r ? 650 : 0))
     window.clearInterval(t)
     if (r) {
@@ -123,6 +123,7 @@ export default function Craps() {
       flashTimer.current = window.setTimeout(() => setFlash({}), 2600)
     } else setDice(null)   // a failed roll: back to the last real roll, not a random frame
     setRolling(false)
+    if (r) await refresh()   // the cash follows the dice, not the other way round
   }
   async function takeDown() { const s = await run(() => api.crapsClear(), { silent: true }); if (s) setSt(s) }
 

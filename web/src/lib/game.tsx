@@ -5,6 +5,7 @@ import { api, GameError } from './api'
 import { isNative, RESUME_EVENT } from './platform'
 import { errorText, isNetworkError, NET_RE, OFFLINE_TEXT } from './errors'
 import { initStore, logOutStore } from './store'
+import { setClock } from './clock'
 import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
@@ -22,8 +23,10 @@ interface GameState {
   toasts: Toast[]
   refresh: () => Promise<void>
   toast: (text: string, kind?: Toast['kind']) => void
-  /** Run an RPC, toast on error, refresh state on success. Returns result or undefined on failure. */
-  run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => Promise<T | undefined>
+  /** Run an RPC, toast on error, refresh state on success. Returns result or undefined on failure.
+   *  `refresh: false` leaves the refresh to the caller (a casino game that shows its result after an animation,
+   *  so the top-bar cash doesn't give it away first). */
+  run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean; refresh?: boolean }) => Promise<T | undefined>
   busy: boolean
   /** Signed in and loaded, but the last poll or action couldn't reach the server; the top bar says so until a poll gets through. */
   netDown: boolean
@@ -148,7 +151,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0)
   const refresh = useCallback(async () => {
     const n = ++seq.current
-    const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setMeAt(gotAt.current); setMe(m) }
+    const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setClock(m.server_time, gotAt.current); setMeAt(gotAt.current); setMe(m) }
     try {
       land(await api.me())
       if (netDownRef.current) markNet(false)
@@ -211,7 +214,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t)
   }, [me, refresh])
 
-  const run = useCallback(async <T,>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => {
+  const run = useCallback(async <T,>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean; refresh?: boolean }) => {
     setBusy(true)
     try {
       const r = await fn()
@@ -219,7 +222,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const msg = opts?.ok?.(r)
         if (msg) toast(msg, 'ok')
       }
-      await refresh()
+      if (opts?.refresh !== false) await refresh()
       return r
     } catch (e) {
       // "Not enough stamina", "You need at least 2 stamina to fight", "A turf war takes 3 stamina": offer a refill

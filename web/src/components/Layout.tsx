@@ -1,5 +1,5 @@
 import { useEffect, type MouseEvent, type ReactNode } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { useGame } from '../lib/game'
 import { money, num, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
@@ -54,6 +54,16 @@ function TopLink({ to, label, className = '', children }: { to: string; label: s
   return <Link to={to} className={`tb-link ${className}`.trim()} aria-label={label} onClick={again}>{children}</Link>
 }
 
+/** A new screen starts at the top: opening a crew from the bottom of another crew's page, or Profile from the end of
+ *  Home, used to land mid-page. Back (a POP) is left to the browser, which puts the scroll back where it was. A change
+ *  of query only (a tab, a filter) keeps the scroll. */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  const how = useNavigationType()
+  useEffect(() => { if (how !== 'POP') window.scrollTo({ top: 0 }) }, [pathname, how])
+  return null
+}
+
 export default function Layout() {
   const { me, catalog, netDown } = useGame()
   const now = useNow()
@@ -76,6 +86,7 @@ export default function Layout() {
   return (
     <div className="app">
       <Toasts />
+      <ScrollToTop />
       {me && (
         <header className="topbar">
           <Link to="/profile" className="title tb-link" aria-label={`${me.name}, ${me.crew ? me.crew.name : 'no crew'}: your profile`}>

@@ -701,6 +701,15 @@ wherever the server would refuse (Build without the diamonds, Expand or Buy with
 cash or storage, Sell with every unit equipped). Every text field is 16 px so iOS doesn't
 zoom into it. Purchases never go out under RevenueCat's anonymous id: a login that failed
 is retried before any purchase, or the purchase is refused with a reason.
+A screen's tab or filter lives in the URL and is read from an allow-list
+(`useParam`): a reload or Back lands on the same view, `?tab=foo` shows the first
+tab, and a tab tap replaces the history entry so Back leaves the screen in one step;
+a made-up casino game or forum board is put right. A new screen starts at the top.
+Every countdown runs on the server's clock (`lib/clock.ts` corrects for the phone's).
+Amount fields take whole numbers ("1,000" is 1000). A casino result shows on the
+reels, wheel or dice before the top-bar cash moves. A turf attack's result stays in
+the block sheet above the form, with Attack again one tap away; blocks held by your
+cartel are drawn and described as allies and don't offer an attack.
 Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
 Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
 that is short of thugs offers the missing ones, which join that attack.

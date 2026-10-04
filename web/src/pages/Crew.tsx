@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { ago, money, num } from '../lib/format'
+import { ago, money, num, toInt } from '../lib/format'
 import { Btn, Card, Empty, Loading, Modal, RowLink, Stat } from '../components/ui'
 import { BailButton } from '../components/Bail'
 import { Ledger } from '../components/Ledger'
@@ -63,7 +63,7 @@ function CrewHub() {
           {!founding ? <div className="bd small muted">Name it and pick an emblem; you're its Capo.</div> : (
             <div className="bd stack">
               <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
-                <label className="f">Emblem<input className="input" value={form.emblem} maxLength={4} onChange={e => setForm({ ...form, emblem: e.target.value })} /></label>
+                <label className="f">Emblem<input className="input" value={form.emblem} maxLength={8} aria-label="Emblem" onChange={e => setForm({ ...form, emblem: e.target.value })} /></label>
                 <label className="f">Name<input className="input" value={form.name} maxLength={24} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
               </div>
               <label className="f">Description<textarea className="input" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
@@ -99,7 +99,7 @@ function CrewPage({ id }: { id: string }) {
   useEffect(() => { load() }, [myCrew, load])
   if (!c) return <div className="page"><BackBar fallback="/crew" /><Loading error={gone ? null : error} onRetry={load} /></div>
   const mine = me.crew?.id === c.id
-  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { const r = await run(fn, { ok }); load(); setLedgerV(v => v + 1); return r }
+  const act = async <T,>(fn: () => Promise<T>, ok?: (r: T) => string) => { const r = await run(fn, { ok }); await load(); setLedgerV(v => v + 1); return r }
   // a deposit or withdrawal empties the field, so a second tap doesn't move the same amount again
   const bank = async (n: number) => { if (await act(() => api.crewBank(n), r => `Crew bank: ${money(r.bank)}`)) setAmount(0) }
   const boss = c.is_boss
@@ -149,7 +149,7 @@ function CrewPage({ id }: { id: string }) {
           {edit && (
             <div className="stack">
               <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
-                <input className="input" value={edit.emblem} maxLength={4} onChange={e => setEdit({ ...edit, emblem: e.target.value })} />
+                <input className="input" value={edit.emblem} maxLength={8} aria-label="Emblem" onChange={e => setEdit({ ...edit, emblem: e.target.value })} />
                 <textarea className="input" rows={2} value={edit.description} onChange={e => setEdit({ ...edit, description: e.target.value })} />
               </div>
               <div className="hstack">
@@ -203,7 +203,7 @@ function CrewPage({ id }: { id: string }) {
       {mine && (
         <Card title="Crew Bank" right={<small>{boss ? 'you can withdraw' : 'Capo & Co-Capo withdraw'}</small>}>
           <div className="bd hstack">
-            <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" aria-label={boss ? 'Amount to deposit or withdraw' : 'Amount to deposit'} value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
+            <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Amount" aria-label={boss ? 'Amount to deposit or withdraw' : 'Amount to deposit'} value={amount || ''} onChange={e => setAmount(toInt(e.target.value))} />
             <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => bank(amount)}>Deposit</Btn>
             {boss && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => bank(-amount)}>Withdraw</Btn>}
           </div>

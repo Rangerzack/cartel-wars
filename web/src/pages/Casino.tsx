@@ -26,13 +26,15 @@ export default function Casino() {
   const { game = GAMES[0].v } = useParams()
   const nav = useNavigate()
   const g = (GAMES.some(x => x.v === game) ? game : GAMES[0].v) as Game
+  // /casino/foo: the URL is put right (replaced, so Back doesn't return to it)
+  useEffect(() => { if (g !== game) nav(`/casino/${g}`, { replace: true }) }, [g, game, nav])
   const locked = me.jailed || me.hospital
   return (
     <div className="page">
       <BackBar fallback="/" />
       {GAMES.length > 1 ? (
         <div className="seg casino-tabs">
-          {GAMES.map(t => <button key={t.v} className={g === t.v ? 'on' : ''} onClick={() => nav(`/casino/${t.v}`)}>{t.l}</button>)}
+          {GAMES.map(t => <button key={t.v} type="button" className={g === t.v ? 'on' : ''} aria-pressed={g === t.v} onClick={() => nav(`/casino/${t.v}`, { replace: true })}>{t.l}</button>)}
         </div>
       ) : (
         <div className="notice gold">The slot machine is open. Tables — poker, blackjack, craps and roulette — are coming soon.</div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
@@ -10,6 +10,7 @@ import { BackBar } from '../components/BackBar'
 import { ReportModal } from '../components/Report'
 import { useNow } from '../lib/useNow'
 import { useLoad } from '../lib/useLoad'
+import { intParam } from '../lib/useParam'
 
 export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
   { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
@@ -37,6 +38,11 @@ const Muted = ({ until }: { until: string }) => <div className="notice gold">You
 
 export default function Forum() {
   const { cat, id } = useParams()
+  const nav = useNavigate()
+  // /forum/foo or /forum/t/abc: the URL is put right (replaced, so Back doesn't return to it)
+  const bad = (id !== undefined && !Number.isInteger(Number(id))) || (cat !== undefined && !isBoard(cat))
+  useEffect(() => { if (bad) nav('/forum', { replace: true }) }, [bad, nav])
+  if (bad) return null
   if (id) return <ThreadView id={Number(id)} />
   if (isBoard(cat)) return <BoardView cat={cat} />
   return <Boards />
@@ -73,7 +79,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
   const { run } = useGame()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
-  const page = Number(params.get('p') ?? 0)
+  const page = intParam(params, 'p')
   const [compose, setCompose] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -127,7 +133,7 @@ function ThreadView({ id }: { id: number }) {
   const { run, ask } = useGame()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
-  const page = Number(params.get('p') ?? 0)
+  const page = intParam(params, 'p')
   const [reply, setReply] = useState('')
   const [editing, setEditing] = useState<{ kind: 'thread' | 'post'; id: number; body: string; title?: string } | null>(null)
   const [reporting, setReporting] = useState<{ kind: 'forum_thread' | 'forum_post'; id: number; author: ForumAuthor; body: string } | null>(null)

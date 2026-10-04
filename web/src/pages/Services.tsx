@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
+import { commodityIcon, every, money, nextRollover, num, timeLeft, toInt } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
@@ -111,7 +111,7 @@ export default function Services() {
       <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
           <div className="small muted">Cash on hand can be taken in fights. Banked cash can't. Carrying more cash than the other side is worth +1 in a fight, though. {cfg.daily_cash ? <>Everyone gets {money(cfg.daily_cash)} on hand at 00:00 UTC — next in {timeLeft(nextRollover(now), now)}.</> : null}</div>
-          <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
+          <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(toInt(e.target.value))} />
           <div className="grid2">
             {/* the field clears after a move, so a second tap can't send the same amount again */}
             <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={async () => { if (await run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })) setBank(0) }}>Deposit</Btn>

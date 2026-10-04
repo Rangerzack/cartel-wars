@@ -121,8 +121,41 @@ try {
   await p.goto(`${BASE}/items?tab=shop`)
   await knuckles.getByRole('button', { name: /^Sell/ }).waitFor()
 
+  // 9. the view lives in the URL: Items keeps its tab and category across a reload, and tab taps don't pile up history
+  await p.goto(`${BASE}/items?tab=shop&cat=transport`)
+  await p.getByRole('button', { name: 'Transport', pressed: true }).waitFor()
+  await p.reload()
+  await p.getByRole('button', { name: 'Transport', pressed: true }).waitFor()
+  const depth = await p.evaluate(() => history.length)
+  await p.getByRole('button', { name: 'Protection' }).click()
+  await p.getByRole('button', { name: 'Protection', pressed: true }).waitFor()
+  if (await p.evaluate(() => history.length) !== depth) throw new Error('a tab tap replaces the history entry')
+  if (!p.url().includes('cat=protection')) throw new Error('the category is in the URL: ' + p.url())
+
+  // 10. made-up params and routes land somewhere real
+  await p.goto(`${BASE}/economy?tab=foo`)
+  await p.getByRole('button', { name: 'Production', pressed: true }).waitFor()
+  await p.goto(`${BASE}/casino/foo`)
+  await p.waitForURL(/\/casino\/(poker|slots)$/)
+  await p.goto(`${BASE}/forum/foo`)
+  await p.waitForURL(/\/forum$/)
+
+  // 11. a turf attack's result stays in the sheet, above the form, with the next hit one tap away
+  const crew = await one(`insert into crews (name, emblem, capo_id) values ($1, '🦂', $2) returning id`, [N('Sting '), me])
+  await db.query('update profiles set crew_id = $1, cash = 5000000, stamina = 50 where id = $2', [crew.id, me])
+  await db.query(`insert into player_hoodlums (player_id, code, qty) values ($1, 'thug', 60) on conflict (player_id, code) do update set qty = 60`, [me])
+  const blk = await one('select id, hood_id from blocks where owner_crew_id is null order by id limit 1')
+  await p.goto(`${BASE}/territory?hood=${blk.hood_id}&block=${blk.id}`)
+  const sheet = p.locator('.modal')
+  await sheet.locator('h2', { hasText: 'Attack with' }).waitFor()
+  await sheet.getByLabel(/Thugs/).fill('51')
+  await sheet.getByRole('button', { name: 'Attack', exact: true }).click()
+  await sheet.locator('.attack-result').waitFor()
+  if (await p.locator('.modal').count() !== 1) throw new Error('the result shows in the same sheet')
+  if (!/BLOCK [A-F]/i.test(await sheet.locator('h3').innerText())) throw new Error('the sheet keeps its title: ' + await sheet.locator('h3').innerText())
+
   if (errors.length) throw new Error(errors.join('\n'))
-  console.log('e2e-reliability PASSED: retry on a failed load, chat keeps place and draft, casino lock, table max, qty field, gone crew, build and sell guards')
+  console.log('e2e-reliability PASSED: retry on a failed load, chat keeps place and draft, casino lock, table max, qty field, gone crew, build and sell guards, URL state, bad routes, attack result in place')
 } catch (e) {
   console.error('e2e-reliability FAILED:', e.message)
   process.exitCode = 1
