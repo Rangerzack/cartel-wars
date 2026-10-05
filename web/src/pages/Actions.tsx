@@ -4,6 +4,8 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, dropOdds, every, findIcon, money, num } from '../lib/format'
 import { Btn, Card, Empty, Modal } from '../components/ui'
+import { BailButton } from '../components/Bail'
+import { HealButton } from '../components/Heal'
 import type { ActionDef, RareFind, RecentFind } from '../lib/types'
 
 type Sort = 'default' | 'cash' | 'rep'
@@ -69,7 +71,8 @@ export default function Actions() {
     <div className="page">
       <h2>{me.jailed ? 'Jail Actions' : 'Actions'}</h2>
       {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <Link to="/services?focus=jail">Post bail →</Link></div>}
-      {me.hospital && <div className="notice red">You can't work from a hospital bed. <Link to="/services?focus=hospital">Buy health →</Link></div>}
+      {me.hospital && <div className="notice red">You can't work from a hospital bed.</div>}
+      {me.hospital && <HealButton />}
       {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <Link to="/economy">Choose your path →</Link></div>}
       {!me.hospital && me.stamina === 0 && <div className="notice blue">Out of stamina. It comes back {catalog.config.stamina_regen_amount ?? 2} {every(catalog.config.stamina_regen_minutes ?? 10)}, or <button type="button" className="linkbtn" onClick={() => askRefill()}>refill it →</button></div>}
 
@@ -149,7 +152,8 @@ export default function Actions() {
         </Modal>
       )}
       {bust && (
-        <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted'} onClose={() => setBust(null)}>
+        <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted'} onClose={() => setBust(null)}
+          footer={bust.a.effect === 'go_to_jail' ? <button type="button" className="btn gold block" style={{ marginTop: 14 }} onClick={() => setBust(null)}>Stay inside</button> : undefined}>
           {bust.a.effect === 'go_to_jail' ? (
             <p>The cops took the money and the hint. You're in jail with your heat maxed out until you post bail, which clears it to 0 — check your jail setup.</p>
           ) : (
@@ -158,7 +162,8 @@ export default function Actions() {
               <p className="red">Your heat was in the red and a patrol caught you. You're in jail with your heat maxed out until you post bail, which clears it to 0 — regular weapons are confiscated, jail setup is active.</p>
             </>
           )}
-          <Btn className="gold block" onClick={() => { setBust(null); nav('/services?focus=jail') }}>Post bail</Btn>
+          {/* bail is paid right here; after a deliberate trip in it's the quiet option, and Stay inside closes the sheet */}
+          <BailButton className={bust.a.effect === 'go_to_jail' ? 'ghost block' : 'gold block'} onDone={() => setBust(null)} />
         </Modal>
       )}
     </div>

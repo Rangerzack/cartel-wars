@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { categoryLabel, money, num } from '../lib/format'
@@ -10,18 +9,20 @@ import { PerkTag } from '../components/Perk'
 import { discounted, perk } from '../lib/perks'
 import { itemCombos } from '../lib/combos'
 import { SetupCombo } from '../components/Combo'
+import { useParam } from '../lib/useParam'
 
 const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon']
 
 export default function Items() {
   const me = useMe()
   const { catalog, run, toast, ask } = useGame()
-  const [sp] = useSearchParams()
   const nav = useNavigate()
-  // deep links: /items?tab=shop&cat=weapon, /items?setup=defense (and the old /items#shop)
-  const [tab, setTab] = useState<'setups' | 'shop'>(sp.get('tab') === 'shop' || window.location.hash === '#shop' ? 'shop' : 'setups')
-  const [setup, setSetup] = useState<SetupKind>((['offense', 'defense', 'jail'] as const).find(s => s === sp.get('setup')) ?? 'offense')
-  const [cat, setCat] = useState<ItemCategory>(cats.find(c => c === sp.get('cat')) ?? 'weapon')
+  // the tab, setup and category live in the URL (/items?tab=shop&cat=weapon, /items?setup=defense): a reload, Back
+  // from the boost card or a link lands on the same view. The old /items#shop still opens the shop.
+  const [tabParam, setTab] = useParam<'setups' | 'shop'>('tab', ['setups', 'shop'], 'setups')
+  const tab = window.location.hash === '#shop' ? 'shop' : tabParam
+  const [setup, setSetup] = useParam<SetupKind>('setup', ['offense', 'defense', 'jail'], 'offense')
+  const [cat, setCat] = useParam<ItemCategory>('cat', cats, 'weapon')
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const shopPerk = cat === 'transport' ? 'chop_shop' as const : 'pawn_shop' as const
 
@@ -35,8 +36,10 @@ export default function Items() {
   // weapons and protection count in both fight setups; jail weapons only inside
   const homeSetups: Partial<Record<ItemCategory, SetupKind[]>> = { weapon: ['offense', 'defense'], protection: ['offense', 'defense'], jail_weapon: ['jail'] }
   const setupName: Record<SetupKind, string> = { offense: 'Offensive', defense: 'Defensive', jail: 'Jail' }
-  /** Buy one and equip it straight away wherever it has a free slot — new players shouldn't need a second screen. */
-  async function buy(itemId: number, category: ItemCategory, name: string) {
+  /** Buy one and equip it straight away wherever it has a free slot — new players shouldn't need a second screen.
+   *  A reputation item can't be sold back, so that one asks first. */
+  async function buy(itemId: number, category: ItemCategory, name: string, rep = 0) {
+    if (rep > 0 && !await ask(`Reputation items can't be sold back.`, { title: `Buy ${name} for ⭐ ${num(rep)}?`, yes: `Buy · ⭐ ${num(rep)}`, tone: 'gold' })) return
     const r = await run(() => api.buyItem(itemId, 1), { silent: true })
     if (!r) return
     const targets = homeSetups[category] ?? []
@@ -105,11 +108,15 @@ export default function Items() {
 
       {tab === 'shop' && (
         <>
-          <div className="seg">{cats.map(c => <button key={c} className={cat === c ? 'on' : ''} onClick={() => setCat(c)}>{categoryLabel[c]}</button>)}</div>
+          <Seg value={cat} onChange={setCat} options={cats.map(c => ({ v: c, l: categoryLabel[c] }))} />
           {(perk(me, shopPerk) > 0 || perk(me, 'repo') > 0) && <div className="hstack"><PerkTag code={shopPerk} /><PerkTag code="repo" /></div>}
           <Card>
             {catalog.items.filter(i => i.category === cat).map(i => {
               const have = inv.get(i.id)?.qty ?? 0
+              // what the server will sell (sell_item): units beyond the most any one setup equips, since one unit can sit in
+              // every setup at once
+              const equippedMost = Math.max(0, ...(['offense', 'defense', 'jail'] as const).map(s => (me.setups[s] ?? []).find(x => x.item_id === i.id)?.qty ?? 0))
+              const loose = Math.max(0, have - equippedMost)
               const drop = !!i.drop_only
               const cost = discounted(i.price, perk(me, shopPerk))
               const resale = Math.floor(i.price * (0.5 + perk(me, 'repo')))
@@ -119,7 +126,7 @@ export default function Items() {
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
-                  {have > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
+                  {loose > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
                     // it sits next to the gold Buy and goes back at about half price: ask first
                     if (!await ask(`It goes back for about half what it costs to buy.`, { title: `Sell one ${i.name} for ${money(resale)}?`, yes: `Sell · ${money(resale)}`, tone: 'gold' })) return
                     return run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })
@@ -127,7 +134,7 @@ export default function Items() {
                   {drop
                     ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on jobs</Btn>
                     : i.rep_price > 0
-                    ? <Btn className="sm blue" disabled={me.reputation < i.rep_price} onClick={() => run(() => api.buyItem(i.id, 1), { ok: () => `Earned ${i.name}` })}>⭐ {num(i.rep_price)}</Btn>
+                    ? <Btn className="sm gold" disabled={me.reputation < i.rep_price} onClick={() => buy(i.id, i.category, i.name, i.rep_price)}>⭐ {num(i.rep_price)}</Btn>
                     : <Btn className="sm gold" disabled={me.cash < cost} onClick={() => buy(i.id, i.category, i.name)}>{cost < i.price && <s className="was">{money(i.price)}</s>}{money(cost)}</Btn>}
                 </div>
               )

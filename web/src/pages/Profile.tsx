@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { ago, money, num } from '../lib/format'
-import { Btn, Card, RowLink, Stat } from '../components/ui'
+import { Btn, Card, Loading, RowLink, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { AccountCard } from '../components/Account'
 import { BackBar } from '../components/BackBar'
 import { PlayerLink } from '../components/Linked'
 import { HelpPolicies } from '../components/HelpPolicies'
-import type { BlockedPlayer } from '../lib/types'
+import { useLoad } from '../lib/useLoad'
 
 export default function Profile() {
   const me = useMe()
@@ -26,10 +26,10 @@ export default function Profile() {
           {edit ? (
             <div className="stack">
               <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
-                <input className="input" value={edit.avatar} maxLength={4} onChange={e => setEdit({ ...edit, avatar: e.target.value })} />
+                <input className="input" value={edit.avatar} maxLength={8} aria-label="Avatar" onChange={e => setEdit({ ...edit, avatar: e.target.value })} />
                 <textarea className="input" rows={2} maxLength={200} placeholder="Say something about yourself" value={edit.bio} onChange={e => setEdit({ ...edit, bio: e.target.value })} />
               </div>
-              <div className="hstack"><Btn className="sm gold" onClick={async () => { await run(() => api.updateProfile(edit.avatar, edit.bio), { ok: () => 'Profile saved' }); setEdit(null) }}>Save</Btn><Btn className="sm ghost" onClick={() => setEdit(null)}>Cancel</Btn></div>
+              <div className="hstack"><Btn className="sm gold" onClick={async () => { if (await run(() => api.updateProfile(edit.avatar, edit.bio), { ok: () => 'Profile saved' })) setEdit(null) }}>Save</Btn><Btn className="sm ghost" onClick={() => setEdit(null)}>Cancel</Btn></div>
             </div>
           ) : <div><Btn className="sm ghost" onClick={() => setEdit({ avatar: me.avatar, bio: me.bio })}>Edit avatar & bio</Btn></div>}
           <Ribbons list={me.ribbons} empty="No accolade stripes yet." />
@@ -74,13 +74,11 @@ export default function Profile() {
 
 /** Players I've blocked (no DMs either way, their chat lines and posts hidden from me), each with a way back. */
 function BlockedPlayers() {
-  const { run, toast } = useGame()
-  const [list, setList] = useState<BlockedPlayer[] | null>(null)
-  const load = useCallback(() => api.blockedList().then(setList).catch(e => toast(e.message, 'bad')), [toast])
-  useEffect(() => { load() }, [load])
+  const { run } = useGame()
+  const { data: list, error, reload: load } = useLoad(() => api.blockedList())
   return (
     <Card title="Blocked players" right={list?.length ? <small>{list.length}</small> : undefined}>
-      {!list && <div className="bd"><span className="spin" /></div>}
+      {!list && <Loading error={error} onRetry={load} />}
       {list?.length === 0 && <div className="bd small muted">Nobody blocked.</div>}
       {list?.map(b => (
         <div key={b.id} className="row blocked">

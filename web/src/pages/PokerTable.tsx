@@ -18,10 +18,12 @@ export default function PokerTable() {
   const { id } = useParams()
   const tid = Number(id)
   const me = useMe()
-  const { toast, refresh, run } = useGame()
+  const { toast, refresh, run, ask } = useGame()
   const nav = useNavigate()
   const now = useNow()
-  const [st, setSt] = useState<PokerState | null>(null)
+  // the table state and when it arrived (the server clock it carries is measured forward from there)
+  const [snap, setSnap] = useState<{ st: PokerState; at: number } | null>(null)
+  const st = snap?.st ?? null
   const [raise, setRaise] = useState<number | null>(null)
   const [raising, setRaising] = useState(false)
   const [pick, setPick] = useState<number | null>(null)
@@ -30,12 +32,23 @@ export default function PokerTable() {
   const [err, setErr] = useState<string | null>(null)
   const busy = useRef(false)
   const lastHand = useRef<number | null>(null)
+  // every state that lands bumps this; a poll that started before an action answered is thrown away, so the action
+  // buttons can't come back for a round trip on the pre-action state
+  const ver = useRef(0)
+  const [acting, setActing] = useState(false)
+  const land = useCallback((s: PokerState) => {
+    ver.current++
+    setSnap({ st: s, at: Date.now() })
+    // the clock checked or folded for you: the raise panel doesn't carry over to a later street
+    if (!s.hand?.my?.my_turn) { setRaising(false); setRaise(null) }
+  }, [])
 
   const load = useCallback(async () => {
     if (busy.current) return
     busy.current = true
-    try { setSt(await api.pokerState(tid)); setErr(null) } catch (e) { setErr((e as Error).message) } finally { busy.current = false }
-  }, [tid])
+    const v = ver.current
+    try { const s = await api.pokerState(tid); if (v === ver.current) land(s); setErr(null) } catch (e) { setErr((e as Error).message) } finally { busy.current = false }
+  }, [tid, land])
   useEffect(() => {
     load()
     const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 1500)
@@ -57,20 +70,28 @@ export default function PokerTable() {
   const potNow = hand?.pot ?? 0
   const rel = useCallback((seat: number) => mine ? (seat - mine.seat + 6) % 6 : seat, [mine])
   const seatAt = useMemo(() => { const m = new Map<number, PokerSeat>(); st?.seats.forEach(s => m.set(s.seat, s)); return m }, [st])
-  const secondsLeft = hand?.deadline ? Math.max(0, Math.ceil((new Date(hand.deadline).getTime() - now) / 1000)) : null
+  // the deadline is server time: measure from the server clock the state came with, so a wrong phone clock can't
+  // make the countdown run early or late
+  const serverNow = snap ? Date.parse(snap.st.server_time) + (now - snap.at) : now
+  const secondsLeft = hand?.deadline ? Math.max(0, Math.ceil((new Date(hand.deadline).getTime() - serverNow) / 1000)) : null
   const showdown = !!(hand?.finished && hand.result && !hand.result.fold_out)
 
   async function act(action: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) {
-    try { setSt(await api.pokerAct(action, amount)); setRaising(false); setRaise(null) } catch (e) { toast((e as Error).message, 'bad'); load() }
+    if (acting) return   // a double tap: the second one must not act on the next street
+    setActing(true)
+    try { land(await api.pokerAct(action, amount)); setRaising(false); setRaise(null) } catch (e) { toast((e as Error).message, 'bad'); load() } finally { setActing(false) }
   }
   async function leave() {
+    // mid-hand, leaving folds you and the chips already in the pot stay there
+    if (my && !my.folded && hand && !hand.finished
+      && !await ask(`Leaving now folds this hand — the ${money(my.total_bet)} you've put in the pot stays there.`, { title: 'Leave the table?', yes: 'Leave', tone: 'red' })) return
     const r = await run(() => api.pokerLeave(), { ok: r => `Cashed out ${money(r.cashed_out)}` })
     if (r) nav('/casino/poker')
   }
-  async function sitIn() { const r = await run(() => api.pokerSitIn(), { silent: true }); if (r) setSt(r) }
+  async function sitIn() { const r = await run(() => api.pokerSitIn(), { silent: true }); if (r) land(r) }
   async function join(seat: number) {
     const r = await run(() => api.pokerJoin(tid, seat, buyin), { ok: () => `Bought in for ${money(buyin)}` })
-    if (r) { setSt(r); setPick(null) }
+    if (r) { land(r); setPick(null) }
   }
 
   if (err && !st) return <div className="page"><div className="notice red">{err}</div><button className="btn" onClick={() => nav('/casino/poker')}>Back to the lobby</button></div>
@@ -90,6 +111,7 @@ export default function PokerTable() {
         <b>{t.name}</b>
         <div className="small muted">Blinds {money(t.small_blind)}/{money(t.big_blind)} · {hand ? `hand #${hand.no}` : 'waiting for players'}</div>
       </div>
+      {err && <div className="notice red">Can't reach the table — retrying. The clock keeps running on the server.</div>}
 
       <div className="felt">
         <div className="board">
@@ -160,23 +182,23 @@ export default function PokerTable() {
                   <button className="btn sm" onClick={() => setRaise(allInTo)}>All in</button>
                 </div>
                 <div className="hstack">
-                  <button className="btn ghost" onClick={() => setRaising(false)}>Back</button>
-                  <button className="btn gold grow" onClick={() => act(hand!.current_bet > 0 ? 'raise' : 'bet', raise ?? minTo)}>{hand!.current_bet > 0 ? 'Raise to' : 'Bet'} {money(raise ?? minTo)}</button>
+                  <button type="button" className="btn ghost" onClick={() => setRaising(false)}>Back</button>
+                  <button type="button" className="btn gold grow" disabled={acting} onClick={() => act(hand!.current_bet > 0 ? 'raise' : 'bet', raise ?? minTo)}>{hand!.current_bet > 0 ? 'Raise to' : 'Bet'} {money(raise ?? minTo)}</button>
                 </div>
               </div>
             ) : (
               <div className="hstack">
-                <button className="btn red grow" onClick={() => act('fold')}>Fold</button>
+                <button type="button" className="btn ghost red grow" disabled={acting} onClick={() => act('fold')}>Fold</button>
                 {my.to_call > 0
-                  ? <button className="btn doit grow" onClick={() => act('call')}>Call {money(my.to_call)}{my.to_call >= stack ? ' (all in)' : ''}</button>
-                  : <button className="btn doit grow" onClick={() => act('check')}>Check</button>}
-                <button className="btn gold grow" disabled={stack <= my.to_call} onClick={() => { setRaise(minTo); setRaising(true) }}>{hand!.current_bet > 0 ? 'Raise' : 'Bet'}</button>
+                  ? <button type="button" className="btn doit grow" disabled={acting} onClick={() => act('call')}>Call {money(my.to_call)}{my.to_call >= stack ? ' (all in)' : ''}</button>
+                  : <button type="button" className="btn doit grow" disabled={acting} onClick={() => act('check')}>Check</button>}
+                <button type="button" className="btn gold grow" disabled={acting || stack <= my.to_call} onClick={() => { setRaise(minTo); setRaising(true) }}>{hand!.current_bet > 0 ? 'Raise' : 'Bet'}</button>
               </div>
             )
           ) : (
             <div className="hstack" style={{ justifyContent: 'space-between' }}>
               <span className="small muted">{my ? (my.folded ? 'You folded.' : hand?.finished ? 'Next hand in a moment…' : 'Waiting for others…') : hand && !hand.finished ? "You'll be dealt in next hand." : 'Waiting…'}</span>
-              <button className="btn sm" disabled={stack >= t.max_buyin || me.cash <= 0} onClick={() => { setBuyin(Math.min(me.cash, t.max_buyin - stack)); setPick(mine.seat) }}>Rebuy</button>
+              <button type="button" className="btn sm" disabled={t.max_buyin - stack < 100 || me.cash < 100} onClick={() => { setBuyin(Math.min(me.cash, t.max_buyin - stack)); setPick(mine.seat) }}>Rebuy</button>
             </div>
           )}
         </div>
@@ -188,8 +210,10 @@ export default function PokerTable() {
         <Modal title={mine ? 'Rebuy' : `Seat ${pick + 1} · buy in`} onClose={() => setPick(null)}>
           <div className="stack">
             <div className="small muted">{mine ? `Top up to at most ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.` : `Bring ${money(t.min_buyin)} to ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.`}</div>
-            <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin)} label={mine ? 'Add' : 'Buy-in'} />
-            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
+            <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.max(100, Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin))} label={mine ? 'Add' : 'Buy-in'} />
+            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin) || (!!mine && buyin > t.max_buyin - stack)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
+            {!mine && me.cash < t.min_buyin && <div className="why">The table takes at least {money(t.min_buyin)} — you have {money(me.cash)} on hand.</div>}
+            {mine && buyin > t.max_buyin - stack && <div className="why">Your stack can't go past {money(t.max_buyin)} here — room for {money(t.max_buyin - stack)}.</div>}
           </div>
         </Modal>
       )}

@@ -11,8 +11,8 @@ const ALL = Object.keys(SYM)
 
 export default function Slots() {
   const me = useMe()
-  const { run } = useGame()
-  const [wager, setWager] = useBet('slots')
+  const { run, refresh } = useGame()
+  const [wager, setWager] = useBet('slots', me.cash)
   const [reels, setReels] = useState<string[]>(['seven', 'seven', 'seven'])
   const [spinning, setSpinning] = useState(false)
   const [last, setLast] = useState<SlotsResult | null>(null)
@@ -21,13 +21,16 @@ export default function Slots() {
 
   async function spin() {
     if (spinning) return
+    const before = reels
     setSpinning(true); setLast(null)
     timer.current = window.setInterval(() => setReels([0, 1, 2].map(() => ALL[Math.floor(Math.random() * ALL.length)])), 70)
-    const r = await run(() => api.slotsSpin(wager), { silent: true })
+    const r = await run(() => api.slotsSpin(wager), { silent: true, refresh: false })
     await new Promise(res => setTimeout(res, r ? 600 : 0))
     if (timer.current) window.clearInterval(timer.current)
-    if (r) { setReels(r.reels); setLast(r) }
+    // the reels stop on the result, then the cash follows: the top bar never shows the win before the reels do
+    if (r) { setReels(r.reels); setLast(r) } else setReels(before)
     setSpinning(false)
+    if (r) await refresh()
   }
 
   return (
@@ -43,6 +46,7 @@ export default function Slots() {
           <div className="table-bar">
             <BetPicker part="chips" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
             <button type="button" className="btn gold block" disabled={spinning || me.cash < wager} onClick={spin}>{spinning ? <span className="spin" /> : `Spin for ${money(wager)}`}</button>
+            {me.cash < wager && <div className="why">That's {money(wager)} a spin — you have {money(me.cash)} on hand.</div>}
           </div>
           <BetPicker part="amount" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
         </div>

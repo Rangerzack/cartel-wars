@@ -5,6 +5,7 @@ import { api, GameError } from './api'
 import { isNative, RESUME_EVENT } from './platform'
 import { errorText, isNetworkError, NET_RE, OFFLINE_TEXT } from './errors'
 import { initStore, logOutStore } from './store'
+import { setClock } from './clock'
 import type { Catalog, Me } from './types'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
@@ -16,12 +17,16 @@ interface GameState {
   session: Session | null
   authReady: boolean
   me: Me | null
+  /** When `me` arrived (Date.now()): pages that count forward from its server snapshot measure from here. */
+  meAt: number
   catalog: Catalog | null
   toasts: Toast[]
   refresh: () => Promise<void>
   toast: (text: string, kind?: Toast['kind']) => void
-  /** Run an RPC, toast on error, refresh state on success. Returns result or undefined on failure. */
-  run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => Promise<T | undefined>
+  /** Run an RPC, toast on error, refresh state on success. Returns result or undefined on failure.
+   *  `refresh: false` leaves the refresh to the caller (a casino game that shows its result after an animation,
+   *  so the top-bar cash doesn't give it away first). */
+  run: <T>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean; refresh?: boolean }) => Promise<T | undefined>
   busy: boolean
   /** Signed in and loaded, but the last poll or action couldn't reach the server; the top bar says so until a poll gets through. */
   netDown: boolean
@@ -63,6 +68,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [me, setMe] = useState<Me | null>(null)
+  const [meAt, setMeAt] = useState(0)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [busy, setBusy] = useState(false)
@@ -140,16 +146,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     markNet(true)
   }, [toast, markNet])
 
+  // Each refresh takes a number; an answer older than the newest request is dropped, so the minute poll (or a
+  // visibility refresh) that was already in flight when an action landed can't put the pre-action state back on screen.
+  const seq = useRef(0)
   const refresh = useCallback(async () => {
+    const n = ++seq.current
+    const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setClock(m.server_time, gotAt.current); setMeAt(gotAt.current); setMe(m) }
     try {
-      const m = await api.me()
-      gotAt.current = Date.now()
-      setMe(m)
+      land(await api.me())
       if (netDownRef.current) markNet(false)
     } catch (e) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
-        try { const m = await api.ensureProfile(); gotAt.current = Date.now(); setMe(m) } catch (e2) { failed(e2, 'me') }
+        try { land(await api.ensureProfile()) } catch (e2) { failed(e2, 'me') }
       } else {
         failed(e, 'me')
       }
@@ -205,7 +214,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t)
   }, [me, refresh])
 
-  const run = useCallback(async <T,>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean }) => {
+  const run = useCallback(async <T,>(fn: () => Promise<T>, opts?: { ok?: (r: T) => string | void; silent?: boolean; refresh?: boolean }) => {
     setBusy(true)
     try {
       const r = await fn()
@@ -213,7 +222,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const msg = opts?.ok?.(r)
         if (msg) toast(msg, 'ok')
       }
-      await refresh()
+      if (opts?.refresh !== false) await refresh()
       return r
     } catch (e) {
       // "Not enough stamina", "You need at least 2 stamina to fight", "A turf war takes 3 stamina": offer a refill
@@ -230,8 +239,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
-    [session, authReady, me, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
+  const value = useMemo<GameState>(() => ({ session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
+    [session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>
 }

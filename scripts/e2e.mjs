@@ -18,6 +18,7 @@ async function snap(page, name) { if (shots) await page.screenshot({ path: `${sh
 async function newPlayer(name) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 })
   const page = await ctx.newPage()
+  page.on('dialog', d => d.accept())   // in-app confirms fall back to window.confirm under automation
   lastPage = page
   page.on('pageerror', e => errors.push(`${name}: ${e.message}`))
   page.on('response', r => { if (r.status() === 404) errors.push(`404 ${r.url()}`) })
@@ -185,7 +186,6 @@ try {
   await p.getByRole('button', { name: 'Save new password' }).click()
   await toast(p, /Password updated/)
   await snap(p, 'profile')
-  p.once('dialog', d => d.accept())
   await p.getByRole('button', { name: 'Sign out' }).click()
   await p.getByRole('button', { name: 'Existing Account' }).waitFor()
   await p.getByText('Forgot your password?').click()

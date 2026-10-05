@@ -58,7 +58,7 @@ export default function Home() {
         <div className="notice red">You're locked up{me.jail_until ? <> for another {timeLeft(me.jail_until, now)}</> : <> until you post bail</>}. Only jail actions work, and you can only fight other inmates, with your jail setup. <Link to="/services?focus=jail">Post bail →</Link></div>
       )}
       {me.hospital && (
-        <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services?focus=hospital">Buy health →</Link></div>
+        <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services?focus=hospital">Heal to full →</Link></div>
       )}
       {me.is_admin && (me.reports_open ?? 0) > 0 && <div className="notice blue">🛡 {me.reports_open} player{me.reports_open === 1 ? ' has' : 's have'} open reports. <Link to="/admin">Review →</Link></div>}
       {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}

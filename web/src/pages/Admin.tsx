@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago } from '../lib/format'
-import { Btn, Card, Empty, Seg } from '../components/ui'
+import { Btn, Card, Empty, Loading, Seg } from '../components/ui'
 import { PlayerLink } from '../components/Linked'
 import { BackBar } from '../components/BackBar'
 import { BOARDS } from './Forum'
-import type { BannedWord, ModAction, ModLogEntry, ModQueueItem, ModReport, ReportKind, WordMatch } from '../lib/types'
+import type { BannedWord, ModAction, ModQueueItem, ModReport, ReportKind, WordMatch } from '../lib/types'
+import { useLoad } from '../lib/useLoad'
+import { useParam } from '../lib/useParam'
 
 type Tab = 'reports' | 'log' | 'words'
 
@@ -40,13 +42,12 @@ const when = (at: string) => new Date(at).toLocaleString()
 /** Admin tools: reported profiles, the moderation log and the word filter. */
 export default function Admin() {
   const me = useMe()
-  const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'reports'
+  const [tab, setTab] = useParam<Tab>('tab', ['reports', 'log', 'words'], 'reports')
   if (!me.is_admin) return <div className="page"><BackBar fallback="/" /><Empty>Admins only.</Empty></div>
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Seg value={tab} onChange={t => setSp({ tab: t })} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }]} />
+      <Seg value={tab} onChange={setTab} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }]} />
       {tab === 'reports' && <Reports />}
       {tab === 'log' && <Log />}
       {tab === 'words' && <Words />}
@@ -98,16 +99,14 @@ function Where({ r }: { r: ModReport }) {
 }
 
 function Reports() {
-  const { toast, run, ask } = useGame()
-  const [q, setQ] = useState<ModQueueItem[] | null>(null)
-  const load = useCallback(() => api.modQueue().then(setQ).catch(e => toast(e.message, 'bad')), [toast])
-  useEffect(() => { load() }, [load])
+  const { run, ask } = useGame()
+  const { data: q, error, reload: load } = useLoad(() => api.modQueue())
   const remove = (t: ModQueueItem, r: ModReport) => async () => {
     const [action, question, ok] = deleteAction[r.kind as Exclude<ReportKind, 'profile'>]
     if (!await ask(question, { title: 'Delete it?', yes: 'Delete', tone: 'red' })) return
     if (await run(() => api.modAction(t.id, action, r.ref_id!), { ok: () => ok })) load()
   }
-  if (!q) return <Empty><span className="spin" /></Empty>
+  if (!q) return <Loading error={error} onRetry={load} />
   if (q.length === 0) return <Card><Empty>No open reports.</Empty></Card>
   return (
     <>
@@ -147,10 +146,8 @@ function Reports() {
 }
 
 function Log() {
-  const { toast } = useGame()
-  const [log, setLog] = useState<ModLogEntry[] | null>(null)
-  useEffect(() => { api.modLog(100).then(setLog).catch(e => toast(e.message, 'bad')) }, [toast])
-  if (!log) return <Empty><span className="spin" /></Empty>
+  const { data: log, error, reload } = useLoad(() => api.modLog(100))
+  if (!log) return <Loading error={error} onRetry={reload} />
   return (
     <Card title="Moderation log" right={<small>newest first</small>}>
       {log.length === 0 && <Empty>Nothing yet.</Empty>}
@@ -173,13 +170,12 @@ function Log() {
 }
 
 function Words() {
-  const { run, toast, ask } = useGame()
-  const [words, setWords] = useState<BannedWord[] | null>(null)
+  const { run, ask } = useGame()
   const [word, setWord] = useState('')
   const [how, setHow] = useState<WordMatch>('word')
   const [chat, setChat] = useState(true)
-  useEffect(() => { api.modWords().then(setWords).catch(e => toast(e.message, 'bad')) }, [toast])
-  if (!words) return <Empty><span className="spin" /></Empty>
+  const { data: words, error, reload, set: setWords } = useLoad(() => api.modWords())
+  if (!words) return <Loading error={error} onRetry={reload} />
   // Every word carries the chat switch: on, it also blocks chat messages and forum posts (matched the word's own way).
   const flipChat = (w: BannedWord) => async () => {
     if (!await ask(w.chat ? `Let “${w.word}” through in chat and forum posts? It still guards names, bios and titles.` : `Block “${w.word}” in chat and forum posts too?`, { title: 'Change the chat filter?', yes: w.chat ? 'Let it through' : 'Block it' })) return

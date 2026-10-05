@@ -1,22 +1,19 @@
-import { useEffect, useState } from 'react'
-import { useGame } from '../lib/game'
+import { useState } from 'react'
 import { api } from '../lib/api'
 import { accoladeMeta, timeLeft } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Card, Empty, RowLink, Seg } from '../components/ui'
+import { Card, Empty, Loading, RowLink, Seg } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
-import type { Accolades as AccoladesT } from '../lib/types'
 import { BackBar } from '../components/BackBar'
+import { useLoad } from '../lib/useLoad'
 
 const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf', 'gambler'] as const
 
 export default function Accolades() {
-  const { toast } = useGame()
   const now = useNow(30_000)
-  const [data, setData] = useState<AccoladesT | null>(null)
+  const { data, error, reload } = useLoad(() => api.accolades())
   const [week, setWeek] = useState<'this_week' | 'last_week'>('this_week')
-  useEffect(() => { api.accolades().then(setData).catch(e => toast(e.message, 'bad')) }, [toast])
-  if (!data) return <Empty><span className="spin" /></Empty>
+  if (!data) return <div className="page"><BackBar fallback="/" /><Loading error={error} onRetry={reload} /></div>
   const board = data[week]
   return (
     <div className="page">

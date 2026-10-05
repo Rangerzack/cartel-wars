@@ -17,7 +17,7 @@ that doesn't match your memory — all tuning lives in `supabase/migrations/`.
 | Resource | Base | Max | Regen | Notes |
 |---|---|---|---|---|
 | Stamina | 25 | 150 (upgrade with Diamonds) | +1 / 5 min *(wiki)* | Spent by Actions. Attacks require ≥2 but don't consume it. |
-| Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. |
+| Health | 100 | 500 (upgrade with Diamonds) | +5 / 5 min *(ours — faster hospital exits)* | ≤19 = **Hospital**: no actions, no attacks. Buy health at the Hospital on a sliding scale: $40/pt base, and the per-point price rises by 1× for every 100 points bought in the last 24h (like hoodlums) *(ours)*. Health is sold **to full only** *(Zack, 2026-10-02)*: one Heal to Full price, or wait till you have the cash (or heal on your own). No point picker and no partial check-out. |
 | Heat | 0 | 100 (+50 per 💎30 upgrade, no cap *(Zack)*) | decays −1 / 10 min *(ours)* | Green 0–39, Yellow 40–74, Red 75+ at base; each heat upgrade moves both lines up 50 with the max (one upgrade: max 150, yellow 90, red 125). Rises with Actions and Attacks. At Red each action/attack risks getting **Busted** (jail). More heat than your opponent is a +1 fight edge. |
 | Cash ($) | tutorial grant | — | — | Cash on hand can be taken in fights. Banked cash is safe. More cash on hand than your opponent is a +1 fight edge. **Daily cash**: every account — players and the NPC thugs — gets $50,000 on hand at 00:00 UTC, online or not *(ours)*. A thug's daily cash sits on top of its stash until hunters take it. |
 | Diamonds | starter grant (25) | — | — | Premium currency: refills, max-stat upgrades, inventory slots, extra grow houses, boosts. Earned via milestones (see Fighting) and the Daily Drop, or bought in the iOS app (see Store). |
@@ -674,11 +674,42 @@ that is irreversible or costs over half your cash asks first, in the game's own
 sheet (title, one line, Cancel beside the action it names), never the browser's
 `confirm()`, which some browsers and embedded web views mute or answer no by
 themselves.
+Landing in the hospital works the same way *(Zack, 2026-10-02)*: Actions from a hospital
+bed, a player's page and a fight's result offer **Heal to Full** in place, at the
+hospital's price. Short of cash, the button is off and says what you have.
+Getting busted offers **Post Bail** right where it happened *(Zack, 2026-10-02)*: the
+bust sheet after a job, a fight's result and a crew fight's result pay bail on the spot
+(the same price as the jail card, from cash on hand) and leave you where you were. Short
+of cash, the button is off and points at the bank. After the Bribe Police job, a
+deliberate trip in, **Stay inside** is the main button and bail is the quiet one.
 A fight's result sheet has Attack again under the result, with the same checks as
 Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
 never a dead button: Do It, Attack and a turf attack open the refill sheet (free,
 diamonds, or product, each priced with what it restores), and so does any server
 refusal for stamina (crew fights). The server still checks every refill.
+**Reliability rules** *(Zack, 2026-10-02, Phase 2)*: a screen's first fetch never leaves
+a spinner that stays: a failed load shows what went wrong and a Try again where the
+spinner was (`useLoad`), and an older answer never overwrites a newer one (the minute poll
+can't put pre-action cash back on screen; a fast filter change can't leave the old list
+under the new heading). A crew or cartel that no longer exists sends you back to the hub
+replacing the URL, so Back doesn't loop. Chat follows new lines only while you're reading
+the end of the log, and a refused send leaves the draft in the box. Poker takes one action
+at a time and a stale poll can't bring the buttons back. Jailed or hospitalized, every
+casino control is off (not just refused by the server); roulette holds the $500k table
+max client-side; craps places one chip at a time. A button is disabled, with a reason,
+wherever the server would refuse (Build without the diamonds, Expand or Buy without the
+cash or storage, Sell with every unit equipped). Every text field is 16 px so iOS doesn't
+zoom into it. Purchases never go out under RevenueCat's anonymous id: a login that failed
+is retried before any purchase, or the purchase is refused with a reason.
+A screen's tab or filter lives in the URL and is read from an allow-list
+(`useParam`): a reload or Back lands on the same view, `?tab=foo` shows the first
+tab, and a tab tap replaces the history entry so Back leaves the screen in one step;
+a made-up casino game or forum board is put right. A new screen starts at the top.
+Every countdown runs on the server's clock (`lib/clock.ts` corrects for the phone's).
+Amount fields take whole numbers ("1,000" is 1000). A casino result shows on the
+reels, wheel or dice before the top-bar cash moves. A turf attack's result stays in
+the block sheet above the form, with Attack again one tap away; blocks held by your
+cartel are drawn and described as allies and don't offer an attack.
 Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
 Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
 that is short of thugs offers the missing ones, which join that attack.

@@ -2,35 +2,36 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { ago, every, money, num } from '../lib/format'
-import { Btn, Card, Empty, Modal, Stat } from '../components/ui'
+import { ago, every, money, num, toInt } from '../lib/format'
+import { Btn, Card, Loading, Modal, Stat } from '../components/ui'
+import { BailButton } from '../components/Bail'
+import { HealButton } from '../components/Heal'
 import { Ribbons } from '../components/Ribbons'
-import type { FightEdge, FightPreview, FightResult, PublicPlayer } from '../lib/types'
+import type { FightEdge, FightPreview, FightResult } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { ComboPill } from '../components/Combo'
 import { matchup, matchupText } from '../lib/combos'
 import { ReportModal } from '../components/Report'
 import { ModButtons } from './Admin'
+import { useLoad } from '../lib/useLoad'
 
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, toast, catalog, askRefill, ask } = useGame()
+  const { run, catalog, askRefill, ask } = useGame()
   const nav = useNavigate()
-  const [p, setP] = useState<PublicPlayer | null>(null)
   const [result, setResult] = useState<FightResult | null>(null)
   const [amount, setAmount] = useState(0)
   const [dia, setDia] = useState(0)
   const [reporting, setReporting] = useState(false)
 
-  const load = useCallback(() => api.player(id).then(setP).catch(e => toast(e.message, 'bad')), [id, toast])
-  useEffect(() => { load() }, [load])
+  const { data: p, error, reload: load } = useLoad(() => api.player(id), id)
   // odds before you swing; quietly absent if the preview isn't available
   const [pv, setPv] = useState<FightPreview | null>(null)
   const loadPreview = useCallback(() => { if (id && id !== me.id) api.fightPreview(id).then(setPv).catch(() => setPv(null)) }, [id, me.id])
   useEffect(() => { loadPreview() }, [loadPreview])
 
-  if (!p) return <Empty><span className="spin" /></Empty>
+  if (!p) return <div className="page"><BackBar fallback="/fight" /><Loading error={error} onRetry={load} /></div>
   const isMe = p.id === me.id
   // jail is its own room: inmates only fight inmates
   const jailWall = me.jailed !== p.jailed
@@ -81,6 +82,7 @@ export default function Player() {
               {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
             </div>
           )}
+          {!isMe && me.hospital && <><div className="why">You're in the hospital — heal to full to fight again, or wait it out.</div><HealButton /></>}
           {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
           {!isMe && !cantFight && tired && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}, or tap Attack to refill.</div>}
           {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
@@ -103,12 +105,12 @@ export default function Player() {
         <Card title="Send Money / Diamonds">
           <div className="bd stack">
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Cash amount" aria-label="Cash to send" value={amount || ''} onChange={e => setAmount(Number(e.target.value) || 0)} />
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Cash amount" aria-label="Cash to send" value={amount || ''} onChange={e => setAmount(toInt(e.target.value))} />
               <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => run(() => api.sendCash(p.id, amount), { ok: r => `Sent ${money(r.sent)} to ${p.name}` })}>Send $</Btn>
             </div>
             {amount > me.cash && <div className="why">You have {money(me.cash)} on hand.</div>}
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" aria-label="Diamonds to send" value={dia || ''} onChange={e => setDia(Number(e.target.value) || 0)} />
+              <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" aria-label="Diamonds to send" value={dia || ''} onChange={e => setDia(toInt(e.target.value))} />
               <Btn className="blue" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
             </div>
             {dia > me.diamonds && <div className="why">You have 💎 {num(me.diamonds)}.</div>}
@@ -145,13 +147,15 @@ export default function Player() {
               {' '}Their health is now {result.their_health}; yours {result.my_health}.
             </div>
             {result.hospitalized_them && <div className="notice red">You put {p.name} in the hospital.</div>}
-            {result.hospitalized_me && <div className="notice red">You're in the hospital. Check out at Services.</div>}
+            {result.hospitalized_me && <div className="notice red">You're in the hospital.</div>}
+            {me.hospital && <HealButton />}
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
+            {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
             <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
             {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
-              : me.hospital ? "You're in the hospital. Check out at Services."
+              : me.hospital ? "You're in the hospital — heal to full above, or wait it out."
               : me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."
             }</div> : tired && <div className="why">You're out of stamina — Attack again offers a refill.</div>}
           </div>

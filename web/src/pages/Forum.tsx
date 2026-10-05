@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
 import { ago } from '../lib/format'
-import type { ForumAuthor, ForumCategories, ForumCategory, ForumList, ForumThread } from '../lib/types'
-import { Btn, Card, Empty, Modal } from '../components/ui'
+import type { ForumAuthor, ForumCategory, ForumThread } from '../lib/types'
+import { Btn, Card, Empty, Loading, Modal } from '../components/ui'
 import { CrewLink, LinkedText, PlayerLink, TitleLink } from '../components/Linked'
 import { BackBar } from '../components/BackBar'
 import { ReportModal } from '../components/Report'
 import { useNow } from '../lib/useNow'
+import { useLoad } from '../lib/useLoad'
+import { intParam } from '../lib/useParam'
 
 export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
   { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
@@ -36,21 +38,24 @@ const Muted = ({ until }: { until: string }) => <div className="notice gold">You
 
 export default function Forum() {
   const { cat, id } = useParams()
+  const nav = useNavigate()
+  // /forum/foo or /forum/t/abc: the URL is put right (replaced, so Back doesn't return to it)
+  const bad = (id !== undefined && !Number.isInteger(Number(id))) || (cat !== undefined && !isBoard(cat))
+  useEffect(() => { if (bad) nav('/forum', { replace: true }) }, [bad, nav])
+  if (bad) return null
   if (id) return <ThreadView id={Number(id)} />
   if (isBoard(cat)) return <BoardView cat={cat} />
   return <Boards />
 }
 
 function Boards() {
-  const { toast } = useGame()
   const nav = useNavigate()
-  const [data, setData] = useState<ForumCategories | null>(null)
-  useEffect(() => { api.forumCategories().then(setData).catch(e => toast(e.message, 'bad')) }, [toast])
+  const { data, error, reload } = useLoad(() => api.forumCategories())
   return (
     <div className="page">
       <BackBar fallback="/" />
       <Card title="🗣 Forum" right={<small>{data?.is_admin ? 'you are an admin' : 'players talk here'}</small>}>
-        {!data && <Empty><span className="spin" /></Empty>}
+        {!data && <Loading error={error} onRetry={reload} />}
         {data?.categories.map(c => {
           const b = board(c.key)!
           return (
@@ -71,18 +76,16 @@ function Boards() {
 }
 
 function BoardView({ cat }: { cat: ForumCategory }) {
-  const { toast, run } = useGame()
+  const { run } = useGame()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
-  const page = Number(params.get('p') ?? 0)
-  const [data, setData] = useState<ForumList | null>(null)
+  const page = intParam(params, 'p')
   const [compose, setCompose] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const muted = useMutedUntil()
   const b = board(cat)!
-  const load = useCallback(() => api.forumList(cat, page).then(setData).catch(e => toast(e.message, 'bad')), [cat, page, toast])
-  useEffect(() => { load() }, [load])
+  const { data, error, reload: load } = useLoad(() => api.forumList(cat, page), `${cat}|${page}`)
 
   async function post() {
     const r = await run(() => api.forumCreateThread(cat, title, body), { silent: true })
@@ -93,7 +96,7 @@ function BoardView({ cat }: { cat: ForumCategory }) {
       <BackBar fallback="/forum" right={data?.can_post && !muted && <button type="button" className="btn sm doit" onClick={() => setCompose(true)}>New Thread</button>} />
       {data?.can_post && muted && <Muted until={muted} />}
       <Card title={<>{b.icon} {b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
-        {!data && <Empty><span className="spin" /></Empty>}
+        {!data && <Loading error={error} onRetry={load} />}
         {data?.threads.length === 0 && <Empty>{cat === 'updates' && !data.can_post ? 'No updates posted yet.' : 'Nothing here yet — start the first thread.'}</Empty>}
         {data?.threads.map(t => (
           <div key={t.id} className="row link" onClick={() => nav(`/forum/t/${t.id}`)}>
@@ -127,18 +130,17 @@ function BoardView({ cat }: { cat: ForumCategory }) {
 }
 
 function ThreadView({ id }: { id: number }) {
-  const { toast, run, ask } = useGame()
+  const { run, ask } = useGame()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
-  const page = Number(params.get('p') ?? 0)
-  const [data, setData] = useState<ForumThread | null>(null)
+  const page = intParam(params, 'p')
   const [reply, setReply] = useState('')
   const [editing, setEditing] = useState<{ kind: 'thread' | 'post'; id: number; body: string; title?: string } | null>(null)
-  const [gone, setGone] = useState(false)
   const [reporting, setReporting] = useState<{ kind: 'forum_thread' | 'forum_post'; id: number; author: ForumAuthor; body: string } | null>(null)
   const muted = useMutedUntil()
-  const load = useCallback(() => api.forumThread(id, page).then(setData).catch(e => { setGone(true); toast(e.message, 'bad') }), [id, page, toast])
-  useEffect(() => { load() }, [load])
+  const { data, error, reload: load } = useLoad(() => api.forumThread(id, page), `${id}|${page}`)
+  // the server says "No such thread" for one that was deleted; anything else (a dropped connection) gets a Retry
+  const gone = !data && !!error && /no such|not found|gone/i.test(error)
 
   async function send() {
     const r = await run(() => api.forumReply(id, reply), { silent: true })
@@ -156,7 +158,7 @@ function ThreadView({ id }: { id: number }) {
   }
 
   if (gone) return <div className="page"><div className="notice red">That thread is gone.</div><Link to="/forum" className="btn">Back to the forum</Link></div>
-  if (!data) return <Empty><span className="spin" /></Empty>
+  if (!data) return <div className="page"><BackBar fallback="/forum" /><Loading error={error} onRetry={load} /></div>
   const t = data.thread, b = board(t.category)!
   return (
     <div className="page">

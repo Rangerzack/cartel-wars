@@ -2,13 +2,14 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, money, num, timeLeft, every, nextRollover } from '../lib/format'
+import { commodityIcon, every, money, nextRollover, num, timeLeft, toInt } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { focusCard } from '../lib/scroll'
 import { Btn, Card, Empty, Qty } from '../components/ui'
+import { HealButton } from '../components/Heal'
 import { PerkTag } from '../components/Perk'
 import { HireHoodlums } from '../components/Hire'
-import { perk } from '../lib/perks'
+import { bailCost, perk } from '../lib/perks'
 import { drugRefill } from '../lib/market'
 import type { MilestoneKind } from '../lib/types'
 import { milestoneLabel, milestoneTotal, nextRepeat } from '../lib/milestones'
@@ -33,16 +34,13 @@ export default function Services() {
   }, [focus, key])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
-  const [heal, setHeal] = useState(20)
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
   const heatRed = me.heat_red ?? cfg.heat_red
-  // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Clinic, Bent Cop, Pharmacy)
-  const law = perk(me, 'law_office'), clinic = perk(me, 'clinic'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
-  const bail = Math.ceil(cfg.bail_base * (1 - law))   // jail has no timer: you're in until you post this
-  // mirrors _health_price: per-point price climbs with points bought in the last 24h
-  const healthPrice = (n: number) => Math.ceil(Math.ceil(cfg.hospital_per_point * n * (1 + (me.health_bought + n / 2) / cfg.health_price_scale)) * (1 - clinic))
+  // prices mirror the server, business perks included (Law Office, Gym / Shooting Range, Bent Cop, Pharmacy; the Clinic in HealButton)
+  const law = perk(me, 'law_office'), bent = perk(me, 'bent_cop'), pharmacy = perk(me, 'pharmacy')
+  const bail = bailCost(me, cfg)   // jail has no timer: you're in until you post this
   const bribeCost = (n: number) => Math.ceil(n * cfg.bribe_per_heat * (1 - bent))
   const refillUnits = (units: number) => Math.ceil(units * (1 - pharmacy))
   // drug refills: each drug is full this many times a day (more on the Daily Drop), then half the stamina bar
@@ -52,9 +50,7 @@ export default function Services() {
   const lateGain = Math.ceil(me.stamina_max * (me.refills?.late_share ?? 0.5))
   const usedAny = Object.values(me.refills?.used ?? {}).some(n => (n ?? 0) > 0)
   const missing = me.health_max - me.health
-  const healN = Math.max(1, Math.min(heal, missing))
   const outAt = me.hospital_out_at ?? 20
-  const outN = Math.max(0, outAt - me.health)
   const maxSlots = cfg.max_slots ?? 130
   const slotsMaxed = me.inventory_slots >= maxSlots
 
@@ -69,21 +65,11 @@ export default function Services() {
           <PerkTag code="clinic" />
           {me.hospital
             ? <div>You're laid up at {me.health} health. You heal {cfg.health_regen_amount} {every(cfg.health_regen_minutes)} — next in {timeLeft(me.health_next, now)} — and walk out at {outAt} ({cfg.hospital_release_pct ?? 80}% of your max).</div>
-            : <div className="small muted">Health comes back {cfg.health_regen_amount} {every(cfg.health_regen_minutes)}. Get knocked under 20 and you're in the hospital until you're back to {cfg.hospital_release_pct ?? 80}%. Buy more here — the price per point climbs the more you buy in a day.</div>}
-          {me.hospital && outN > 0 && (
-            <Btn className="doit block" disabled={me.cash < healthPrice(outN)} onClick={() => run(api.hospitalCheckout, { ok: r => `Checked out for ${money(r.cost)}` })}>Check Out (+{outN}) · {money(healthPrice(outN))}</Btn>
-          )}
+            : <div className="small muted">Health comes back {cfg.health_regen_amount} {every(cfg.health_regen_minutes)}. Get knocked under 20 and you're in the hospital until you're back to {cfg.hospital_release_pct ?? 80}%. Here you heal all the way to full in one go — the price per point climbs the more you buy in a day.</div>}
+          {/* health is sold to full only: one price, or wait till you have it */}
           {missing > 0 ? (
             <>
-              <div className="spread">
-                <Qty value={healN} onChange={setHeal} min={1} max={Math.max(1, missing)} />
-                <Btn className={me.hospital ? '' : 'doit'} disabled={me.cash < healthPrice(healN)} onClick={() => run(() => api.buyHealth(healN), { ok: r => `+${r.gain} health for ${money(r.cost)}` })}>Buy +{healN} · {money(healthPrice(healN))}</Btn>
-              </div>
-              <div className="hstack">
-                <button className="btn sm ghost" onClick={() => setHeal(Math.max(1, Math.min(25, missing)))}>+25</button>
-                <button className="btn sm ghost" onClick={() => setHeal(Math.max(1, Math.min(50, missing)))}>+50</button>
-                <button className="btn sm ghost" onClick={() => setHeal(missing)}>Full · {money(healthPrice(missing))}</button>
-              </div>
+              <HealButton className="doit block" />
               {me.health_bought > 0 && <div className="small muted">{num(me.health_bought)} bought in the last 24h — the scale resets a day after your first buy.</div>}
             </>
           ) : <div className="small muted">You're at full health.</div>}
@@ -125,7 +111,7 @@ export default function Services() {
       <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
           <div className="small muted">Cash on hand can be taken in fights. Banked cash can't. Carrying more cash than the other side is worth +1 in a fight, though. {cfg.daily_cash ? <>Everyone gets {money(cfg.daily_cash)} on hand at 00:00 UTC — next in {timeLeft(nextRollover(now), now)}.</> : null}</div>
-          <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(Number(e.target.value) || 0)} />
+          <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(toInt(e.target.value))} />
           <div className="grid2">
             {/* the field clears after a move, so a second tap can't send the same amount again */}
             <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={async () => { if (await run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })) setBank(0) }}>Deposit</Btn>

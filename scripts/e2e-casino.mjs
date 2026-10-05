@@ -20,6 +20,7 @@ async function newPlayer(name) {
   const page = await ctx.newPage()
   lastPage = page
   page.on('pageerror', e => errors.push(`${name}: ${e.message}`))
+  page.on('dialog', d => d.accept())   // the in-app confirm (leaving mid-hand) falls back to window.confirm under automation
   page.on('response', r => { if (r.status() === 404) errors.push(`404 ${r.url()}`) })
   page.on('console', m => { if (m.type() === 'error' && !/realtime|websocket|WebSocket|Failed to load resource/i.test(m.text())) errors.push(`${name} console: ${m.text()}`) })
   await page.goto(BASE)

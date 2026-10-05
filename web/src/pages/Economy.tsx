@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { commodityIcon, money, num, timeLeft } from '../lib/format'
+import { commodityIcon, money, num, timeLeft, toInt } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Btn, Card, Empty, Qty, Seg } from '../components/ui'
-import type { Commodity, Market, StreetInfo } from '../lib/types'
+import { Btn, Card, Empty, Loading, Qty, Seg } from '../components/ui'
+import { useLoad } from '../lib/useLoad'
+import type { Commodity, Me, StreetInfo } from '../lib/types'
 import { PathCard, pathBlock } from '../components/Path'
 import { PerkTag } from '../components/Perk'
 import { perk } from '../lib/perks'
 import { afterFee, hustleQuote, priceCap, streetMood } from '../lib/market'
+import { useParam } from '../lib/useParam'
 
 const labFor: Record<Commodity, 'grow_house' | 'dust_lab' | 'pill_factory'> = { herb: 'grow_house', dust: 'dust_lab', pills: 'pill_factory' }
 
@@ -20,10 +22,10 @@ const andList = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')}
 
 type Tab = 'grow' | 'hustlers' | 'market'
 
+const TABS: Tab[] = ['grow', 'hustlers', 'market']
+
 export default function Economy() {
-  const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'grow'
-  const setTab = (t: Tab) => setSp({ tab: t })
+  const [tab, setTab] = useParam<Tab>('tab', TABS, 'grow')
   return (
     <div className="page">
       {/* the path decides grow houses and hustlers; the Marketplace is open to both, so its tab starts with the offers */}
@@ -50,7 +52,12 @@ function StreetTag({ s, price }: { s?: StreetInfo; price: number }) {
 
 function Grow() {
   const me = useMe()
-  const { catalog, run, ask } = useGame()
+  const { catalog, run, ask, meAt } = useGame()
+  const now = useNow(10_000)
+  // what a house holds right now: the server's count when `me` arrived, carried forward at the house's rate (the
+  // server computes the same thing from started_at when you collect), so the number and Collect don't sit still
+  // between polls
+  const producedNow = (g: Me['grow_houses'][number]) => (g.running ? Math.min(g.cap, g.produced + Math.floor(Math.max(0, now - meAt) / 3_600_000 * g.rate)) : g.produced)
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const have = new Set(me.grow_houses.map(g => g.commodity))
   const extraDia = catalog.config.extra_grow_diamonds ?? 20
@@ -58,7 +65,7 @@ function Grow() {
   const lvlCap = me.path ? null : (catalog.config.path_grow_level ?? 5)
   const expandCost = (me.storage_base ?? me.storage_cap) * 20
   const nameOf = (c: Commodity) => catalog.commodities.find(x => x.code === c)?.name ?? c
-  const ready = me.grow_houses.filter(g => g.produced > 0)
+  const ready = me.grow_houses.filter(g => producedNow(g) > 0)
   // every house with something ready, one after another, and one toast for the lot; a full storage ends the round
   const collectAll = () => run(async () => {
     const got: string[] = []
@@ -90,34 +97,37 @@ function Grow() {
         ))}
         <div className="row">
           <div className="grow s">Expand storage by 250 units</div>
-          <Btn className="sm gold" onClick={async () => {
+          <Btn className="sm gold" disabled={me.cash < expandCost} onClick={async () => {
             // a new player's first expansion is all the cash they start with: ask before it goes
             if (expandCost > me.cash / 2 && !await ask(`That's ${money(expandCost)} of your ${money(me.cash)} on hand, for 250 more units of storage.`, { title: 'Expand storage?', yes: `Expand · ${money(expandCost)}`, tone: 'gold' })) return
             return run(api.storageUpgrade, { ok: () => 'Storage expanded by 250 units' })
           }}>Expand · {money(expandCost)}</Btn>
         </div>
+        {me.cash < expandCost && <div className="row"><div className="why grow">Expanding costs {money(expandCost)} on hand — you have {money(me.cash)}.</div></div>}
       </Card>
 
       <div className="h2row">
         <h2>Grow Houses</h2>
         {ready.length >= 2 && <Btn className="sm doit" onClick={collectAll}>Collect All · {ready.length}</Btn>}
       </div>
+      {me.grow_houses.length === 0 && <Card><Empty>{blocked ? 'Traders don\'t run grow houses.' : 'No grow houses yet. Build your first one below — it produces while you\'re away.'}</Empty></Card>}
       {me.grow_houses.map(g => {
         const c = catalog.commodities.find(x => x.code === g.commodity)!
-        const full = g.produced >= g.cap
+        const produced = producedNow(g)
+        const full = produced >= g.cap
         const capped = lvlCap != null && g.level >= lvlCap
         return (
           <Card key={g.id} title={<>{commodityIcon[g.commodity]} {c.name} · Lv {g.level}</>} right={<small>{g.running ? (full ? 'FULL' : 'running') : 'stopped'}</small>}>
             <div className="bd stack">
               <div className="spread">
-                <div><b className="tabular" style={{ fontSize: 20 }}>{num(g.produced)}</b> <span className="muted">/ {num(g.cap)} ready</span></div>
+                <div><b className="tabular" style={{ fontSize: 20 }}>{num(produced)}</b> <span className="muted">/ {num(g.cap)} ready</span></div>
                 <div className="small muted">{num(g.rate)} units / hour</div>
               </div>
               {(perk(me, labFor[g.commodity]) > 0 || perk(me, 'utility') > 0) && <div className="hstack"><PerkTag code={labFor[g.commodity]} /><PerkTag code="utility" /></div>}
-              <div className="bar"><div className="track"><div className="fill" style={{ width: (g.produced / g.cap) * 100 + '%', background: 'linear-gradient(#86efac, #22a34a)' }} /></div></div>
+              <div className="bar"><div className="track"><div className="fill" style={{ width: (produced / Math.max(1, g.cap)) * 100 + '%', background: 'linear-gradient(#86efac, #22a34a)' }} /></div></div>
               {/* the everyday pair on top; stopping and abandoning are small and apart, so Abandon never sits beside Upgrade */}
               <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-                <Btn className="doit flex1" disabled={g.produced === 0} onClick={() => run(() => api.growCollect(g.id), { ok: r => `Collected ${num(r.collected)} ${c.name}${r.left ? ` (${num(r.left)} left — storage full)` : ''}` })}>Collect</Btn>
+                <Btn className="doit flex1" disabled={produced === 0} onClick={() => run(() => api.growCollect(g.id), { ok: r => `Collected ${num(r.collected)} ${c.name}${r.left ? ` (${num(r.left)} left — storage full)` : ''}` })}>Collect</Btn>
                 <Btn className="gold" disabled={!!blocked || capped || me.cash < g.upgrade_cost} onClick={() => run(() => api.growUpgrade(g.id), { ok: r => `Upgraded to level ${r.level}` })}>Upgrade {money(g.upgrade_cost)}</Btn>
               </div>
               <div className="hstack">
@@ -130,7 +140,7 @@ function Grow() {
         )
       })}
       <Card title="Build">
-        {catalog.commodities.filter(c => !have.has(c.code)).map(c => (
+        {!blocked && catalog.commodities.filter(c => !have.has(c.code)).map(c => (
           <div key={c.code} className="row">
             <span className="ico">{commodityIcon[c.code]}</span>
             <div className="grow">
@@ -139,7 +149,7 @@ function Grow() {
               {!blocked && me.cash < c.grow_price && <div className="why">Need {money(c.grow_price - me.cash)} more cash</div>}
               {!blocked && me.cash >= c.grow_price && me.grow_houses.length > 0 && me.diamonds < extraDia && <div className="why">Need 💎 {extraDia - me.diamonds} more diamonds · <Link to="/store">Diamonds ›</Link></div>}
             </div>
-            <Btn className="sm gold" disabled={!!blocked || me.cash < c.grow_price} onClick={() => run(() => api.growBuild(c.code), { ok: () => `${c.name} grow house is up and running` })}>Build</Btn>
+            <Btn className="sm gold" disabled={!!blocked || me.cash < c.grow_price || (me.grow_houses.length > 0 && me.diamonds < extraDia)} onClick={() => run(() => api.growBuild(c.code), { ok: () => `${c.name} grow house is up and running` })}>Build · {money(c.grow_price)}</Btn>
           </div>
         ))}
         {have.size === catalog.commodities.length && <Empty>You run every kind of grow house. Upgrade them.</Empty>}
@@ -215,20 +225,23 @@ const MTABS: MTab[] = ['browse', 'sell', 'order', 'mine']
 
 function MarketTab() {
   const me = useMe()
-  const { catalog, run, toast } = useGame()
+  const { catalog, run } = useGame()
   const now = useNow()
   // Browse first, so what's for sale is on the first screen; the forms sit under their own tabs (?mtab=, Browse when absent)
-  const [sp, setSp] = useSearchParams()
-  const mtab = MTABS.find(t => t === sp.get('mtab')) ?? 'browse'
-  const [market, setMarket] = useState<Market | null>(null)
+  const [mtab, setMtab] = useParam<MTab>('mtab', MTABS, 'browse')
   const [filter, setFilter] = useState<Commodity | 'all'>('all')
   const [sell, setSell] = useState<Draft>({ com: 'herb', n: 25, price: null })
   const [want, setWant] = useState<Draft>({ com: 'herb', n: 500, price: null })
   const [buyQty, setBuyQty] = useState<Record<string, number>>({})
   const [fillQty, setFillQty] = useState<Record<string, number>>({})
 
-  const load = useCallback(() => api.market(filter === 'all' ? undefined : filter).then(setMarket).catch(e => toast(e.message, 'bad')), [filter, toast])
-  useEffect(() => { load() }, [load])
+  // the old rows stay up, dimmed, while a filter change loads; a failed load gets a Retry
+  const { data: market, error: marketError, reload: load, stale } = useLoad(() => api.market(filter === 'all' ? undefined : filter), filter, { keep: true })
+  // trades come and go while the page is open: ask again every 30 s so a row isn't gone by the time it's tapped
+  useEffect(() => {
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 30_000)
+    return () => clearInterval(t)
+  }, [load])
 
   if (!catalog) return <Empty><span className="spin" /></Empty>
   const feePct = catalog.config.market_fee_pct ?? 5
@@ -273,7 +286,7 @@ function MarketTab() {
   const comSeg = catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))
   return (
     <>
-      <Seg value={mtab} onChange={t => setSp({ tab: 'market', mtab: t })}
+      <Seg value={mtab} onChange={setMtab}
         options={[{ v: 'browse', l: 'Browse' }, { v: 'sell', l: 'Sell' }, { v: 'order', l: 'Buy order' }, { v: 'mine', l: `Mine${mineCount ? ` (${mineCount})` : ''}` }]} />
 
       {mtab === 'browse' && <>
@@ -291,7 +304,7 @@ function MarketTab() {
                 <span className="ico">{commodityIcon[c.code]}</span>
                 <div className="grow">
                   <div className="t">{c.name}</div>
-                  <div className="s"><StreetTag s={market?.street?.[c.code] ?? me.street?.[c.code]} price={market?.prices?.[c.code] ?? me.prices[c.code]} /></div>
+                  <div className="s"><StreetTag s={me.street?.[c.code] ?? market?.street?.[c.code]} price={me.prices[c.code] ?? market?.prices?.[c.code] ?? 0} /></div>
                 </div>
                 <div className="small price-stats">
                   {st?.last != null ? <>last <b className="tabular">{money(st.last)}</b></> : <span className="muted">no trades yet</span>}
@@ -302,8 +315,8 @@ function MarketTab() {
           })}
         </Card>
 
-        <Card title="Wanted" right={<small>best offer first</small>}>
-          {!market && <Empty><span className="spin" /></Empty>}
+        <Card title="Wanted" right={<small>best offer first</small>} className={stale ? 'stale' : ''}>
+          {!market && <Loading error={marketError} onRetry={load} />}
           {market && orders.length === 0 && <Empty>No buy orders right now.</Empty>}
           {orders.map(o => {
             const mine = me.storage[o.commodity] ?? 0
@@ -319,7 +332,7 @@ function MarketTab() {
                 </div>
                 {!o.mine && (
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-                    <input className="input sm" inputMode="numeric" aria-label={`Units of ${nameOf(o.commodity)} to sell`} value={q} onChange={e => setFillQty({ ...fillQty, [o.id]: Number(e.target.value) || 0 })} />
+                    <input className="input sm" inputMode="numeric" aria-label={`Units of ${nameOf(o.commodity)} to sell`} value={q} onChange={e => setFillQty({ ...fillQty, [o.id]: toInt(e.target.value) })} />
                     <Btn className="sm gold" disabled={q <= 0 || !!why} onClick={async () => { await run(() => api.fillOrder(o.id, q), { ok: r => `Sold ${num(r.units)} for ${money(r.cash)} (after ${money(r.fee)} fee)` }); load() }}>Sell {money(afterFee(catalog, q * o.unit_price))}</Btn>
                   </div>
                 )}
@@ -328,22 +341,25 @@ function MarketTab() {
           })}
         </Card>
 
-        <Card title="For Sale" right={<small>cheapest first</small>}>
-          {!market && <Empty><span className="spin" /></Empty>}
+        <Card title="For Sale" right={<small>cheapest first</small>} className={stale ? 'stale' : ''}>
+          {!market && <Loading error={marketError} onRetry={load} />}
           {market && listings.length === 0 && <Empty>Nothing for sale right now.</Empty>}
           {listings.map(l => {
-            const q = Math.min(buyQty[l.id] ?? l.qty, l.qty)
+            const q = Math.max(0, Math.min(Math.floor(buyQty[l.id] ?? l.qty), l.qty))
+            const room = Math.max(0, me.storage_cap - me.storage_used)
+            const why = q <= 0 ? 'enter how many' : me.cash < q * l.unit_price ? `that's ${money(q * l.unit_price)} — you have ${money(me.cash)} on hand`
+              : room < q ? `only ${num(room)} units of storage room` : null
             return (
               <div key={l.id} className="row">
                 <span style={{ fontSize: 20 }}>{commodityIcon[l.commodity]}</span>
                 <div className="grow">
                   <div className="t">{num(l.qty)} {nameOf(l.commodity)} @ {money(l.unit_price)}</div>
-                  <div className="s">{l.mine ? 'your listing' : `by ${l.seller}`} · {timeLeft(l.expires_at, now)} left</div>
+                  <div className="s">{l.mine ? 'your listing' : `by ${l.seller}`} · {timeLeft(l.expires_at, now)} left{!l.mine && why ? <span className="red"> · {why}</span> : null}</div>
                 </div>
                 {!l.mine && (
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-                    <input className="input sm" inputMode="numeric" aria-label={`Units of ${nameOf(l.commodity)} to buy`} value={q} onChange={e => setBuyQty({ ...buyQty, [l.id]: Number(e.target.value) || 0 })} />
-                    <Btn className="sm gold" disabled={me.cash < q * l.unit_price} onClick={async () => { await run(() => api.buyListing(l.id, q), { ok: r => `Bought ${num(r.units)} for ${money(r.cost)}` }); load() }}>Buy {money(q * l.unit_price)}</Btn>
+                    <input className="input sm" inputMode="numeric" aria-label={`Units of ${nameOf(l.commodity)} to buy`} value={q} onChange={e => setBuyQty({ ...buyQty, [l.id]: toInt(e.target.value) })} />
+                    <Btn className="sm gold" disabled={!!why} onClick={async () => { await run(() => api.buyListing(l.id, q), { ok: r => `Bought ${num(r.units)} for ${money(r.cost)}` }); load() }}>Buy {money(q * l.unit_price)}</Btn>
                   </div>
                 )}
               </div>
@@ -359,8 +375,8 @@ function MarketTab() {
             {perk(me, 'trucking') > 0 && <PerkTag code="trucking" />}
             <Seg value={sell.com} onChange={v => setSell({ com: v, n: sell.n, price: null })} options={comSeg} />
             <div className="grid2">
-              <label className="f">Units ({num(minL)}–{num(maxL)})<input className="input" inputMode="numeric" value={sell.n} onChange={e => setSell({ ...sell, n: Number(e.target.value) || 0 })} /></label>
-              <label className="f">Price / unit (up to {money(sellCap)})<input className="input" inputMode="numeric" value={sellPrice} onChange={e => setSell({ ...sell, price: Number(e.target.value) || 0 })} /></label>
+              <label className="f">Units ({num(minL)}–{num(maxL)})<input className="input" inputMode="numeric" value={sell.n} onChange={e => setSell({ ...sell, n: toInt(e.target.value) })} /></label>
+              <label className="f">Price / unit (up to {money(sellCap)})<input className="input" inputMode="numeric" value={sellPrice} onChange={e => setSell({ ...sell, price: toInt(e.target.value) })} /></label>
             </div>
             <div className="small muted">In storage: {num(inStorage)}. Street is {money(street)}; you can ask up to {capPct}% of it. Listings need a vehicle that can carry the batch and expire in 48h. Sells for <b className="gold">{money(sell.n * sellPrice)}</b> — you keep {money(afterFee(catalog, sell.n * sellPrice))} after the {feePct}% fee.</div>
             {sellWhyNot && <div className="why">{sellWhyNot}</div>}
@@ -375,8 +391,8 @@ function MarketTab() {
             <div className="small muted">Post what you want and at what price; sellers fill it while you're away. The cash is held off your hand until it fills, and comes back if you cancel or it runs out after 48h. Product lands in storage even when it's full.</div>
             <Seg value={want.com} onChange={v => setWant({ com: v, n: want.n, price: null })} options={comSeg} />
             <div className="grid2">
-              <label className="f">Units ({num(minL)}–{num(orderMax)})<input className="input" inputMode="numeric" value={want.n} onChange={e => setWant({ ...want, n: Number(e.target.value) || 0 })} /></label>
-              <label className="f">Offer / unit (street {money(wStreet)})<input className="input" inputMode="numeric" value={wantPrice} onChange={e => setWant({ ...want, price: Number(e.target.value) || 0 })} /></label>
+              <label className="f">Units ({num(minL)}–{num(orderMax)})<input className="input" inputMode="numeric" value={want.n} onChange={e => setWant({ ...want, n: toInt(e.target.value) })} /></label>
+              <label className="f">Offer / unit (street {money(wStreet)})<input className="input" inputMode="numeric" value={wantPrice} onChange={e => setWant({ ...want, price: toInt(e.target.value) })} /></label>
             </div>
             <div className="small">Holds <b className="gold">{money(held)}</b> of your cash on hand.</div>
             {wantWhyNot && <div className="why">{wantWhyNot}</div>}

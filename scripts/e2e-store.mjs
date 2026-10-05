@@ -51,19 +51,16 @@ try {
   const a = await newPlayer(N('Buyer'))
   const aId = (await one('select id from profiles where name = $1', [N('Buyer')])).id
 
-  // Home's quick grid → the store: the "sold in the iPhone app" notice first, then six packs, dimmed, amounts only
+  // Home's quick grid → the store: on the web the Diamonds card says where they're sold (and that they can be earned),
+  // with no pack list at all: a list with no prices and no buttons was a dead end
   await a.locator('.quick').getByRole('link', { name: 'Store' }).click()
   await a.waitForURL(/\/store$/)
   const packs = a.locator('#diamonds')
-  const notice = packs.getByText('Diamonds are sold in the iPhone app.')
+  const notice = packs.getByText(/Diamonds are sold in the iPhone app\. Everything they buy can also be earned/)
   await notice.waitFor()
   const rows = packs.locator('.store-pack')
-  if (await rows.count() !== 6) throw new Error(`packs ${await rows.count()}`)
-  if ((await notice.boundingBox()).y > (await rows.first().boundingBox()).y) throw new Error('the notice comes before the packs')
-  if (await packs.locator('.store-pack.off').count() !== 6) throw new Error('packs are dimmed on the web')
-  const amounts = (await rows.locator('.t').allTextContents()).map(s => s.trim())
-  if (amounts.join('|') !== '100 diamonds|550 diamonds|1,200 diamonds|2,600 diamonds|7,000 diamonds|15,000 diamonds') throw new Error(amounts.join('|'))
-  if (await rows.getByRole('button').count() !== 0) throw new Error('no buy buttons on the web')
+  if (await rows.count() !== 0) throw new Error(`no pack list on the web, got ${await rows.count()}`)
+  if (await packs.getByRole('button').count() !== 0) throw new Error('no buy buttons on the web')
   if (/\$\s?\d/.test(await packs.innerText())) throw new Error('no prices on the web')
   if (await a.getByRole('button', { name: 'Restore purchases' }).count() !== 0) throw new Error('no restore on the web')
   await packs.getByText('Only diamonds you earn in the game can be sent').waitFor()

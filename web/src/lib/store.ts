@@ -21,24 +21,32 @@ export type BuyResult = 'bought' | 'cancelled' | 'pending'
 const MANAGE_URL = 'https://apps.apple.com/account/subscriptions'
 const rc = () => import('@revenuecat/purchases-capacitor')
 let configured: Promise<void> | null = null
-let user: string | null = null
+let user: string | null = null        // who RevenueCat is signed in as right now
+let wanted: string | null = null      // who it should be: the signed-in player
+let switching: Promise<void> | null = null
 const products = new Map<string, StoreProduct>()
 
-/** Sign RevenueCat in as the player: purchases carry this id to the webhook, which credits that Supabase user. */
+/** Sign RevenueCat in as the player: purchases carry this id to the webhook, which credits that Supabase user.
+ *  `user` moves only once the SDK has confirmed, so a login that fails (a dropped connection right after sign-in) is
+ *  known to have failed, and sdk() tries it again before any purchase goes out. */
 export async function initStore(userId: string) {
   if (!storeReady) return
+  wanted = userId
   const { Purchases } = await rc()
   if (!configured) {
-    user = userId
-    configured = Purchases.configure({ apiKey: KEY!, appUserID: userId }).catch(e => { configured = null; user = null; throw e })
+    configured = Purchases.configure({ apiKey: KEY!, appUserID: userId }).then(() => { user = userId }, e => { configured = null; throw e })
     return configured
   }
   await configured
-  if (user !== userId) { await Purchases.logIn({ appUserID: userId }); user = userId }
+  if (user === userId) return
+  if (!switching) switching = Purchases.logIn({ appUserID: userId }).then(() => { user = userId }).finally(() => { switching = null })
+  await switching
+  if (user !== userId) return initStore(userId)   // the switch that just finished was for someone else
 }
 
 /** On sign-out: RevenueCat forgets the player, so the next purchase can't land on their account. */
 export async function logOutStore() {
+  wanted = null
   if (!storeReady || !configured || !user) return
   const { Purchases } = await rc()
   await configured
@@ -46,10 +54,14 @@ export async function logOutStore() {
   await Purchases.logOut()
 }
 
+/** The SDK, signed in as the current player, or an error: never a purchase under the anonymous id (the webhook would
+ *  credit nobody while Apple still charges). A failed earlier configure or login is retried here. */
 async function sdk() {
   if (!storeReady) throw new Error('Purchases are only in the iPhone app')
-  if (!configured) throw new Error("The store isn't ready yet. Try again in a moment.")
-  await configured
+  if (!wanted) throw new Error('Sign in to buy')
+  if (!configured || user !== wanted) {
+    try { await initStore(wanted) } catch { throw new Error("The store can't reach Apple right now. Check your connection and try again.") }
+  }
   return rc()
 }
 
@@ -86,11 +98,13 @@ export const buyPack = (productId: string) => buy(productId)
 /** Subscribe to the Daily Drop (the catalog's store.drop_product). */
 export const buyDrop = (productId: string) => buy(productId)
 
-/** Ask Apple again for what this Apple ID bought: brings back a Daily Drop subscription. Packs are used up when bought. */
-export async function restorePurchases() {
+/** Ask Apple again for what this Apple ID bought: brings back a Daily Drop subscription. Packs are used up when bought.
+ *  Says whether anything is active to restore, so the Store can tell the player the truth. */
+export async function restorePurchases(): Promise<{ active: number }> {
   const { Purchases, PURCHASES_ERROR_CODE: E } = await sdk()
   try {
-    await Purchases.restorePurchases()
+    const { customerInfo } = await Purchases.restorePurchases()
+    return { active: customerInfo.activeSubscriptions.length }
   } catch (e) {
     const x = e as { code?: unknown; message?: string }
     if (String(x?.code) === E.RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR || String(x?.code) === E.RECEIPT_ALREADY_IN_USE_ERROR) {
@@ -113,9 +127,9 @@ export function manageSubscriptions() {
  * After StoreKit says yes, the diamonds or the subscription come through the webhook, not the purchase call: ask the
  * server every 1.5 s, for up to 20 s, until `arrived` holds. False if it's still on its way.
  */
-export async function waitForDelivery(arrived: (m: Me) => boolean): Promise<boolean> {
+export async function waitForDelivery(arrived: (m: Me) => boolean, keepGoing: () => boolean = () => true): Promise<boolean> {
   const end = Date.now() + 20_000
-  while (Date.now() < end) {
+  while (Date.now() < end && keepGoing()) {   // the screen that asked has gone: stop asking
     try { if (arrived(await api.me())) return true } catch { /* a dropped request: ask again */ }
     await new Promise(r => setTimeout(r, 1500))
   }

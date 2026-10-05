@@ -1,10 +1,13 @@
-export const money = (n: number | null | undefined) => '$' + Math.round(n ?? 0).toLocaleString('en-US')
+import { now as clockNow } from './clock'
+export const money = (n: number | null | undefined) => { const v = Math.round(n ?? 0); return (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US') }
 export const num = (n: number | null | undefined) => Math.round(n ?? 0).toLocaleString('en-US')
+/** What an amount field means as a whole number: "1,000" is 1000, "2.5" is 2, "" is 0 (RPCs take integers). */
+export const toInt = (v: string) => { const n = Math.floor(Number(v.replace(/[^0-9.]/g, ''))); return Number.isFinite(n) && n > 0 ? n : 0 }
 
-export function timeLeft(iso: string | null | undefined, now = Date.now()): string {
+export function timeLeft(iso: string | null | undefined, now = clockNow()): string {
   if (!iso) return ''
   const ms = new Date(iso).getTime() - now
-  if (ms <= 0) return 'now'
+  if (ms <= 0) return '0s'   // reads in every frame it's used in ("Back in 0s", "0s left"), unlike "now"
   const s = Math.ceil(ms / 1000)
   if (s < 60) return `${s}s`
   const m = Math.floor(s / 60)
@@ -14,7 +17,7 @@ export function timeLeft(iso: string | null | undefined, now = Date.now()): stri
   return `${Math.floor(h / 24)}d ${h % 24}h`
 }
 
-export function ago(iso: string, now = Date.now()): string {
+export function ago(iso: string, now = clockNow()): string {
   const s = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000))
   if (s < 60) return 'just now'
   const m = Math.floor(s / 60)
@@ -29,6 +32,11 @@ export const categoryLabel: Record<string, string> = {
   weapon: 'Weapons', jail_weapon: 'Jail Weapons', protection: 'Protection', transport: 'Transport',
 }
 export const hoodlumIcon: Record<string, string> = { thug: '🧢', spy: '🕶️', mercenary: '🔫', enforcer: '🛡️' }
+/** A hoodlum code as a word: "thug" / "12 thugs", "mercenary" / "mercenaries". */
+export const hoodlumName = (code: string, n = 1) => {
+  const one = code === 'mercenary' ? 'merc' : code
+  return n === 1 ? one : one.endsWith('y') ? `${one.slice(0, -1)}ies` : `${one}s`
+}
 
 export const accoladeMeta: Record<string, { label: string; icon: string; unit: (n: number) => string }> = {
   fight_win: { label: 'Fights won', icon: '⚔️', unit: n => `${num(n)} ${n === 1 ? 'win' : 'wins'}` },
@@ -44,8 +52,9 @@ export const accoladeMeta: Record<string, { label: string; icon: string; unit: (
 export const chips = (n: number | null | undefined) => {
   const v = Math.round(n ?? 0)
   const a = Math.abs(v), sign = v < 0 ? '−' : ''
-  if (a >= 1_000_000) return `${sign}$${(a / 1_000_000).toFixed(a % 1_000_000 === 0 ? 0 : 1)}M`
-  if (a >= 10_000) return `${sign}$${(a / 1000).toFixed(a % 1000 === 0 ? 0 : 1)}k`
+  const short = (x: number) => String(Math.round(x * 10) / 10)   // one decimal at most, no trailing .0 ($1M, not $1000.0k)
+  if (a >= 999_950) return `${sign}$${short(a / 1_000_000)}M`
+  if (a >= 9_995) return `${sign}$${short(a / 1000)}k`
   return sign + money(a)
 }
 

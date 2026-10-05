@@ -7,10 +7,11 @@ export const MIN_BET = 100
  * Bet amount for one game: starts at the table minimum, then remembers the last amount you used
  * on this device (per game) so a big bet never surprises a new player.
  */
-export function useBet(game: string): [number, (n: number) => void] {
+export function useBet(game: string, cash = Infinity): [number, (n: number) => void] {
   const key = `cw.bet.${game}`
+  // the last bet on this device, but never more than what's on hand now (a loss since then would leave Spin off)
   const [v, setV] = useState(() => {
-    try { const n = Number(localStorage.getItem(key)); return n >= MIN_BET ? n : MIN_BET } catch { return MIN_BET }
+    try { const n = Number(localStorage.getItem(key)); const m = n >= MIN_BET ? n : MIN_BET; return Math.max(MIN_BET, Math.min(m, Math.floor(cash / 100) * 100)) } catch { return MIN_BET }
   })
   const set = (n: number) => { setV(n); try { localStorage.setItem(key, String(n)) } catch { /* private mode */ } }
   return [v, set]
