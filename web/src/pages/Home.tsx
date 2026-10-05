@@ -89,7 +89,7 @@ export default function Home() {
       <DailyDrop compact />
 
       {fights.length > 0 && (
-        <Card title="Latest fights" right={<small className="tabular">{me.fights_won}W · {me.fights_lost}L · <Link to="/fight?tab=log">all ›</Link></small>}>
+        <Card title="Latest fights" right={<small className="tabular">{me.fights_won}W · {me.fights_lost}L · <Link to="/fight?tab=log" className="hd-link">all ›</Link></small>}>
           {fights.map(f => {
             const otherId = f.i_attacked ? f.defender_id : f.attacker_id
             // a player who deleted their account has no profile to open

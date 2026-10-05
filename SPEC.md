@@ -735,6 +735,26 @@ come in under the top bar, clear of the bet bar. The blackjack keys (H S D P, En
 to deal) never take a key from a focused button, a field or an open sheet. The Thugs
 list's win chances are counted in plpgsql loops (`_win_frac`), about 9× faster.
 
+**Design system** *(Phase 4, 2026-10-05)*: one set of tokens at the top of `web/src/index.css`,
+and its header says how to use them. Depth comes from lightness, not gradients (page,
+card, tile, button, pressed; inputs and tracks sunken), with one bevel (a top hairline)
+on raised things. Gold is money and "this one": filled gold spends or confirms, tinted gold
+is a screen's main action (Do It, Enter the City, Open, Collect), a gold edge marks what's
+ready or selected; red is danger and attacks, green gains and "yours", blue information,
+each with a tint, an edge and a readable text colour. Grey is every other button, ghost a
+minor one beside a stronger one. Gradients are kept only for materials: cards, dice, felts,
+chips, medals and the logo. Oswald (uppercase) is for titles, labels, big numbers and the
+navigation chrome (tabs, segmented tabs, Back); every button and every sentence is the
+system face. Scales: type 11 / 12.5 / 14 / 15 / 17 / 21 / 28, radius 4 / 8 / 12 / 16 /
+pill, space 4 / 8 / 12 / 16 / 24, motion fast / base / slow on one easing. Animations are
+feedback for something that happened (a deal, a roll, a payout, a crate); nothing loops for
+decoration, and Reduce Motion stops all of it. Every control is 44 pt to the touch (drawn
+smaller, it reaches with an invisible hit area), except the game boards (the city map, the
+roulette layout), links inside a sentence and a checkbox inside its label. The strip under
+the top bar only says what nothing else does: offline anywhere, the hospital off Home.
+`scripts/ui-shots.mjs` captures 25 screens and states of the demo world at 390 × 844 and
+lists every control under 44 pt, for before/after comparisons.
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,

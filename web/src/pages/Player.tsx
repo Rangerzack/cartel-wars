@@ -111,7 +111,7 @@ export default function Player() {
             {amount > me.cash && <div className="why">You have {money(me.cash)} on hand.</div>}
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
               <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" aria-label="Diamonds to send" value={dia || ''} onChange={e => setDia(toInt(e.target.value))} />
-              <Btn className="blue" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
+              <Btn className="gold" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
             </div>
             {dia > me.diamonds && <div className="why">You have 💎 {num(me.diamonds)}.</div>}
             <div className="small muted">Only diamonds you earned in the game can be sent. Bought ones stay with you.</div>

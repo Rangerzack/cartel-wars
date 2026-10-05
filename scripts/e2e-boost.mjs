@@ -152,9 +152,9 @@ try {
   await a.getByText("You're in County Jail — jail setup is active").waitFor()
   const jailCard = a.locator('.card', { has: a.locator('.hd', { hasText: 'County Jail' }) })
   await jailCard.getByText('until you post bail').first().waitFor()
-  await a.locator('.status-strip').getByText('🔒 In jail · until bail').waitFor()
-  // the top bar's heat corner says Jail while you're inside
+  // the top bar's heat corner says Jail while you're inside (and the strip under it doesn't repeat it, Phase 4)
   await a.locator('.topbar .jail-tag', { hasText: 'Jail' }).waitFor()
+  if (await a.locator('.status-strip', { hasText: 'In jail' }).count()) throw new Error('the JAIL tag says it; no jail pill under the top bar')
   if (await a.locator('.topbar .bar.heat').count()) throw new Error('no heat bar in the top bar while jailed')
   if (await police.getByRole('button', { name: /Go to Jail/ }).count()) throw new Error('no second trip while inside')
   const pj = await one(`select diamonds, jail_until = 'infinity' as ok, heat = heat_max as maxed from profiles where id = $1`, [aId])

@@ -114,7 +114,8 @@ export function Stat({ k, v, cls = '' }: { k: string; v: ReactNode; cls?: string
     text.selectNodeContents(el)
     const base = parseFloat(cs.fontSize)
     for (const size of STAT_STEPS.filter(s => s < base)) {
-      if (text.getBoundingClientRect().width <= room + 0.5) return
+      // 2 px to spare: a value that measured a hair under the room ("🔥 34/100", 94.8 of 95) still drew an ellipsis
+      if (text.getBoundingClientRect().width <= room - 2) return
       el.style.fontSize = size + 'px'
     }
   }, [])
