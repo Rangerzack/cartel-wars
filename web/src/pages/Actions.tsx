@@ -108,7 +108,7 @@ export default function Actions() {
                 <div className="t">{a.name}</div>
                 <div className="s">{a.description}</div>
                 <div className="s tabular">
-                  <span style={{ color: '#7dd3fc' }}>⚡ {a.stamina_cost}</span>
+                  <span className="stam">⚡ {a.stamina_cost}</span>
                   {' · '}
                   {a.effect === 'go_to_jail' ? <span>🔒 jail until you post bail</span> : a.pay_rep > 0 ? <span className="dia">⭐ +{a.pay_rep} reputation</span> : <span className="gold">{money(a.pay_min)}–{money(a.pay_max)}</span>}
                   {a.heat_gain > 0 && <> · <span className="red">🔥 +{a.heat_gain}</span></>}

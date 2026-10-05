@@ -105,7 +105,7 @@ function Grow() {
                 <div className="small muted">{num(g.rate)} units / hour</div>
               </div>
               {(perk(me, labFor[g.commodity]) > 0 || perk(me, 'utility') > 0) && <div className="hstack"><PerkTag code={labFor[g.commodity]} /><PerkTag code="utility" /></div>}
-              <div className="bar"><div className="track"><div className="fill" style={{ width: (produced / Math.max(1, g.cap)) * 100 + '%', background: 'linear-gradient(#86efac, #22a34a)' }} /></div></div>
+              <div className="bar"><div className="track"><div className="fill grow-fill" style={{ width: (produced / Math.max(1, g.cap)) * 100 + '%' }} /></div></div>
               {/* the everyday pair on top; stopping and abandoning are small and apart, so Abandon never sits beside Upgrade */}
               <div className="hstack" style={{ flexWrap: 'nowrap' }}>
                 <Btn className="doit flex1" disabled={produced === 0} onClick={() => run(() => api.growCollect(g.id), { ok: r => `Collected ${num(r.collected)} ${c.name}${r.left ? ` (${num(r.left)} left — storage full)` : ''}` })}>Collect</Btn>

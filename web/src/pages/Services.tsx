@@ -241,7 +241,7 @@ function BoostCard() {
             <div className="small">{cost} diamonds buys {label('attack')} in your Offense setup <b>or</b> {label('defense')} in your Defense setup for {hours} hours. One side at a time — while a boost runs you can extend it, and when it runs out you can pick either side again.</div>
             <div className="grid2">
               <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · 💎 {cost}</Btn>
-              <Btn className="blue" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
+              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
             </div>
             {me.diamonds < cost && <div className="why">A boost costs 💎 {cost} — you have 💎 {num(me.diamonds)}.</div>}
             {b.side && <div className="small muted">Your last boost was {b.side}.</div>}

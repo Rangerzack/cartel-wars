@@ -67,6 +67,7 @@ function ScrollToTop() {
 export default function Layout() {
   const { me, catalog, netDown } = useGame()
   const now = useNow()
+  const onHome = useLocation().pathname === '/'
   const b = me ? badges(me) : {}
   const unread = (me?.unread_activity ?? 0) + (me?.unread_dms ?? 0)
   // (2) in the browser tab title, and the home-screen app icon badge where the platform supports it
@@ -113,11 +114,12 @@ export default function Layout() {
           </div>
         </header>
       )}
-      {me && (me.jailed || me.hospital || netDown) && (
+      {/* the strip only says what nothing else on screen does: offline anywhere, the hospital off Home (the top bar's
+          JAIL tag covers jail, and Home's Next up covers both) */}
+      {me && (netDown || (me.hospital && !onHome)) && (
         <div className="status-strip">
           {netDown && <span className="pill red">📡 Offline · retrying</span>}
-          {me.jailed && <span className="pill red">🔒 In jail{me.jail_until ? ` · ${timeLeft(me.jail_until, now)}` : ' · until bail'}</span>}
-          {me.hospital && <span className="pill red">🏥 Hospitalized</span>}
+          {me.hospital && !onHome && <span className="pill red">🏥 Hospitalized</span>}
         </div>
       )}
       {me && <NamePrompt />}
