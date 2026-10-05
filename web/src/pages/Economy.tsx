@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { commodityIcon, money, num, timeLeft, toInt } from '../lib/format'
+import { collectHouses, collectedLine, producedNow as heldNow } from '../lib/grow'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Loading, Qty, Seg } from '../components/ui'
 import { useLoad } from '../lib/useLoad'
@@ -17,8 +18,6 @@ const labFor: Record<Commodity, 'grow_house' | 'dust_lab' | 'pill_factory'> = { 
 
 /** 3.6 → "3h 36m", the way every other duration in the game reads. */
 const hoursMins = (h: number) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h` }
-/** "a, b and c" */
-const andList = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? ''
 
 type Tab = 'grow' | 'hustlers' | 'market'
 
@@ -54,35 +53,17 @@ function Grow() {
   const me = useMe()
   const { catalog, run, ask, meAt } = useGame()
   const now = useNow(10_000)
-  // what a house holds right now: the server's count when `me` arrived, carried forward at the house's rate (the
-  // server computes the same thing from started_at when you collect), so the number and Collect don't sit still
-  // between polls
-  const producedNow = (g: Me['grow_houses'][number]) => (g.running ? Math.min(g.cap, g.produced + Math.floor(Math.max(0, now - meAt) / 3_600_000 * g.rate)) : g.produced)
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  // what a house holds right now, carried forward from the server's count (lib/grow.ts)
+  const producedNow = (g: Me['grow_houses'][number]) => heldNow(g, now, meAt)
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const have = new Set(me.grow_houses.map(g => g.commodity))
   const extraDia = catalog.config.extra_grow_diamonds ?? 20
   const blocked = pathBlock(me, 'producer')
   const lvlCap = me.path ? null : (catalog.config.path_grow_level ?? 5)
   const expandCost = (me.storage_base ?? me.storage_cap) * 20
-  const nameOf = (c: Commodity) => catalog.commodities.find(x => x.code === c)?.name ?? c
   const ready = me.grow_houses.filter(g => producedNow(g) > 0)
-  // every house with something ready, one after another, and one toast for the lot; a full storage ends the round
-  const collectAll = () => run(async () => {
-    const got: string[] = []
-    let stop = ''
-    for (const g of ready) {
-      try {
-        const r = await api.growCollect(g.id)
-        if (r.collected > 0) got.push(`${num(r.collected)} ${nameOf(g.commodity)}`)
-        if (r.left > 0) { stop = 'storage is full'; break }
-      } catch (e) {
-        if (!got.length) throw e
-        stop = (e as Error).message.toLowerCase()
-        break
-      }
-    }
-    return { got, stop }
-  }, { ok: r => `Collected ${andList(r.got)}${r.stop ? ` — ${r.stop}` : ''}` })
+  // every house with something ready, one after another, and one toast for the lot (lib/grow.ts)
+  const collectAll = () => run(() => collectHouses(ready, catalog), { ok: collectedLine })
   return (
     <>
       {blocked && <div className="notice blue">{blocked} You can still collect what's already grown.</div>}
@@ -135,6 +116,7 @@ function Grow() {
                 <span className="push-right"><Btn className="sm ghost red" onClick={async () => { if (await ask(`Its level and anything it has produced are gone for good.`, { title: `Abandon your ${c.name} grow house?`, yes: 'Abandon', tone: 'red' })) return run(() => api.growAbandon(g.id), { ok: () => 'Abandoned' }) }}>Abandon</Btn></span>
               </div>
               {capped && !blocked && <div className="why">Level {lvlCap} is as far as you go without a path — pick Producer above to keep upgrading.</div>}
+              {!capped && !blocked && me.cash < g.upgrade_cost && <div className="why">Upgrading costs {money(g.upgrade_cost)} on hand — you have {money(me.cash)}.</div>}
             </div>
           </Card>
         )
@@ -165,7 +147,7 @@ function Hustlers() {
   const now = useNow()
   const [com, setCom] = useState<Commodity>('herb')
   const [n, setN] = useState(1)
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const c = catalog.commodities.find(x => x.code === com)!
   // Strip Club: each hustler carries more · Night Club: trips come back sooner · Dispensary: sells over street
   const strip = perk(me, 'strip_club'), night = perk(me, 'night_club'), disp = perk(me, 'dispensary')
@@ -243,7 +225,7 @@ function MarketTab() {
     return () => clearInterval(t)
   }, [load])
 
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const feePct = catalog.config.market_fee_pct ?? 5
   const capPct = catalog.config.listing_max_pct ?? 150
   const nameOf = (c: Commodity) => catalog.commodities.find(x => x.code === c)?.name ?? c
@@ -259,7 +241,7 @@ function MarketTab() {
     inStorage < minL ? `You need at least ${num(minL)} ${nameOf(sell.com)} in storage to list (you have ${num(inStorage)}).`
     : sell.n < minL || sell.n > maxL ? `List between ${num(minL)} and ${num(maxL)} units.`
     : sell.n > inStorage ? `You only have ${num(inStorage)} ${nameOf(sell.com)}.`
-    : me.transport_capacity < sell.n ? (me.transport_capacity === 0 ? 'You need a vehicle to haul product — buy one in the Transport shop.' : `Your best vehicle carries ${num(me.transport_capacity)} — list fewer units or buy a bigger ride.`)
+    : me.transport_capacity < sell.n ? (me.transport_capacity === 0 ? 'You need a vehicle to haul product — buy one under Items › Transport.' : `Your best vehicle carries ${num(me.transport_capacity)} — list fewer units or buy a bigger vehicle.`)
     : sellPrice < 1 ? 'Set a price.'
     : sellPrice > sellCap ? `Listings can go up to ${capPct}% of street — ${money(sellCap)} a unit right now.`
     : null
@@ -370,7 +352,7 @@ function MarketTab() {
       </>}
 
       {mtab === 'sell' && (
-        <Card title="Sell" right={<small>truck capacity {num(me.transport_capacity)}</small>}>
+        <Card title="Sell" right={<small>vehicle carries {num(me.transport_capacity)}</small>}>
           <div className="bd stack">
             {perk(me, 'trucking') > 0 && <PerkTag code="trucking" />}
             <Seg value={sell.com} onChange={v => setSell({ com: v, n: sell.n, price: null })} options={comSeg} />

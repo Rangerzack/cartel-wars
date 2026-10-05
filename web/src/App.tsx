@@ -30,7 +30,7 @@ function Gate() {
   if (!authReady) return <div className="empty">Loading…</div>
   if (recovery && session) return <SetNewPassword />
   if (!session) return <Auth />
-  if (!me) return <div className="app"><Toasts /><div className="empty"><span className="spin" /> Entering the city…</div></div>
+  if (!me) return <div className="app"><Toasts /><div className="empty"><span className="spin" aria-hidden /> Entering the city…</div></div>
   return (
     <Routes>
       <Route element={<Layout />}>

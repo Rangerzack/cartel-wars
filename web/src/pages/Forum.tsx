@@ -111,9 +111,9 @@ function BoardView({ cat }: { cat: ForumCategory }) {
       </Card>
       {data && data.pages > 1 && (
         <div className="hstack" style={{ justifyContent: 'center' }}>
-          <button className="btn sm" disabled={page <= 0} onClick={() => setParams({ p: String(page - 1) })}>‹ Newer</button>
+          <button className="btn sm" disabled={page <= 0} onClick={() => setParams({ p: String(page - 1) })}>‹ Prev</button>
           <span className="small muted">page {page + 1} of {data.pages}</span>
-          <button className="btn sm" disabled={page + 1 >= data.pages} onClick={() => setParams({ p: String(page + 1) })}>Older ›</button>
+          <button className="btn sm" disabled={page + 1 >= data.pages} onClick={() => setParams({ p: String(page + 1) })}>Next ›</button>
         </div>
       )}
       {compose && (

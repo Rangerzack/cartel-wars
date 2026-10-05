@@ -122,6 +122,9 @@ try {
   await a.getByText('⚡ Includes your +50 attack boost').waitFor()
   await a.getByText(/Attack 98 · Defense 20/).waitFor()   // 20 + 7×4 knuckles + 50
   await a.locator('.seg button', { hasText: 'Defensive' }).click()
+  // the setup is in the URL now (a router navigation), so wait for the switch to land before looking
+  await a.locator('.seg button[aria-pressed="true"]', { hasText: 'Defensive' }).waitFor()
+  await a.getByText(/^Attack \d+ · Defense \d+$/).waitFor()
   if (await a.getByText('Includes your +50').count()) throw new Error('boost only in its own setup')
 
   // Extend it
@@ -159,15 +162,19 @@ try {
   await jailCard.getByText('bail walks you out with zero heat').waitFor()
   await police.getByText('posting bail clears your heat to 0').waitFor()
   await snap(a, 'jail')
-  // Services puts jail first while you're inside, and Home's "Post bail" lands on it
-  await a.goto(BASE)
-  await a.locator('.notice', { hasText: "You're locked up" }).getByRole('link', { name: 'Post bail →' }).click()
-  await a.waitForURL(/\/services\?focus=jail$/)
+  // Services puts jail first while you're inside
+  await a.goto(`${BASE}/services?focus=jail`)
   await a.locator('#jail.focused').waitFor()
   if ((await a.locator('.svc-nav a').first().textContent()) !== 'Jail') throw new Error('Jail is the first chip')
   if ((await a.locator('.page > .card').first().getAttribute('id')) !== 'jail') throw new Error('the jail card comes first')
-  await jailCard.getByRole('button', { name: 'Post Bail · $8,000' }).click()
+  // Home leads with it too, and bail is paid right there (Phase 3: Next up)
+  await a.goto(BASE)
+  const jailRow = a.locator('.next-up .row[data-next="jail"]')
+  await jailRow.getByText("You're locked up").waitFor()
+  await jailRow.getByRole('button', { name: 'Post Bail · $8,000' }).click()
   await a.getByText('Bailed out for $8,000 · heat back to 0').waitFor()
+  await jailRow.waitFor({ state: 'detached' })
+  await a.goto(`${BASE}/services`)
   const out = await one('select jail_until, heat from profiles where id = $1', [aId])
   if (out.jail_until !== null || out.heat !== 0) throw new Error('out on bail with zero heat: ' + JSON.stringify(out))
   await a.locator('.topbar .bar.heat').waitFor()

@@ -137,7 +137,7 @@ export function Empty({ children }: { children: ReactNode }) { return <div class
 /** Where a list or screen is still loading, or its load failed: a spinner, or what went wrong with a way to try again
  *  (never a spinner that stays forever). `useLoad` supplies `error` and `onRetry`. */
 export function Loading({ error, onRetry }: { error: string | null; onRetry: () => void }) {
-  if (!error) return <Empty><span className="spin" /></Empty>
+  if (!error) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   return (
     <Empty>
       <div className="stack center load-fail">
@@ -158,12 +158,14 @@ export function RowLink({ to, onClick, className = '', label, children }:
   return <button type="button" className={cls} onClick={onClick} aria-label={label}>{children}</button>
 }
 
-/** Button that shows a spinner while its async handler runs. */
-export function Btn({ onClick, children, className = '', disabled }: { onClick: () => Promise<unknown> | void; children: ReactNode; className?: string; disabled?: boolean }) {
+/** Button that shows a spinner while its async handler runs. The label stays in place, just not drawn, so the button
+ *  keeps its width (nothing beside it jumps) and its name for VoiceOver; `label` names it when the text alone doesn't
+ *  say which one it is (a list of "Do It"s). */
+export function Btn({ onClick, children, className = '', disabled, label }: { onClick: () => Promise<unknown> | void; children: ReactNode; className?: string; disabled?: boolean; label?: string }) {
   const [busy, setBusy] = useState(false)
   return (
-    <button type="button" className={`btn ${className}`} disabled={disabled || busy} aria-busy={busy || undefined} onClick={async () => { setBusy(true); try { await onClick() } finally { setBusy(false) } }}>
-      {busy ? <span className="spin" /> : children}
+    <button type="button" className={`btn ${className}${busy ? ' busy' : ''}`} disabled={disabled || busy} aria-busy={busy || undefined} aria-label={label} onClick={async () => { setBusy(true); try { await onClick() } finally { setBusy(false) } }}>
+      {busy ? <><span className="btn-label">{children}</span><span className="spin" aria-hidden /></> : children}
     </button>
   )
 }

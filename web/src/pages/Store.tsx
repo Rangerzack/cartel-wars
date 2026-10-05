@@ -70,7 +70,7 @@ export default function Store() {
             <span className="ico">💎</span>
             <div className="grow t tabular">{num(p.diamonds)} diamonds</div>
             {storeReady && (delivering === p.id
-              ? <span className="small muted nowrap"><span className="spin" /> Delivering…</span>
+              ? <span className="small muted nowrap"><span className="spin" aria-hidden /> Delivering…</span>
               : <Btn className="gold sm" disabled={!products?.[p.id] || !!delivering} onClick={() => buy(p.id, p.diamonds)}>{products?.[p.id]?.priceString ?? '—'}</Btn>)}
           </div>
         ))}

@@ -70,8 +70,10 @@ try {
   const aId = (await one('select id from profiles where name = $1', [N('Warden')])).id
   await db.query('update profiles set is_admin = true where id = $1', [aId])
   await a.reload()
-  await a.getByText(/open reports\. Review →/).waitFor()
-  await a.goto(`${BASE}/admin`)
+  // Home's Next up says reports are waiting, and Review opens the queue
+  await a.locator('.next-up [data-next="reports"]').getByText(/open reports?$/).waitFor()
+  await a.locator('.next-up [data-next="reports"]').getByRole('link', { name: 'Review' }).click()
+  await a.waitForURL(/\/admin$/)
   const item = a.locator('.mod-item', { hasText: N('Carl') })
   await item.getByText('“selling in his bio”').waitFor()
   await item.getByText(N('Betty')).waitFor()

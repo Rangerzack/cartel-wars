@@ -6,6 +6,7 @@ import type { RouletteBet, RouletteBetType, RouletteResult } from '../../lib/typ
 import { Card } from '../ui'
 import { BetPicker, Net, useBet } from './shared'
 
+const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36])
 const key = (b: { type: RouletteBetType; value?: number }) => b.value === undefined ? b.type : `${b.type}:${b.value}`
 const label = (b: { type: RouletteBetType; value?: number }) => {
@@ -60,10 +61,11 @@ export default function Roulette() {
       <Card title="🎡 Roulette" className="table-card" right={<small>European · single zero</small>}>
         <div className="bd stack">
           <div className={`wheel-result ${spinning ? 'spinning' : ''} ${last ? last.color : ''}`}>
-            {spinning ? <span className="spin" /> : last ? <>{last.number}</> : '—'}
+            {spinning ? <span className="spin" role="img" aria-label="Working" /> : last ? <>{last.number}</> : '—'}
           </div>
-          <div className="center" style={{ minHeight: 22 }}>
-            {last && (last.payout > 0 ? <span className="gold">{last.color} {last.number} — paid {money(last.payout)} (<Net n={last.net} />)</span> : <span className="muted">{last.color} {last.number} — house takes it (<Net n={last.net} />)</span>)}
+          {/* read out when the ball lands; the colour leads the line, so it's capitalised */}
+          <div className="center" style={{ minHeight: 22 }} role="status">
+            {last && (last.payout > 0 ? <span className="gold">{cap(last.color)} {last.number} — paid {money(last.payout)} (<Net n={last.net} />)</span> : <span className="muted">{cap(last.color)} {last.number} — house takes it (<Net n={last.net} />)</span>)}
           </div>
           <fieldset className="lockable roulette" disabled={spinning}>
             <button className={`n green ${hit === 0 ? 'hit' : ''}`} onClick={() => add('straight', 0)}>0{amt('straight', 0) && <i>{chips(amt('straight', 0))}</i>}</button>
@@ -91,7 +93,7 @@ export default function Roulette() {
           <div className="table-bar">
             <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip (tap a spot to place it)" />
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <button type="button" className="btn gold flex1" disabled={spinning || !list.length || !!whyNot} onClick={spin}>{spinning ? <span className="spin" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a bet'}</button>
+              <button type="button" className="btn gold flex1" disabled={spinning || !list.length || !!whyNot} onClick={spin}>{spinning ? <span className="spin" role="img" aria-label="Working" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a bet'}</button>
               <button type="button" className="btn ghost" disabled={spinning || !list.length} onClick={() => setBets({})}>Clear</button>
             </div>
             {whyNot && <div className="why">{whyNot}</div>}

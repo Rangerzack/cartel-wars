@@ -75,8 +75,11 @@ export default function Blackjack() {
   // keyboard: H hit · S stand · D double · P split · Enter/Space deal
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // the shortcuts never take a key from something that wants it: a field, a focused button or link (Space and
+      // Enter press that, not Deal), an open sheet, or a key held with a modifier
       const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector('.modal')) return
+      if (t && (t.isContentEditable || t.closest('input, textarea, select, button, a, [role="button"]'))) return
       const k = e.key.toLowerCase()
       if (playing) {
         if (k === 'h') act('hit')
@@ -147,6 +150,8 @@ export default function Blackjack() {
           </div>
         )}
 
+        {/* the result, read out once the hand settles (the drawn line below waits for the dealer's cards) */}
+        <div className="sr-only" role="status">{done && g?.result ? `${summary(g)} ${g.result.net > 0 ? 'up' : g.result.net < 0 ? 'down' : 'even'} ${money(Math.abs(g.result.net))}` : ''}</div>
         {done && g?.result && (
           <div className={`bj-summary ${g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : ''}`} style={{ animationDelay: `${settleDelay}s` }}>
             {summary(g)} <Net n={g.result.net} />
@@ -162,7 +167,7 @@ export default function Blackjack() {
                 <button type="button" className={`btn ${book === 'hit' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('hit')}>Hit<small>H</small></button>
                 <button type="button" className={`btn doit ${book === 'stand' ? 'hinted' : ''}`} disabled={busy} onClick={() => act('stand')}>Stand<small>S</small></button>
                 <button type="button" className={`btn gold ${book === 'double' ? 'hinted' : ''}`} disabled={busy || !canDouble} onClick={() => act('double')}>Double<small>+{money(extra)}</small></button>
-                <button type="button" className={`btn blue ${book === 'split' ? 'hinted' : ''}`} disabled={busy || !canSplit} onClick={() => act('split')}>Split<small>+{money(extra)}</small></button>
+                <button type="button" className={`btn gold ${book === 'split' ? 'hinted' : ''}`} disabled={busy || !canSplit} onClick={() => act('split')}>Split<small>+{money(extra)}</small></button>
               </div>
               {g?.can_double && !canDouble && <div className="why">Doubling needs {money(extra)} on hand.</div>}
               {g?.can_split && !canSplit && <div className="why">Splitting needs {money(extra)} on hand.</div>}

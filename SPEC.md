@@ -714,6 +714,27 @@ Hoodlums are hired where they're used as well as at Services: Territory's Thugs,
 Mercs and Spies tiles open a hire panel on the page, and a block's attack sheet
 that is short of thugs offers the missing ones, which join that attack.
 
+**UX rules** *(Phase 3, 2026-10-04)*: Home leads with what needs you. **Next up** is the
+first card whenever something waits (jail, the hospital, open reports for admins, Daily
+Drop crates, hustler trips back, full grow houses), most urgent first, and each one is
+done right there: Post Bail and Heal to Full pay in place (gold, full width, with the
+reason under them when you're short), Collect and Open sit at the end of their line.
+A new player's **Getting started** comes next, above the stats: just the next step,
+gold-edged, with how many are done, and the other five a tap away. A disabled button
+says why where you'd tap it (bail, bribes, boosts, upgrades, banks, rebuys, the grow
+house Upgrade), or the line beside it says what you have (the shop's cash on hand, the
+refill row's diamonds and product). The shop buys ×1, ×5 or ×10 a tap (kept in the URL
+as `n`) and equips them into the free slots of each setup they fit; Sell sells the
+loose units, up to that count. Words: a vehicle "carries" N; pagers are ‹ Prev / Next ›;
+a poker table is joined with Sit (your own reads Your Seat). Paying more at the
+blackjack table (Double, Split) is gold. Do It buttons are named for their job, and
+the job's result, the casino results and loading spinners are read out to VoiceOver.
+A busy button keeps its width. Sign out takes one tap. Chat loads older lines 50 at a
+time (the server caps a read at 200) and keeps your place. At a casino table toasts
+come in under the top bar, clear of the bet bar. The blackjack keys (H S D P, Enter
+to deal) never take a key from a focused button, a field or an open sheet. The Thugs
+list's win chances are counted in plpgsql loops (`_win_frac`), about 9× faster.
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,

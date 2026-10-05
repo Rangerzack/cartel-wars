@@ -1,6 +1,8 @@
 import { now as clockNow } from './clock'
 export const money = (n: number | null | undefined) => { const v = Math.round(n ?? 0); return (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US') }
 export const num = (n: number | null | undefined) => Math.round(n ?? 0).toLocaleString('en-US')
+/** "a, b and c" */
+export const andList = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? ''
 /** What an amount field means as a whole number: "1,000" is 1000, "2.5" is 2, "" is 0 (RPCs take integers). */
 export const toInt = (v: string) => { const n = Math.floor(Number(v.replace(/[^0-9.]/g, ''))); return Number.isFinite(n) && n > 0 ? n : 0 }
 

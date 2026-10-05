@@ -20,6 +20,8 @@ export default function Actions() {
   const [bust, setBust] = useState<Result | null>(null)
   const [flash, setFlash] = useState<Record<number, Flash>>({})
   const [session, setSession] = useState({ jobs: 0, cash: 0, rep: 0, finds: 0 })
+  // what VoiceOver reads after a job: the flash on the row is drawn, not said
+  const [said, setSaid] = useState('')
   const [found, setFound] = useState<{ item: RareFind; res: Result } | null>(null)
   const [finds, setFinds] = useState<RecentFind[] | null>(null)
   useEffect(() => { api.recentFinds(6).then(setFinds).catch(() => setFinds([])) }, [])
@@ -31,7 +33,7 @@ export default function Actions() {
   const flashKey = useRef(0)
   const timers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
   useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), [])
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
 
   const list = catalog.actions.filter(a => a.is_jail === me.jailed)
   const owned = new Set(me.inventory.map(i => i.item_id))
@@ -63,6 +65,7 @@ export default function Actions() {
     if (r.busted || a.effect === 'go_to_jail') { setBust(res); return }
     const key = ++flashKey.current
     setFlash(f => ({ ...f, [a.id]: { ...res, key } }))
+    setSaid(`${a.name}: ${r.rep > 0 ? `plus ${r.rep} reputation` : `plus ${money(r.pay)}`}. ${r.stamina} stamina left, heat ${r.heat}.`)
     clearTimeout(timers.current[a.id])
     timers.current[a.id] = setTimeout(() => setFlash(f => { const n = { ...f }; if (n[a.id]?.key === key) delete n[a.id]; return n }), 2600)
   }
@@ -70,7 +73,10 @@ export default function Actions() {
   return (
     <div className="page">
       <h2>{me.jailed ? 'Jail Actions' : 'Actions'}</h2>
-      {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out. <Link to="/services?focus=jail">Post bail →</Link></div>}
+      <div className="sr-only" role="status">{said}</div>
+      {me.jailed && <div className="notice red">Inside, the hustle is different. These are the only actions you can run until you're out.</div>}
+      {/* bail paid right here, the way the hospital's Heal to Full is */}
+      {me.jailed && <BailButton />}
       {me.hospital && <div className="notice red">You can't work from a hospital bed.</div>}
       {me.hospital && <HealButton />}
       {me.path_required && <div className="notice gold">{me.path_due === 'grow' ? 'Your grow houses have outgrown the starter rules' : "You've earned your stripes"} — time to pick Producer or Trader. <Link to="/economy">Choose your path →</Link></div>}
@@ -121,7 +127,7 @@ export default function Actions() {
                 )}
               </div>
               <div className="doit-wrap">
-                <Btn className="doit" disabled={!!cant} onClick={() => tired ? askRefill(a.stamina_cost) : go(a)}>Do It</Btn>
+                <Btn className="doit" label={`Do It: ${a.name}`} disabled={!!cant} onClick={() => tired ? askRefill(a.stamina_cost) : go(a)}>Do It</Btn>
                 {f && <span key={f.key} className="floater">{f.rep > 0 ? `⭐+${f.rep}` : `+${money(f.pay)}`}</span>}
               </div>
             </div>

@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { ActivityItem, FightLog } from '../lib/types'
 import { useGame, useMe } from '../lib/game'
-import { ago, money, num, timeLeft } from '../lib/format'
-import { scrollBehavior } from '../lib/scroll'
-import { useNow } from '../lib/useNow'
+import { ago, money, num } from '../lib/format'
 import { Card, RowLink, Stat } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { GettingStarted } from '../components/GettingStarted'
@@ -13,18 +11,15 @@ import { features } from '../lib/features'
 import { ActivityRow } from '../components/Activity'
 import { HomePath } from '../components/Path'
 import { DailyDrop } from '../components/DailyDrop'
+import { NextUp } from '../components/NextUp'
 
 type Tile = { to: string; ic: string; l: string; badge?: { n: number; tone: 'red' | 'gold'; label: string } }
 
 export default function Home() {
   const me = useMe()
-  const now = useNow()
   const off = me.power.offense, def = me.power.defense
   const { refresh, catalog } = useGame()
-  const healAmt = catalog?.config.health_regen_amount ?? 10
   const heatRed = me.heat_red ?? catalog?.config.heat_red ?? 75
-  const full = me.grow_houses.filter(g => g.running && g.produced >= g.cap).length
-  const back = me.hustlers.filter(h => h.back).length
   const [fights, setFights] = useState<FightLog[]>([])
   useEffect(() => { api.fights(3).then(setFights).catch(() => {}) }, [me.fights_won, me.fights_lost])
   // "While you were away": unseen activity, until the player clears it or opens the Activity page
@@ -54,16 +49,10 @@ export default function Home() {
 
   return (
     <div className="page">
-      {me.jailed && (
-        <div className="notice red">You're locked up{me.jail_until ? <> for another {timeLeft(me.jail_until, now)}</> : <> until you post bail</>}. Only jail actions work, and you can only fight other inmates, with your jail setup. <Link to="/services?focus=jail">Post bail →</Link></div>
-      )}
-      {me.hospital && (
-        <div className="notice red">You're in the hospital at {me.health} health — +{healAmt} in {timeLeft(me.health_next, now)}, out at {me.hospital_out_at ?? 20}. <Link to="/services?focus=hospital">Heal to full →</Link></div>
-      )}
-      {me.is_admin && (me.reports_open ?? 0) > 0 && <div className="notice blue">🛡 {me.reports_open} player{me.reports_open === 1 ? ' has' : 's have'} open reports. <Link to="/admin">Review →</Link></div>}
-      {back > 0 && <div className="notice gold">{back} hustler trip{back > 1 ? 's are' : ' is'} back with cash. <Link to="/economy?tab=hustlers">Collect →</Link></div>}
-      {(me.drop?.crates ?? 0) > 0 && <div className="notice gold">📦 {me.drop!.crates === 1 ? 'A Daily Drop crate is' : `${me.drop!.crates} Daily Drop crates are`} waiting. <button type="button" className="linkbtn" onClick={() => document.getElementById('drop')?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })}>Open →</button></div>}
-      {full > 0 && <div className="notice gold">{full} grow house{full > 1 ? 's are' : ' is'} full — collect to keep production going. <Link to="/economy">Collect →</Link></div>}
+      {/* what needs you now (jail, the hospital, crates, trips back, full houses), then a new player's next step: both
+          above the stats, so the first thing to do is the first thing on screen (Phase 3) */}
+      <NextUp />
+      <GettingStarted me={me} />
 
       {/* Cash and diamonds are already in the top bar (P3-19); Storage replaces the old Storage card and opens Economy, where Expand is */}
       <div className="grid3">
@@ -96,7 +85,6 @@ export default function Home() {
       <HomePath />
 
       {me.ribbons.length > 0 && <Ribbons list={me.ribbons} />}
-      <GettingStarted me={me} />
 
       <DailyDrop compact />
 

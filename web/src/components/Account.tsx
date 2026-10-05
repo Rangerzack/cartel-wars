@@ -29,14 +29,14 @@ function NewPasswordFields({ onDone, submitLabel }: { onDone: () => void; submit
       <label className="f">New password<input className="input" type="password" autoComplete="new-password" minLength={6} value={pw} onChange={e => setPw(e.target.value)} /></label>
       <label className="f">Confirm new password<input className="input" type="password" autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} /></label>
       {bad && <div className="small red">{bad}</div>}
-      <button className="btn gold block" type="submit" disabled={!!bad || !pw || pw !== pw2 || saving}>{saving ? <span className="spin" /> : submitLabel}</button>
+      <button className="btn gold block" type="submit" disabled={!!bad || !pw || pw !== pw2 || saving}>{saving ? <span className="spin" role="img" aria-label="Working" /> : submitLabel}</button>
     </form>
   )
 }
 
 /** Account card on the Profile page: email, change password, sign out, delete the account. */
 export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
-  const { session, signOut, ask } = useGame()
+  const { session, signOut } = useGame()
   const [changing, setChanging] = useState(false)
   const [deleting, setDeleting] = useState(false)
   return (
@@ -46,7 +46,8 @@ export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
           ? <><NewPasswordFields submitLabel="Save new password" onDone={() => setChanging(false)} /><button className="btn sm ghost" onClick={() => setChanging(false)}>Cancel</button></>
           : <div className="grid2">
               <button className="btn" onClick={() => setChanging(true)}>Change password</button>
-              <Btn className="ghost" onClick={async () => { if (await ask('You can sign back in any time with your email and password.', { title: 'Sign out on this device?', yes: 'Sign out' })) { await signOut(); onSignedOut() } }}>Sign out</Btn>
+              {/* no "are you sure": signing out loses nothing, and it's two screens deep (Phase 3) */}
+              <Btn className="ghost" onClick={async () => { await signOut(); onSignedOut() }}>Sign out</Btn>
             </div>}
         <button className="btn sm ghost red" onClick={() => setDeleting(true)}>Delete account</button>
       </div>

@@ -15,7 +15,7 @@ const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon'
 
 export default function Items() {
   const me = useMe()
-  const { catalog, run, toast, ask } = useGame()
+  const { catalog, run, toast, ask, refresh } = useGame()
   const nav = useNavigate()
   // the tab, setup and category live in the URL (/items?tab=shop&cat=weapon, /items?setup=defense): a reload, Back
   // from the boost card or a link lands on the same view. The old /items#shop still opens the shop.
@@ -23,7 +23,10 @@ export default function Items() {
   const tab = window.location.hash === '#shop' ? 'shop' : tabParam
   const [setup, setSetup] = useParam<SetupKind>('setup', ['offense', 'defense', 'jail'], 'offense')
   const [cat, setCat] = useParam<ItemCategory>('cat', cats, 'weapon')
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  // how many each Buy (and Sell) tap moves: filling six slots was six taps (Phase 3)
+  const [many, setMany] = useParam<'1' | '5' | '10'>('n', ['1', '5', '10'], '1')
+  const n = Number(many)
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const shopPerk = cat === 'transport' ? 'chop_shop' as const : 'pawn_shop' as const
 
   const inv = new Map(me.inventory.map(i => [i.item_id, i]))
@@ -36,24 +39,30 @@ export default function Items() {
   // weapons and protection count in both fight setups; jail weapons only inside
   const homeSetups: Partial<Record<ItemCategory, SetupKind[]>> = { weapon: ['offense', 'defense'], protection: ['offense', 'defense'], jail_weapon: ['jail'] }
   const setupName: Record<SetupKind, string> = { offense: 'Offensive', defense: 'Defensive', jail: 'Jail' }
-  /** Buy one and equip it straight away wherever it has a free slot — new players shouldn't need a second screen.
+  /** Buy n and equip them straight away wherever there are free slots — new players shouldn't need a second screen.
    *  A reputation item can't be sold back, so that one asks first. */
-  async function buy(itemId: number, category: ItemCategory, name: string, rep = 0) {
-    if (rep > 0 && !await ask(`Reputation items can't be sold back.`, { title: `Buy ${name} for ⭐ ${num(rep)}?`, yes: `Buy · ⭐ ${num(rep)}`, tone: 'gold' })) return
-    const r = await run(() => api.buyItem(itemId, 1), { silent: true })
+  async function buy(itemId: number, category: ItemCategory, name: string, n: number, rep = 0) {
+    if (rep > 0 && !await ask(`Reputation items can't be sold back.`, { title: `Buy ${n > 1 ? `${n} × ` : ''}${name} for ⭐ ${num(rep * n)}?`, yes: `Buy · ⭐ ${num(rep * n)}`, tone: 'gold' })) return
+    const r = await run(() => api.buyItem(itemId, n), { silent: true, refresh: false })
     if (!r) return
+    // the setups as they stand now, not as this screen last drew them: a second quick ×5 would otherwise equip over
+    // the first one's numbers
+    const now = await api.me().catch(() => me)
     const targets = homeSetups[category] ?? []
     const into: string[] = [], full: string[] = []
     for (const s of targets) {
-      const inSetup = me.setups[s] ?? []
-      if (inSetup.reduce((a, x) => a + x.qty, 0) >= me.inventory_slots) { full.push(setupName[s]); continue }
+      const inSetup = now.setups[s] ?? []
+      const free = now.inventory_slots - inSetup.reduce((a, x) => a + x.qty, 0)
+      if (free <= 0) { full.push(setupName[s]); continue }
       const q = inSetup.find(x => x.item_id === itemId)?.qty ?? 0
-      if (await run(() => api.equip(s, itemId, q + 1), { silent: true })) into.push(setupName[s])
+      if (await run(() => api.equip(s, itemId, q + Math.min(n, free)), { silent: true })) into.push(setupName[s])
     }
+    if (!into.length) await refresh()   // nothing equipped, so nothing refreshed yet: the cash and the count
     const list = (xs: string[]) => xs.join(' and ') + (xs.length > 1 ? ' setups' : ' setup')
-    toast(into.length ? `Bought ${name} and equipped it in your ${list(into)}`
-      : full.length ? `Bought ${name} — your ${list(full)} ${full.length > 1 ? 'are' : 'is'} full, swap it in under Setups`
-      : `Bought ${name}`, 'ok')
+    const what = n > 1 ? `${n} ${name}` : name
+    toast(into.length ? `Bought ${what} and equipped ${n > 1 ? 'them' : 'it'} in your ${list(into)}`
+      : full.length ? `Bought ${what} — your ${list(full)} ${full.length > 1 ? 'are' : 'is'} full, swap ${n > 1 ? 'them' : 'it'} in under Setups`
+      : `Bought ${what}`, 'ok')
   }
 
   return (
@@ -92,7 +101,7 @@ export default function Items() {
                 <div key={i.item_id} className="row">
                   <div className="grow">
                     <div className="t">{catalog.items.find(d => d.id === i.item_id)?.drop_only && <span className="find-tag">🎁 </span>}{i.name} <span className="muted small">×{i.qty}</span></div>
-                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${i.capacity} ` : ''}<ComboTags id={i.item_id} /></div>
+                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `carries ${num(i.capacity)} ` : ''}<ComboTags id={i.item_id} /></div>
                   </div>
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
                     <Btn className="sm" disabled={q === 0} onClick={() => run(() => api.equip(setup, i.item_id, q - 1), { silent: true })}>−</Btn>
@@ -109,6 +118,13 @@ export default function Items() {
       {tab === 'shop' && (
         <>
           <Seg value={cat} onChange={setCat} options={cats.map(c => ({ v: c, l: categoryLabel[c] }))} />
+          {/* what a tap buys, and what you have to spend: a price that's off is off because of this line */}
+          <div className="spread shop-bar">
+            <div className="seg" role="group" aria-label="How many at a time">
+              {(['1', '5', '10'] as const).map(v => <button key={v} type="button" className={many === v ? 'on' : ''} aria-pressed={many === v} onClick={() => setMany(v)}>×{v}</button>)}
+            </div>
+            <span className="small muted tabular">{catalog.items.some(i => i.category === cat && i.rep_price > 0) ? <>⭐ {num(me.reputation)} · </> : null}{money(me.cash)} on hand</span>
+          </div>
           {(perk(me, shopPerk) > 0 || perk(me, 'repo') > 0) && <div className="hstack"><PerkTag code={shopPerk} /><PerkTag code="repo" /></div>}
           <Card>
             {catalog.items.filter(i => i.category === cat).map(i => {
@@ -124,18 +140,21 @@ export default function Items() {
                 <div key={i.id} className={`row ${drop ? 'drop-only' : ''}`}>
                   <div className="grow">
                     <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
-                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `cargo ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
+                    <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `carries ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
-                  {loose > 0 && i.rep_price === 0 && !drop && <Btn className="sm ghost" onClick={async () => {
-                    // it sits next to the gold Buy and goes back at about half price: ask first
-                    if (!await ask(`It goes back for about half what it costs to buy.`, { title: `Sell one ${i.name} for ${money(resale)}?`, yes: `Sell · ${money(resale)}`, tone: 'gold' })) return
-                    return run(() => api.sellItem(i.id, 1), { ok: r => `Sold for ${money(r.refund)}` })
-                  }}>Sell {money(resale)}</Btn>}
+                  {loose > 0 && i.rep_price === 0 && !drop && (() => {
+                    // sells up to the count picked, never an equipped unit; it goes back at about half, so it asks first
+                    const k = Math.min(n, loose)
+                    return <Btn className="sm ghost" onClick={async () => {
+                      if (!await ask(`${k > 1 ? 'They go' : 'It goes'} back for about half what ${k > 1 ? 'they cost' : 'it costs'} to buy.`, { title: `Sell ${k > 1 ? `${k} × ${i.name}` : `one ${i.name}`} for ${money(resale * k)}?`, yes: `Sell · ${money(resale * k)}`, tone: 'gold' })) return
+                      return run(() => api.sellItem(i.id, k), { ok: r => `Sold ${k > 1 ? `${k} for ` : 'for '}${money(r.refund)}` })
+                    }}>Sell{k > 1 ? ` ${k}` : ''} {money(resale * k)}</Btn>
+                  })()}
                   {drop
                     ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on jobs</Btn>
                     : i.rep_price > 0
-                    ? <Btn className="sm gold" disabled={me.reputation < i.rep_price} onClick={() => buy(i.id, i.category, i.name, i.rep_price)}>⭐ {num(i.rep_price)}</Btn>
-                    : <Btn className="sm gold" disabled={me.cash < cost} onClick={() => buy(i.id, i.category, i.name)}>{cost < i.price && <s className="was">{money(i.price)}</s>}{money(cost)}</Btn>}
+                    ? <Btn className="sm gold" disabled={me.reputation < i.rep_price * n} onClick={() => buy(i.id, i.category, i.name, n, i.rep_price)}>{n > 1 ? `${n} · ` : ''}⭐ {num(i.rep_price * n)}</Btn>
+                    : <Btn className="sm gold" disabled={me.cash < cost * n} onClick={() => buy(i.id, i.category, i.name, n)}>{n > 1 ? `${n} · ` : ''}{cost < i.price && <s className="was">{money(i.price * n)}</s>}{money(cost * n)}</Btn>}
                 </div>
               )
             })}
