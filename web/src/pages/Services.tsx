@@ -34,7 +34,7 @@ export default function Services() {
   }, [focus, key])
   const [bank, setBank] = useState(0)
   const [bribe, setBribe] = useState(10)
-  if (!catalog) return <Empty><span className="spin" /></Empty>
+  if (!catalog) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const cfg = catalog.config
   const bribeN = Math.min(bribe, me.heat)
   const heatRed = me.heat_red ?? cfg.heat_red
@@ -104,6 +104,8 @@ export default function Services() {
                 onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup. Your heat goes to max (${me.heat_max}) while you're in, and back to 0 when you bail.`, { title: `Go to jail for 💎 ${cfg.jail_diamonds ?? 50}?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
             </div>
           )}
+          {!me.jailed && (me.hospital ? <div className="why">Not from a hospital bed — heal up first.</div>
+            : me.diamonds < (cfg.jail_diamonds ?? 50) ? <div className="why">Going in costs 💎 {cfg.jail_diamonds ?? 50} — you have 💎 {num(me.diamonds)}.</div> : null)}
         </div>
       </Card>
     ),
@@ -117,6 +119,9 @@ export default function Services() {
             <Btn className="gold" disabled={bank <= 0 || bank > me.cash} onClick={async () => { if (await run(() => api.bankDeposit(bank), { ok: r => `Banked. Balance ${money(r.bank)}` })) setBank(0) }}>Deposit</Btn>
             <Btn disabled={bank <= 0 || bank > me.bank} onClick={async () => { if (await run(() => api.bankWithdraw(bank), { ok: r => `Withdrawn. Balance ${money(r.bank)}` })) setBank(0) }}>Withdraw</Btn>
           </div>
+          {bank > me.cash && bank > me.bank ? <div className="why">You have {money(me.cash)} on hand and {money(me.bank)} banked.</div>
+            : bank > me.cash ? <div className="why">You have {money(me.cash)} on hand to deposit.</div>
+            : bank > me.bank ? <div className="why">You have {money(me.bank)} banked to withdraw.</div> : null}
           <div className="hstack">
             <button className="btn sm ghost" onClick={() => setBank(me.cash)}>All cash</button>
             <button className="btn sm ghost" onClick={() => setBank(me.bank)}>All banked</button>
@@ -139,6 +144,9 @@ export default function Services() {
             })}
           </>}
         </div>
+        {me.stamina < me.stamina_max && (me.diamonds < cfg.refill_diamonds || catalog.commodities.some(c => (me.storage[c.code] ?? 0) < refillUnits(c.refill_stamina))) && (
+          <div className="row small muted refill-have">You have 💎 {num(me.diamonds)}, and {catalog.commodities.map((c, i) => <span key={c.code}>{i ? ' · ' : ''}{commodityIcon[c.code]} {num(me.storage[c.code] ?? 0)}</span>)} in storage</div>
+        )}
         <div className="row small refill-left">
           <span className="muted">Full refills left today</span>
           {catalog.commodities.map(c => { const d = drugRefill(me, catalog, c.code); return <span key={c.code} className={`pill ${d.left ? '' : 'red'}`}>{commodityIcon[c.code]} {d.left}/{d.full}</span> })}
@@ -172,7 +180,7 @@ export default function Services() {
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <div className="row small muted"><div>Diamonds come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
+        <div className="row small muted"><div>You have 💎 {num(me.diamonds)}. Diamonds come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
       </Card>
     ),
     milestones: <Milestones />,
@@ -226,6 +234,7 @@ function BoostCard() {
               <Btn className="sm" disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>Extend · 💎 {cost}</Btn>
             </div>
             <div className="small muted">One side at a time: you can switch to {other(b.side)} once this one runs out.</div>
+            {me.diamonds < cost && <div className="why">Extending costs 💎 {cost} — you have 💎 {num(me.diamonds)}.</div>}
           </>
         ) : (
           <>
@@ -234,6 +243,7 @@ function BoostCard() {
               <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · 💎 {cost}</Btn>
               <Btn className="blue" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
             </div>
+            {me.diamonds < cost && <div className="why">A boost costs 💎 {cost} — you have 💎 {num(me.diamonds)}.</div>}
             {b.side && <div className="small muted">Your last boost was {b.side}.</div>}
           </>
         )}

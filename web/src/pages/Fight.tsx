@@ -218,7 +218,7 @@ function Combos() {
   const me = useMe()
   const { catalog } = useGame()
   const { data: meta, error: metaError, reload: reloadMeta } = useLoad(() => api.comboMeta())
-  if (!catalog?.combo_styles || !catalog.combos) return <Card><Empty><span className="spin" /></Empty></Card>
+  if (!catalog?.combo_styles || !catalog.combos) return <Card><Empty><span className="spin" role="status" aria-label="Loading" /></Empty></Card>
   const styles = catalog.combo_styles
   const cfg = catalog.config
   const owns = (part: number[]) => part.some(id => me.inventory.some(i => i.item_id === id && i.qty > 0))

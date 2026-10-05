@@ -4,7 +4,7 @@ import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
 import { ago, money, toInt } from '../lib/format'
 import { Btn, Card, Empty, Loading, RowLink, Stat } from '../components/ui'
-import { Ledger } from '../components/Ledger'
+import { BankWhy, Ledger } from '../components/Ledger'
 import type { CrewSummary } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { CrewLink } from '../components/Linked'
@@ -113,6 +113,7 @@ function CartelPage({ id }: { id: string }) {
             <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => bank(amount)}>Deposit</Btn>
             {c.is_don && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => bank(-amount)}>Withdraw</Btn>}
           </div>
+          <BankWhy amount={amount} cash={me.cash} bank={c.bank ?? null} canWithdraw={!!c.is_don} name="cartel" />
         </Card>
       )}
       {c.member && <Ledger scope="cartel" version={ledgerV} />}

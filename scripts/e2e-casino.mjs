@@ -126,7 +126,7 @@ try {
   await db.query(`delete from poker_seats`); await db.query(`delete from poker_hands`)
   const b = await newPlayer(N('Bet'))
   await a.goto(BASE + '/casino/poker')
-  await a.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: /Open|Join/ }).click()
+  await a.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: 'Sit', exact: true }).click()
   await a.locator('.modal').waitFor()
   await snap(a, 'poker-buyin')
   await a.getByRole('button', { name: /Sit down with/ }).click()
@@ -136,7 +136,7 @@ try {
   await snap(a, 'poker-alone')
 
   await b.goto(BASE + '/casino/poker')
-  await b.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: 'Join' }).click()
+  await b.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: 'Sit', exact: true }).click()
   await b.getByRole('button', { name: /Sit down with/ }).click()
   await toast(b, /Bought in for/)
   await b.locator('.felt').waitFor()

@@ -5,7 +5,7 @@ import { api } from '../lib/api'
 import { ago, money, num, toInt } from '../lib/format'
 import { Btn, Card, Empty, Loading, Modal, RowLink, Stat } from '../components/ui'
 import { BailButton } from '../components/Bail'
-import { Ledger } from '../components/Ledger'
+import { BankWhy, Ledger } from '../components/Ledger'
 import { useNow } from '../lib/useNow'
 import { timeLeft } from '../lib/format'
 import type { CrewFightResult } from '../lib/types'
@@ -207,6 +207,7 @@ function CrewPage({ id }: { id: string }) {
             <Btn className="gold" disabled={amount <= 0 || amount > me.cash} onClick={() => bank(amount)}>Deposit</Btn>
             {boss && <Btn disabled={amount <= 0 || amount > (c.bank ?? 0)} onClick={() => bank(-amount)}>Withdraw</Btn>}
           </div>
+          <BankWhy amount={amount} cash={me.cash} bank={c.bank ?? null} canWithdraw={!!boss} name="crew" />
         </Card>
       )}
       {mine && <Ledger scope="crew" version={ledgerV} />}

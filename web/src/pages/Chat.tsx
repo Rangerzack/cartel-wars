@@ -57,6 +57,11 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   const atEnd = useRef(true)
   // a dropped connection is said once, not on every poll
   const failing = useRef(false)
+  // how far back the log reaches: 50 lines, 50 more per "Load older" (the server caps it at 200); the polls keep it
+  const [limit, setLimit] = useState(50)
+  const reach = useRef(50)   // the same number, for load() without restarting the subscription
+  const [older, setOlder] = useState(false)
+  const keepFromEnd = useRef(0)   // where the reader was, measured from the bottom, across a load of older lines
   const isDm = channel.startsWith('dm:')
   // Blocking: in group chats the lines of players I've blocked never render, whether they came with the history or
   // arrived live (the server already leaves them out of get_messages). A DM keeps its history, but either side's block
@@ -68,7 +73,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
   const now = useNow(30_000)
   const mutedUntil = me.muted_until && new Date(me.muted_until).getTime() > now ? me.muted_until : null
 
-  const load = useCallback(() => api.messages(channel)
+  const load = useCallback(() => api.messages(channel, reach.current)
     .then(m => { setMsgs(m); failing.current = false })
     .catch(e => { if (!failing.current) toast(e.message, 'bad'); failing.current = true }), [channel, toast])
   useEffect(() => {
@@ -89,7 +94,23 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
     const poll = setInterval(() => { if (document.visibilityState !== 'visible') return; if (!live || ++n % 8 === 0) load() }, 4_000)
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [channel, load, me.id])
-  useEffect(() => { if (atEnd.current) logRef.current?.scrollTo({ top: 1e9 }) }, [msgs])
+  useEffect(() => {
+    const el = logRef.current
+    if (!el) return
+    // older lines landed above: hold the reader's place instead of jumping
+    if (keepFromEnd.current) { el.scrollTop = el.scrollHeight - keepFromEnd.current; keepFromEnd.current = 0; return }
+    if (atEnd.current) el.scrollTo({ top: 1e9 })
+  }, [msgs])
+  const loadOlder = async () => {
+    const el = logRef.current
+    if (el) keepFromEnd.current = el.scrollHeight - el.scrollTop
+    reach.current = Math.min(200, reach.current + 50)
+    setLimit(reach.current)
+    setOlder(true)
+    await load()
+    setOlder(false)
+  }
+  const more = !!msgs && msgs.length >= limit && limit < 200
   const onLogScroll = (el: HTMLDivElement) => { atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
   // Reading a DM clears its unread badge: mark it read whenever a message from them shows up here.
   const markedUpTo = useRef(0)
@@ -123,7 +144,8 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
           room; a DM names who it's with, and table talk has no seg */}
       <Card className={`chat ${compact ? 'compact' : ''}`} title={title}>
         <div className="log" ref={logRef} onScroll={e => onLogScroll(e.currentTarget)}>
-          {!shown && <Empty><span className="spin" /></Empty>}
+          {more && <button type="button" className="btn sm ghost load-older" disabled={older} onClick={loadOlder}>{older ? 'Loading…' : 'Load older messages'}</button>}
+          {!shown && <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>}
           {shown?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}
           {shown?.map(m => (
             <div key={m.id} className={`msg ${m.sender_id === me.id ? 'me' : ''}`}>
@@ -138,7 +160,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
           : cut ? <div className="chat-cut small muted">You can't message each other.</div> : (
           <form onSubmit={send}>
             <input className="input" placeholder="Say something…" aria-label="Message" value={text} maxLength={500} onChange={e => setText(e.target.value)} />
-            <button className="btn doit" type="submit" disabled={sending || !text.trim()}>{sending ? <span className="spin" /> : 'Send'}</button>
+            <button className="btn doit" type="submit" disabled={sending || !text.trim()}>{sending ? <span className="spin" role="img" aria-label="Working" /> : 'Send'}</button>
           </form>
         )}
       </Card>
@@ -162,7 +184,7 @@ function Conversations() {
   useEffect(() => { api.conversations().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
   return (
     <Card>
-      {!list && <Empty><span className="spin" /></Empty>}
+      {!list && <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>}
       {list?.length === 0 && <Empty>No private conversations. Open a player's profile and tap Chat.</Empty>}
       {list?.map(c => (
         <RowLink key={c.channel} to={`/chat/${c.channel}`} className={c.unread ? 'unread' : ''}>

@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useGame, useMe } from '../lib/game'
-import { ago, dropIcon, hoodlumIcon, money, nextRollover, num, timeLeft } from '../lib/format'
+import { ago, dropIcon, nextRollover, num, timeLeft } from '../lib/format'
 import { policyUrl, type PolicyPage } from '../lib/pages'
 import { isNative, openExternal } from '../lib/platform'
 import { buyDrop, getOfferings, manageSubscriptions, storeReady, waitForDelivery, type StoreProduct } from '../lib/store'
 import { useNow } from '../lib/useNow'
-import type { DropPrize, DropResult, RecentDrop } from '../lib/types'
-import { Btn, Card, Modal, RowLink } from './ui'
+import type { DropPrize, RecentDrop } from '../lib/types'
+import { Btn, Card, RowLink } from './ui'
+import { useCrateOpener } from './CrateOpener'
 
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
@@ -28,7 +29,6 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const nav = useNavigate()
   const [showOdds, setShowOdds] = useState(false)
   const [jackpots, setJackpots] = useState<RecentDrop[] | null>(null)
-  const [reveal, setReveal] = useState<{ r?: DropResult } | null>(null)
   const [product, setProduct] = useState<StoreProduct | null>(null)
   const [priceFailed, setPriceFailed] = useState(false)
   const [priceTry, setPriceTry] = useState(0)
@@ -44,7 +44,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
     if (!wantPrice) return
     getOfferings([dropProduct]).then(r => { setProduct(r[dropProduct] ?? null); setPriceFailed(false) }).catch(() => { setProduct(null); setPriceFailed(true) })
   }, [wantPrice, dropProduct, priceTry])
-  const opening = useRef(0)   // which open is in progress; closing the sheet during the shake retires it
+  const crate = useCrateOpener(r => { if (r.jackpot) api.recentDrops(5).then(setJackpots).catch(() => {}) })
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
   if (!d || !prizes?.length || !catalog) return null
@@ -89,19 +89,6 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
     if (!await ask(`No more crates after today.${d.crates ? ` Your ${d.crates} unopened crate${d.crates > 1 ? 's stay' : ' stays'} yours to open.` : ''}`, { title: 'Cancel the Daily Drop?', yes: 'Cancel it', tone: 'red' })) return
     return run(api.unsubscribeDrop, { ok: () => 'Daily Drop cancelled' })
   }
-  // Shake the crate while the server rolls, for at least a beat, then show what came out.
-  const open = async () => {
-    const n = ++opening.current
-    setReveal({})
-    const t0 = Date.now()
-    const r = await run(api.openCrate, { silent: true })
-    if (!r) { if (n === opening.current) setReveal(null); return }
-    await new Promise(res => setTimeout(res, Math.max(0, 1100 - (Date.now() - t0))))
-    if (n === opening.current) setReveal({ r })
-    if (r.jackpot) api.recentDrops(5).then(setJackpots).catch(() => {})
-  }
-  const closeReveal = () => { opening.current++; setReveal(null) }
-
   return (
     <>
       <Card id="drop" title="🎁 Daily Drop" className={`drop-card${d.crates > 0 ? ' has-crates' : ''}`}
@@ -114,7 +101,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
               <div className="crate-stack" aria-label={`${d.crates} crate${d.crates > 1 ? 's' : ''} waiting`}>
                 {Array.from({ length: d.max }, (_, i) => <span key={i} className={i < d.crates ? 'on' : ''}>📦</span>)}
               </div>
-              <Btn className="doit block" onClick={open}>Open Crate{d.crates > 1 ? ` · ${d.crates} waiting` : ''}</Btn>
+              <Btn className="doit block" onClick={crate.open}>Open Crate{d.crates > 1 ? ` · ${d.crates} waiting` : ''}</Btn>
               {full && d.subscribed && <div className="small gold">Your stack is full — open one or tomorrow's crate is lost.</div>}
             </>
           ) : d.subscribed ? (
@@ -171,15 +158,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           </div>
         </>}
       </Card>
-      {reveal && (
-        <Modal title={reveal.r?.jackpot ? 'Jackpot' : 'Daily Drop'} onClose={closeReveal}>
-          {!reveal.r ? (
-            <div className="crate-open"><div className="crate-shake">📦</div><div className="small muted">Cracking it open…</div></div>
-          ) : (
-            <Prize r={reveal.r} onOpen={open} onGo={to => { closeReveal(); nav(to) }} />
-          )}
-        </Modal>
-      )}
+      {crate.sheet}
     </>
   )
 }
@@ -215,40 +194,6 @@ function Odds({ prizes, total, jackpots }: { prizes: DropPrize[]; total: number;
           {jackpots.map((j, i) => <div key={i} className="small"><Link to={`/player/${j.player_id}`}>{j.player}</Link> hit <b className="gold">{dropIcon[j.kind]} {j.label}</b> <span className="muted">· {ago(j.at)}</span></div>)}
         </div></div>
       )}
-    </div>
-  )
-}
-
-function Prize({ r, onOpen, onGo }: { r: DropResult; onOpen: () => void; onGo: (to: string) => void }) {
-  const me = useMe()
-  const { run } = useGame()
-  const [banked, setBanked] = useState(false)
-  const over = me.storage_used > me.storage_cap
-  const where = (() => {
-    switch (r.kind) {
-      case 'herb': case 'dust': case 'pills':
-        return <>Into storage — {num(me.storage_used)}/{num(me.storage_cap)}.{over ? ' That puts you over your cap: sell or use some before you can store more.' : ''}</>
-      case 'diamonds': return <>You have 💎 {num(me.diamonds)}.</>
-      case 'cash': return banked ? <>Banked. It's safe.</> : <>It's on hand — bank it so nobody takes it off you in a fight.</>
-      case 'refills': return <>A full stamina refill each, on top of your drug refills. You have {me.free_refills ?? r.amount}.</>
-      case 'thugs': return <>They're with you now — {hoodlumIcon.thug} {num(me.hoodlums.thug ?? 0)} thugs.</>
-      case 'hustlers': return <>Each one skips the hustler fee on your next hires (for a Trader, that hustler's cut). You have {num(me.free_hustlers ?? r.amount)}.</>
-    }
-  })()
-  const go = r.kind === 'refills' ? { to: '/services?focus=refills', l: 'Use a Refill' }
-    : r.kind === 'hustlers' && me.path !== 'producer' ? { to: '/economy?tab=hustlers', l: 'Send Hustlers' }
-    : r.kind === 'thugs' ? { to: '/territory', l: 'Territory' }
-    : null
-  return (
-    <div className={`find-modal drop-prize${r.jackpot ? ' jackpot' : ''}`}>
-      <div className="big">{dropIcon[r.kind]}</div>
-      <div className="name">{r.label}</div>
-      <div className="small">{where}</div>
-      {r.kind === 'cash' && !banked && me.cash >= r.amount && (
-        <Btn className="gold block" onClick={async () => { if (await run(() => api.bankDeposit(r.amount), { ok: () => `Banked ${money(r.amount)}` })) setBanked(true) }}>Bank {money(r.amount)}</Btn>
-      )}
-      {go && <button className="btn block" onClick={() => onGo(go.to)}>{go.l} ›</button>}
-      {r.crates > 0 && <Btn className="doit block" onClick={onOpen}>Open Another · {r.crates} left</Btn>}
     </div>
   )
 }

@@ -47,3 +47,14 @@ export function Ledger({ scope, version = 0 }: { scope: 'crew' | 'cartel'; versi
     </Card>
   )
 }
+
+/** Under a crew or cartel bank's Deposit / Withdraw: why the one that's off is off, said before the tap. */
+export function BankWhy({ amount, cash, bank, canWithdraw, name }: { amount: number; cash: number; bank: number | null; canWithdraw: boolean; name: string }) {
+  if (amount <= 0) return null
+  const overCash = amount > cash, overBank = canWithdraw && amount > (bank ?? 0)
+  if (!overCash && !overBank) return null
+  const text = overCash && (overBank || !canWithdraw) ? `You have ${money(cash)} on hand${canWithdraw ? ` and the ${name} bank has ${money(bank)}` : ''}.`
+    : overCash ? `You have ${money(cash)} on hand to deposit.`
+    : `The ${name} bank has ${money(bank)} to withdraw.`
+  return <div className="row"><div className="why grow">{text}</div></div>
+}

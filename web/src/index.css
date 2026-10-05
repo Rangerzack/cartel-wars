@@ -1112,3 +1112,28 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .online-dot { display: inline-block; width: 8px; height: 8px; margin: 0 6px 1px 0; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 0 6px rgba(80,200,120,.6); vertical-align: middle; }
 .row.cant .ico, .row.cant .t, .row.cant .s { opacity: .55; }
 .card.stale { opacity: .7; transition: opacity .15s; }
+
+/* Phase 3 UX ------------------------------------------------------------- */
+/* read by VoiceOver, not drawn */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Home's Next up: what needs you, most urgent first. A red edge for a state that stops play (jail, the hospital), gold
+   for something ready to take; paying is a full-width button under the line, collecting sits at its right */
+.next-up .row.urgent { box-shadow: inset 3px 0 0 var(--red); background: linear-gradient(90deg, rgba(224,72,63,.09), transparent 70%); }
+.next-up .row.ready { box-shadow: inset 3px 0 0 var(--gold); }
+.next-up .row.wide { align-items: flex-start; }
+.next-up .row .act { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.next-up .row > .btn { flex: none; min-width: 84px; }
+/* Getting started: the next step, gold-edged; the rest open under it */
+.getting-started .row.next { box-shadow: inset 3px 0 0 var(--gold); background: linear-gradient(90deg, rgba(227,179,65,.08), transparent 70%); }
+.getting-started .row.done { opacity: .5; }
+.getting-started .check { width: 22px; text-align: center; flex: none; }
+.getting-started .row.more { min-height: 40px; padding-top: 8px; padding-bottom: 8px; }
+/* the shop: how many a tap buys, beside what you have to spend */
+.shop-bar .seg { flex: none; }
+.shop-bar .seg button { min-width: 48px; padding: 7px 10px; letter-spacing: .3px; }
+/* a button at work: its label holds the width (and the name), the spinner sits over it */
+.btn.busy .btn-label { opacity: 0; }
+.btn.busy > .spin { position: absolute; inset: 0; margin: auto; }
+/* at a casino table the sticky bar (chips, Deal, Spin, the hand's buttons) sits where toasts go: there they drop in
+   under the top bar instead, so a message never covers the next bet */
+body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); bottom: auto; flex-direction: column; }

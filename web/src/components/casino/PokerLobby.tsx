@@ -39,7 +39,7 @@ export default function PokerLobby() {
     <>
       {mine && <div className="notice gold">You're seated at {mine.name}. <Link to={`/casino/table/${mine.id}`}>Back to the table →</Link></div>}
       <Card title="♠ No-Limit Hold'em" right={<small>6-max · live players · 30s clock</small>}>
-        {!tables && <Empty><span className="spin" /></Empty>}
+        {!tables && <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>}
         {tables?.map(t => {
           const rookie = !!t.rookie_days
           const barred = rookie && t.eligible === false
@@ -53,8 +53,8 @@ export default function PokerLobby() {
                 </div>
               </div>
               <span className={`small tabular ${t.seated ? '' : 'muted'}`}>{t.seated}/{t.seats}</span>
-              {t.mine ? <Link className="btn sm gold" to={`/casino/table/${t.id}`}>Sit</Link>
-                : <button type="button" className="btn sm" disabled={!!mine || barred || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>{t.seated ? 'Join' : 'Open'}</button>}
+              {t.mine ? <Link className="btn sm gold" to={`/casino/table/${t.id}`}>Your Seat</Link>
+                : <button type="button" className="btn sm" disabled={!!mine || barred || t.seated >= t.seats} onClick={() => { setBuyin(Math.min(me.cash, Math.max(t.min_buyin, Math.min(t.max_buyin, t.min_buyin * 2)))); setJoin(t) }}>Sit</button>}
             </div>
           )
         })}

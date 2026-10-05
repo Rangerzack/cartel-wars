@@ -95,7 +95,7 @@ export default function PokerTable() {
   }
 
   if (err && !st) return <div className="page"><div className="notice red">{err}</div><button className="btn" onClick={() => nav('/casino/poker')}>Back to the lobby</button></div>
-  if (!st) return <Empty><span className="spin" /></Empty>
+  if (!st) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const t = st.table
 
   return (
@@ -195,12 +195,13 @@ export default function PokerTable() {
                 <button type="button" className="btn gold grow" disabled={acting || stack <= my.to_call} onClick={() => { setRaise(minTo); setRaising(true) }}>{hand!.current_bet > 0 ? 'Raise' : 'Bet'}</button>
               </div>
             )
-          ) : (
+          ) : (<>
             <div className="hstack" style={{ justifyContent: 'space-between' }}>
               <span className="small muted">{my ? (my.folded ? 'You folded.' : hand?.finished ? 'Next hand in a moment…' : 'Waiting for others…') : hand && !hand.finished ? "You'll be dealt in next hand." : 'Waiting…'}</span>
               <button type="button" className="btn sm" disabled={t.max_buyin - stack < 100 || me.cash < 100} onClick={() => { setBuyin(Math.min(me.cash, t.max_buyin - stack)); setPick(mine.seat) }}>Rebuy</button>
             </div>
-          )}
+            {(t.max_buyin - stack < 100 || me.cash < 100) && <div className="small muted">{t.max_buyin - stack < 100 ? `Rebuy: your stack is at the ${money(t.max_buyin)} table max.` : `Rebuy: you need $100 on hand — you have ${money(me.cash)}.`}</div>}
+          </>)}
         </div>
       )}
 

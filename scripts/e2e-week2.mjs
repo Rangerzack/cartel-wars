@@ -125,12 +125,12 @@ try {
   await a.goto(BASE + '/casino/poker')
   const rookie = a.locator('.row', { hasText: 'Rookie Room' })
   await rookie.locator('.pill', { hasText: 'Rookies' }).waitFor()
-  if (await rookie.getByRole('button', { name: /Open|Join/ }).isDisabled()) throw new Error('new player should be able to sit in the Rookie Room')
+  if (await rookie.getByRole('button', { name: 'Sit', exact: true }).isDisabled()) throw new Error('new player should be able to sit in the Rookie Room')
   await snap(a, 'poker-lobby')
   await db.query(`update profiles set created_at = now() - interval '30 days' where id = $1`, [aId])
   await a.reload()
   await a.locator('.row', { hasText: 'Rookie Room' }).getByText(/For players in their first 7 days/).waitFor()
-  if (!(await a.locator('.row', { hasText: 'Rookie Room' }).getByRole('button', { name: /Open|Join/ }).isDisabled())) throw new Error('veteran should be barred')
+  if (!(await a.locator('.row', { hasText: 'Rookie Room' }).getByRole('button', { name: 'Sit', exact: true }).isDisabled())) throw new Error('veteran should be barred')
 
   console.log('E2E WEEK 2 PASSED')
 } catch (e) {

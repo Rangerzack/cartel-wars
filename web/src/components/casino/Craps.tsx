@@ -143,7 +143,7 @@ export default function Craps() {
                 <Die n={dice[0]} rolling={rolling} size={46} /><Die n={dice[1]} rolling={rolling} size={46} />
                 <span className={`cr-sum ${rolling ? 'muted' : ''}`}>{rolling ? '…' : roll || st.last ? dice[0] + dice[1] : ''}</span>
               </div>
-              <div className={`cr-call ${roll?.event ?? ''}`}>{rolling ? 'Dice are out…' : lastCall}</div>
+              <div className={`cr-call ${roll?.event ?? ''}`} role="status">{rolling ? 'Dice are out…' : lastCall}</div>
               {roll && !rolling && (roll.wager > 0 || roll.payout > 0) && <div className="cr-net">This roll <Net n={roll.net} /></div>}
               {history.length > 0 && (
                 <div className="cr-history" aria-label="Last rolls">
@@ -261,7 +261,7 @@ export default function Craps() {
           <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip — tap the felt to bet" />
           <div className="hstack" style={{ flexWrap: 'nowrap' }}>
             <button type="button" className="btn gold flex1 cr-roll" disabled={rolling || placing || onFelt === 0} onClick={doRoll}>
-              {rolling ? <span className="spin" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
+              {rolling ? <span className="spin" role="img" aria-label="Working" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
             </button>
             <button type="button" className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} aria-label="Take down everything except Pass / Don't Pass once the point is on, and come bets">Take down</button>
           </div>
