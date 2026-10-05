@@ -24,11 +24,12 @@ do $$ declare r jsonb; begin
 
   -- chat: 250 lines, a read stops at 200 whatever it asks for, and 50 by default
   insert into messages (channel, sender_id, sender_name, body, created_at)
-    select 'global', 'f3f3f3f3-0020-4000-8000-000000000001', 'P3Me', 'p3 line ' || g, now() - make_interval(secs => 251 - g) from generate_series(1, 250) g;
+    select 'global', 'f3f3f3f3-0020-4000-8000-000000000001', 'P3Me', 'p3 line ' || g, now() + make_interval(secs => g / 1000.0) from generate_series(1, 250) g;   -- newer than anything the earlier suites wrote
   assert jsonb_array_length(get_messages('global', 100000)) = 200, 'capped at 200';
   assert jsonb_array_length(get_messages('global')) = 50, '50 by default';
   assert jsonb_array_length(get_messages('global', 0)) = 1, 'at least one';
   assert (get_messages('global', 100) -> -1 ->> 'body') = 'p3 line 250', 'oldest first, newest last';
+  delete from messages where sender_id = 'f3f3f3f3-0020-4000-8000-000000000001';
 end $$;
 
 select ' PHASE 3 TEST PASSED';
