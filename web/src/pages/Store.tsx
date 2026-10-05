@@ -9,6 +9,7 @@ import { focusCard } from '../lib/scroll'
 import { BackBar } from '../components/BackBar'
 import { DailyDrop } from '../components/DailyDrop'
 import { Btn, Card, Loading } from '../components/ui'
+import { errorText } from '../lib/errors'
 
 /**
  * The store (#15): diamond packs, then the Daily Drop. Purchases go through Apple in the iOS app only (guideline
@@ -40,7 +41,7 @@ export default function Store() {
   const buy = async (id: string, diamonds: number) => {
     const before = me.diamonds
     let r
-    try { r = await buyPack(id) } catch (e) { toast((e as Error).message, 'bad'); return }
+    try { r = await buyPack(id) } catch (e) { toast(errorText(e), 'bad'); return }
     if (r === 'cancelled') { toast('Purchase cancelled', 'info'); return }
     if (r === 'pending') { toast('Waiting for approval. Your diamonds arrive once Apple approves it.', 'info'); return }
     setDelivering(id)
@@ -52,7 +53,7 @@ export default function Store() {
   }
   const restore = async () => {
     let r
-    try { r = await restorePurchases() } catch (e) { toast((e as Error).message, 'bad'); return }
+    try { r = await restorePurchases() } catch (e) { toast(errorText(e), 'bad'); return }
     await refresh()
     // diamond packs are used up when bought, so only a subscription can come back
     toast(r.active > 0 ? 'Your Daily Drop is back' : 'Nothing to restore: diamond packs are spent when bought, and no subscription is active', r.active > 0 ? 'ok' : 'info')

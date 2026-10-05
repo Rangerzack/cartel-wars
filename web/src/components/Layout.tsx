@@ -58,6 +58,13 @@ function TopLink({ to, label, className = '', children }: { to: string; label: s
 /** A new screen starts at the top: opening a crew from the bottom of another crew's page, or Profile from the end of
  *  Home, used to land mid-page. Back (a POP) is left to the browser, which puts the scroll back where it was. A change
  *  of query only (a tab, a filter) keeps the scroll. */
+/** The screen's name as its one level-1 heading: VoiceOver's rotor and the heading list say where you are (Phase 6). */
+const TITLES: Record<string, string> = {
+  '': 'Home', actions: 'Actions', economy: 'Economy', fight: 'Fight', player: 'Player', services: 'Services', items: 'Items',
+  crew: 'Crew', cartel: 'Cartel', territory: 'Territory', chat: 'Chat', profile: 'Profile', admin: 'Admin', accolades: 'Accolades',
+  activity: 'Activity', store: 'Store', casino: 'Casino', forum: 'Forum',
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation()
   const how = useNavigationType()
@@ -118,6 +125,8 @@ export default function Layout() {
       )}
       {/* the strip only says what nothing else on screen does: offline anywhere, the hospital off Home (the top bar's
           JAIL tag covers jail, and Home's Next up covers both) */}
+      <main id="main">
+      {me && <h1 className="sr-only">{TITLES[pathname.split('/')[1] ?? ''] ?? 'Cartel Wars'}</h1>}
       {me && (netDown || (me.hospital && !onHome)) && (
         <div className="status-strip">
           {netDown && <span className="pill red">📡 Offline · retrying</span>}
@@ -131,9 +140,10 @@ export default function Layout() {
           <Outlet />
         </Suspense>
       </ScreenBoundary>
+      </main>
       <RefillSheet />
       <ConfirmSheet />
-      <nav className="tabbar">
+      <nav className="tabbar" aria-label="Tabs">
         <div className="inner">
           {tabs.map(t => (
             <NavLink key={t.to} to={t.to} end={t.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}

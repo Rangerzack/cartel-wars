@@ -176,7 +176,7 @@ function ThreadView({ id }: { id: number }) {
       <div className="small muted">in <Link to={`/forum/${t.category}`}>{b.icon} {b.name}</Link></div>
       <Card>
         <div className="bd stack post">
-          <h3 style={{ margin: 0 }}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
+          <h3 style={{ margin: 0 }} aria-level={2}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
           <PostMeta a={t.author} at={t.created_at} edited={t.edited_at} />
           {t.hidden ? <div className="small muted">{HIDDEN}</div> : <div className="body"><LinkedText text={t.body} /></div>}
           {(t.mine || data.is_admin || !t.hidden) && (

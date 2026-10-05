@@ -6,6 +6,7 @@ import { money } from '../../lib/format'
 import type { PokerTableInfo } from '../../lib/types'
 import { Btn, Card, Empty, Modal } from '../ui'
 import { BetPicker } from './shared'
+import { errorText } from '../../lib/errors'
 
 export default function PokerLobby() {
   const me = useMe()
@@ -17,7 +18,7 @@ export default function PokerLobby() {
   useEffect(() => {
     // a dropped connection is said once, not every 5 s
     let failing = false
-    const load = () => api.pokerLobby().then(t => { setTables(t); failing = false }).catch(e => { if (!failing) toast(e.message, 'bad'); failing = true })
+    const load = () => api.pokerLobby().then(t => { setTables(t); failing = false }).catch(e => { if (!failing) toast(errorText(e), 'bad'); failing = true })
     load()
     const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 5000)
     return () => clearInterval(t)

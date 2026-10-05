@@ -10,6 +10,7 @@ import { features } from '../lib/features'
 import { LinkedText, PlayerLink } from '../components/Linked'
 import { useNow } from '../lib/useNow'
 import { ReportModal } from '../components/Report'
+import { errorText } from '../lib/errors'
 
 export default function Chat() {
   const me = useMe()
@@ -75,7 +76,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
 
   const load = useCallback(() => api.messages(channel, reach.current)
     .then(m => { setMsgs(m); failing.current = false })
-    .catch(e => { if (!failing.current) toast(e.message, 'bad'); failing.current = true }), [channel, toast])
+    .catch(e => { if (!failing.current) toast(errorText(e), 'bad'); failing.current = true }), [channel, toast])
   useEffect(() => {
     load()
     const otherId = channel.startsWith('dm:') ? channel.split(':').slice(1).find(x => x !== me.id) : undefined
@@ -129,7 +130,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
     if (!body || sending) return
     setSending(true)
     // the line clears only once it's through: a refused or dropped send leaves it in the box to fix or retry
-    try { await api.sendMessage(channel, body); setText(''); atEnd.current = true; load() } catch (err) { toast((err as Error).message, 'bad') } finally { setSending(false) }
+    try { await api.sendMessage(channel, body); setText(''); atEnd.current = true; load() } catch (err) { toast(errorText(err), 'bad') } finally { setSending(false) }
   }
   async function block(m: Message) {
     setMenu(null)
@@ -181,7 +182,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
 function Conversations() {
   const { toast } = useGame()
   const [list, setList] = useState<Conversation[] | null>(null)
-  useEffect(() => { api.conversations().then(setList).catch(e => toast(e.message, 'bad')) }, [toast])
+  useEffect(() => { api.conversations().then(setList).catch(e => toast(errorText(e), 'bad')) }, [toast])
   return (
     <Card>
       {!list && <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>}

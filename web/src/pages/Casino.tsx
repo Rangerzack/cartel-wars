@@ -13,6 +13,7 @@ import Roulette from '../components/casino/Roulette'
 import Slots from '../components/casino/Slots'
 import { features } from '../lib/features'
 import { BackBar } from '../components/BackBar'
+import { errorText } from '../lib/errors'
 
 const ALL_GAMES = [
   { v: 'poker', l: '♠ Poker' }, { v: 'blackjack', l: '🃏 Blackjack' }, { v: 'craps', l: '🎲 Craps' }, { v: 'roulette', l: '🎡 Roulette' }, { v: 'slots', l: '🎰 Slots' },
@@ -58,7 +59,7 @@ function History() {
   const me = useMe()
   const { toast } = useGame()
   const [h, setH] = useState<CasinoHistory | null>(null)
-  useEffect(() => { api.casinoHistory(8).then(setH).catch(e => toast(e.message, 'bad')) }, [me, toast])
+  useEffect(() => { api.casinoHistory(8).then(setH).catch(e => toast(errorText(e), 'bad')) }, [me, toast])
   if (!h) return null
   return (
     <Card title="Your ledger" right={<small>all time <Net n={h.net} /></small>}>

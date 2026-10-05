@@ -769,6 +769,22 @@ blank app, and a screen whose file vanished in a deploy reloads the app once ont
 build. Launch shows the same spinner all the way to the city. The App Store screenshots in
 `docs/app-store/` were retaken in the Phase 4 look.
 
+**QA** *(Phase 6, 2026-10-05)*: a money call fired 12 times at once (a double tap, a retry,
+two tabs) goes through as many times as the money allows and no more; every spend locks the
+player's row first. Not enough money says what you have ("You have $40 in the bank"), not
+"Invalid amount". Roulette refuses a bet it can never pay (a number past 36, a fourth dozen)
+before the stake comes off. List reads stop at 100 rows, and a player search treats % and _
+as letters. A pasted amount too big for the server, or a link with a mangled id, gets one
+plain line ("That amount doesn't work…", "That link doesn't go anywhere.") in place of the
+database's wording, on every screen. Each screen has a main landmark and its name as a
+level-1 heading for VoiceOver; links inside a sentence are underlined, not just blue.
+Private helpers (`_name`) can't be called through the API by anyone, and the SQL suite
+fails if a migration leaves one open. QA scripts, all against the local stack:
+`scripts/grants-test.sql` and `scripts/qa-test.sql` (run by `local-db.sh test`),
+`scripts/qa-fuzz.sql` (89 tampered calls, also in `local-db.sh test`), `scripts/qa-race.mjs`
+(concurrent spends) and `scripts/qa-screens.mjs` (every screen at 320 to 844 wide for
+sideways scroll, console errors and failed requests, axe at 390, and 16 broken links).
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,

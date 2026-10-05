@@ -113,6 +113,9 @@ html, body, #root { margin: 0; min-height: 100%; }
 /* one faint gold light over the city, nothing else behind the cards */
 body { background: radial-gradient(120% 45% at 50% -10%, rgba(227,179,65,.07), transparent 60%), var(--bg); background-attachment: fixed; }
 a { color: var(--blue); text-decoration: none; cursor: pointer; }
+/* a link inside a sentence is underlined too, so it doesn't rely on color alone (Phase 6, WCAG 1.4.1); links that are
+   buttons, rows or header links all carry a class */
+a:not([class]) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 button { font: inherit; }
 input, select, textarea { font: inherit; }
 ::selection { background: rgba(227,179,65,.35); }
@@ -923,7 +926,7 @@ textarea.input { resize: vertical; font: inherit; }
 .perk-tag { display: inline-flex; align-self: flex-start; align-items: center; gap: 4px; font-size: 11.5px; padding: 2px 9px; border-radius: var(--r-pill); white-space: nowrap;
   color: #c9f0d4; border: 1px solid var(--green-edge); background: var(--green-tint); }
 .hstack:has(> .perk-tag) { gap: 6px; }
-.btn s.was { opacity: .55; font-weight: 500; margin-right: 5px; font-size: .85em; }
+.btn s.was { opacity: .7; font-weight: 500; margin-right: 5px; font-size: .85em; }
 .biz-filter { margin-bottom: 10px; }
 .hcell.biz-dim { opacity: .35; }
 .hcell.biz-hit { opacity: 1; }
@@ -1165,7 +1168,8 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .chip-nav .n { font-size: 11.5px; font-weight: 700; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(255,255,255,.08); color: #a9a9b6; text-align: center; }
 .chip-nav button.on .n { background: rgba(227,179,65,.16); color: var(--gold-hi); }
 .online-dot { display: inline-block; width: 8px; height: 8px; margin: 0 6px 1px 0; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(0,0,0,.5); vertical-align: middle; }
-.row.cant .ico, .row.cant .t, .row.cant .s { opacity: .55; }
+.row.cant .ico, .row.cant .t { opacity: .55; }
+.row.cant .s { opacity: .8; }   /* the reason stays readable: 4.7:1 */
 .card.stale { opacity: .7; transition: opacity var(--t-fast); }
 
 /* Phase 3 UX ------------------------------------------------------------- */

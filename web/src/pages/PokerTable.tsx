@@ -9,6 +9,7 @@ import { Btn, Empty, Modal } from '../components/ui'
 import { BackBar } from '../components/BackBar'
 import { BetPicker, Cards } from '../components/casino/shared'
 import { Channel } from './Chat'
+import { errorText } from '../lib/errors'
 
 // seat slots around the felt, index 0 = bottom centre (always "me" when seated); the side seats sit at 16 / 84 % so
 // their 84 px boxes stay inside the rail at 375 and 390 px
@@ -47,7 +48,7 @@ export default function PokerTable() {
     if (busy.current) return
     busy.current = true
     const v = ver.current
-    try { const s = await api.pokerState(tid); if (v === ver.current) land(s); setErr(null) } catch (e) { setErr((e as Error).message) } finally { busy.current = false }
+    try { const s = await api.pokerState(tid); if (v === ver.current) land(s); setErr(null) } catch (e) { setErr(errorText(e)) } finally { busy.current = false }
   }, [tid, land])
   useEffect(() => {
     load()
@@ -79,7 +80,7 @@ export default function PokerTable() {
   async function act(action: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) {
     if (acting) return   // a double tap: the second one must not act on the next street
     setActing(true)
-    try { land(await api.pokerAct(action, amount)); setRaising(false); setRaise(null) } catch (e) { toast((e as Error).message, 'bad'); load() } finally { setActing(false) }
+    try { land(await api.pokerAct(action, amount)); setRaising(false); setRaise(null) } catch (e) { toast(errorText(e), 'bad'); load() } finally { setActing(false) }
   }
   async function leave() {
     // mid-hand, leaving folds you and the chips already in the pot stay there
