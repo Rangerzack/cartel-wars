@@ -43,13 +43,13 @@ export function AccountCard({ onSignedOut }: { onSignedOut: () => void }) {
     <Card title="Account" right={<small>{session?.user.email}</small>}>
       <div className="bd stack">
         {changing
-          ? <><NewPasswordFields submitLabel="Save new password" onDone={() => setChanging(false)} /><button className="btn sm ghost" onClick={() => setChanging(false)}>Cancel</button></>
+          ? <><NewPasswordFields submitLabel="Save New Password" onDone={() => setChanging(false)} /><button className="btn sm ghost" onClick={() => setChanging(false)}>Cancel</button></>
           : <div className="grid2">
-              <button className="btn" onClick={() => setChanging(true)}>Change password</button>
+              <button className="btn" onClick={() => setChanging(true)}>Change Password</button>
               {/* no "are you sure": signing out loses nothing, and it's two screens deep (Phase 3) */}
-              <Btn className="ghost" onClick={async () => { await signOut(); onSignedOut() }}>Sign out</Btn>
+              <Btn className="ghost" onClick={async () => { await signOut(); onSignedOut() }}>Sign Out</Btn>
             </div>}
-        <button className="btn sm ghost red" onClick={() => setDeleting(true)}>Delete account</button>
+        <button className="btn sm ghost red" onClick={() => setDeleting(true)}>Delete Account</button>
       </div>
       {deleting && <DeleteAccount onClose={() => setDeleting(false)} onDeleted={onSignedOut} />}
     </Card>
@@ -96,7 +96,7 @@ export function SetNewPassword() {
       <Card>
         <div className="bd stack">
           <div className="small muted">You opened a password reset link. Pick a new password to get back in.</div>
-          <NewPasswordFields submitLabel="Save and enter the city" onDone={endRecovery} />
+          <NewPasswordFields submitLabel="Save and Enter the City" onDone={endRecovery} />
           <button className="btn sm ghost" onClick={async () => { await signOut(); endRecovery() }}>Cancel</button>
         </div>
       </Card>

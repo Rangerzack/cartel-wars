@@ -13,6 +13,7 @@ import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
 import { PlayerLink } from '../components/Linked'
 import { useLoad } from '../lib/useLoad'
+import { haptic } from '../lib/haptics'
 
 export default function Crew() {
   const { id } = useParams()
@@ -59,7 +60,7 @@ function CrewHub() {
         ))}
       </Card>
       {!me.crew && (
-        <Card title="Found your own" right={!founding && <button type="button" className="btn sm" onClick={() => setFounding(true)}>Start a crew</button>}>
+        <Card title="Found your own" right={!founding && <button type="button" className="btn sm" onClick={() => setFounding(true)}>Start a Crew</button>}>
           {!founding ? <div className="bd small muted">Name it and pick an emblem; you're its Capo.</div> : (
             <div className="bd stack">
               <div className="grid2" style={{ gridTemplateColumns: '64px 1fr' }}>
@@ -124,7 +125,7 @@ function CrewPage({ id }: { id: string }) {
             <div className="stack">
               <Btn className="doit red block" disabled={!!cooldown || me.hospital} onClick={async () => {
                 if (!await ask(`Your whole crew's attack goes against ${c.name}'s defense. Win and you take 5% of their crew bank; lose and 5% of yours goes to them, and everyone on your side takes a beating.`, { title: `Hit ${c.name}?`, yes: 'Crew Fight', tone: 'red' })) return
-                const r = await run(() => api.crewFight(c.id), { silent: true }); if (r) { setFight(r); load() }
+                const r = await run(() => api.crewFight(c.id), { silent: true }); if (r) { haptic(r.won ? 'success' : 'error'); setFight(r); load() }
               }}>
                 ⚔️ Crew Fight{cooldown ? ` · ${timeLeft(c.next_fight_at, now)}` : ''}
               </Btn>
@@ -143,7 +144,6 @@ function CrewPage({ id }: { id: string }) {
               <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}>💬 Crew Chat</Btn>
               <Btn className="sm" onClick={() => nav('/territory')}>🗺 Territory</Btn>
               {boss && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
-              <Btn className="sm ghost red" onClick={async () => { if (await ask(c.is_capo ? (c.co_capo_id ? 'Your Co-Capo takes over as Capo.' : 'Leadership passes to your longest-standing member, or the crew disbands if you are the last one.') : c.co_capo_id === me.id ? 'The Co-Capo seat opens up for the Capo to fill.' : 'You can apply to another crew, or found your own.', { title: `Leave ${c.name}?`, yes: 'Leave', tone: 'red' })) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew', { replace: true }) }) }}>Leave</Btn>
             </div>
           )}
           {edit && (
@@ -253,9 +253,12 @@ function CrewPage({ id }: { id: string }) {
               ? <RowLink key={b.id} to={`/territory?hood=${b.hood_id}`}>{inner}<span className="chev">›</span></RowLink>
               : <div key={b.id} className="row">{inner}</div>
           })}
-          {c.blocks.length > 8 && <div className="row"><button type="button" className="btn sm ghost block" onClick={() => setAllBlocks(!allBlocks)}>{allBlocks ? 'Show fewer' : `Show all ${c.blocks.length}`}</button></div>}
+          {c.blocks.length > 8 && <div className="row"><button type="button" className="btn sm ghost block" onClick={() => setAllBlocks(!allBlocks)}>{allBlocks ? 'Show Fewer' : `Show All ${c.blocks.length}`}</button></div>}
         </Card>
       )}
+
+      {/* leaving sits at the end of the page, apart from the everyday buttons (it used to wrap onto its own line beside them) */}
+      {mine && <Btn className="ghost red block" onClick={async () => { if (await ask(c.is_capo ? (c.co_capo_id ? 'Your Co-Capo takes over as Capo.' : 'Leadership passes to your longest-standing member, or the crew disbands if you are the last one.') : c.co_capo_id === me.id ? 'The Co-Capo seat opens up for the Capo to fill.' : 'You can apply to another crew, or found your own.', { title: `Leave ${c.name}?`, yes: 'Leave', tone: 'red' })) return run(api.crewLeave, { ok: () => 'You left the crew' }).then(r => { if (r) nav('/crew', { replace: true }) }) }}>Leave Crew</Btn>}
 
       {fight && (
         <Modal title={fight.won ? `${me.crew?.name} took the fight` : `${c.name} held the line`} onClose={() => setFight(null)}>

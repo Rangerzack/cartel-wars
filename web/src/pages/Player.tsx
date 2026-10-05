@@ -14,6 +14,7 @@ import { matchup, matchupText } from '../lib/combos'
 import { ReportModal } from '../components/Report'
 import { ModButtons } from './Admin'
 import { useLoad } from '../lib/useLoad'
+import { haptic } from '../lib/haptics'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -41,7 +42,7 @@ export default function Player() {
   async function fight() {
     if (me.stamina < 2) { askRefill(2); return }
     const r = await run(() => api.attack(p!.id), { silent: true })
-    if (r) setResult(r)
+    if (r) { setResult(r); haptic(r.busted ? 'warning' : r.won ? 'success' : 'error') }
     // reload either way: a refusal (they just went to the hospital, say) is what disables Attack again
     load(); loadPreview()
   }
@@ -152,7 +153,7 @@ export default function Player() {
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
             {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
-            <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack again · ⚡2 · {num(me.stamina)} left</Btn>
+            <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack Again · ⚡2 · {num(me.stamina)} left</Btn>
             {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
               : me.hospital ? "You're in the hospital — heal to full above, or wait it out."

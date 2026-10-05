@@ -1,4 +1,4 @@
-import { useEffect, type MouseEvent, type ReactNode } from 'react'
+import { Suspense, useEffect, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { useGame } from '../lib/game'
 import { money, num, timeLeft } from '../lib/format'
@@ -8,6 +8,7 @@ import { RefillSheet } from './Refill'
 import { ConfirmSheet } from './Confirm'
 import type { Me } from '../lib/types'
 import { NamePrompt } from './NamePrompt'
+import { ScreenBoundary } from './ScreenBoundary'
 
 type Badge = { n: number; tone?: 'red' | 'gold'; dot?: boolean; label: string } | null
 
@@ -67,7 +68,8 @@ function ScrollToTop() {
 export default function Layout() {
   const { me, catalog, netDown } = useGame()
   const now = useNow()
-  const onHome = useLocation().pathname === '/'
+  const { pathname } = useLocation()
+  const onHome = pathname === '/'
   const b = me ? badges(me) : {}
   const unread = (me?.unread_activity ?? 0) + (me?.unread_dms ?? 0)
   // (2) in the browser tab title, and the home-screen app icon badge where the platform supports it
@@ -123,7 +125,12 @@ export default function Layout() {
         </div>
       )}
       {me && <NamePrompt />}
-      <Outlet />
+      {/* a screen that fails to draw shows a way out instead of a blank app; a screen still downloading shows a spinner */}
+      <ScreenBoundary key={pathname}>
+        <Suspense fallback={<div className="page"><div className="empty"><span className="spin" role="status" aria-label="Loading" /></div></div>}>
+          <Outlet />
+        </Suspense>
+      </ScreenBoundary>
       <RefillSheet />
       <ConfirmSheet />
       <nav className="tabbar">

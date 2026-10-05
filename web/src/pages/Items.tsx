@@ -91,7 +91,7 @@ export default function Items() {
             {me.inventory.filter(i => allowed(i.category)).length === 0 && (
               <Empty>
                 <div>Nothing usable in this setup yet.</div>
-                <button className="btn gold sm" style={{ marginTop: 10 }} onClick={() => { setTab('shop'); setCat(setup === 'jail' ? 'jail_weapon' : setup === 'defense' ? 'protection' : 'weapon') }}>Go to the shop</button>
+                <button className="btn gold sm" style={{ marginTop: 10 }} onClick={() => { setTab('shop'); setCat(setup === 'jail' ? 'jail_weapon' : setup === 'defense' ? 'protection' : 'weapon') }}>Go to the Shop</button>
               </Empty>
             )}
             {me.inventory.filter(i => allowed(i.category)).map(i => {
@@ -151,7 +151,7 @@ export default function Items() {
                     }}>Sell{k > 1 ? ` ${k}` : ''} {money(resale * k)}</Btn>
                   })()}
                   {drop
-                    ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on jobs</Btn>
+                    ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on Jobs</Btn>
                     : i.rep_price > 0
                     ? <Btn className="sm gold" disabled={me.reputation < i.rep_price * n} onClick={() => buy(i.id, i.category, i.name, n, i.rep_price)}>{n > 1 ? `${n} · ` : ''}⭐ {num(i.rep_price * n)}</Btn>
                     : <Btn className="sm gold" disabled={me.cash < cost * n} onClick={() => buy(i.id, i.category, i.name, n)}>{n > 1 ? `${n} · ` : ''}{cost < i.price && <s className="was">{money(i.price * n)}</s>}{money(cost * n)}</Btn>}

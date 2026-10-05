@@ -43,7 +43,7 @@ export function Ledger({ scope, version = 0 }: { scope: 'crew' | 'cartel'; versi
           <b className={`tabular ${r.amount >= 0 ? 'gold' : 'red'}`}>{r.amount >= 0 ? '+' : '−'}{money(Math.abs(r.amount))}</b>
         </div>
       ))}
-      {shown && shown.length > FIRST && <div className="row"><button type="button" className="btn sm ghost block" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${shown.length}`}</button></div>}
+      {shown && shown.length > FIRST && <div className="row"><button type="button" className="btn sm ghost block" onClick={() => setAll(!all)}>{all ? 'Show Fewer' : `Show All ${shown.length}`}</button></div>}
     </Card>
   )
 }

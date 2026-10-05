@@ -7,6 +7,7 @@ import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Net, PlayingCard, useBet } from './shared'
 import { basicStrategy, type BjMove } from './strategy'
 import { useLoad } from '../../lib/useLoad'
+import { haptic } from '../../lib/haptics'
 
 const TAG: Record<BlackjackOutcome, { t: string; cls: string }> = {
   blackjack: { t: 'Blackjack', cls: 'gold' }, win: { t: 'Win', cls: 'green' }, dealer_bust: { t: 'Win', cls: 'green' },
@@ -41,6 +42,7 @@ export default function Blackjack() {
     if (r.status === 'done' && r.result && counted.current !== rnd) {
       counted.current = rnd
       setSession(s => ({ hands: s.hands + 1, net: s.net + r.result!.net }))
+      if (r.result.net > 0) haptic('success')
     }
   }, [])
 
@@ -178,7 +180,7 @@ export default function Blackjack() {
             <div className="table-bar">
               <BetPicker part="chips" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />
               <button type="button" className="btn gold block bj-deal" disabled={busy || me.cash < wager || !g} onClick={deal}>
-                {me.cash < wager ? `Need ${money(wager)} on hand` : done ? `Deal again · ${money(wager)}` : `Deal · ${money(wager)}`}
+                {me.cash < wager ? `Need ${money(wager)} on Hand` : done ? `Deal Again · ${money(wager)}` : `Deal · ${money(wager)}`}
               </button>
             </div>
             <BetPicker part="amount" value={wager} onChange={setWager} max={Math.min(500000, me.cash)} />

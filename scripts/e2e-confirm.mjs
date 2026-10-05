@@ -50,7 +50,7 @@ try {
   await db.query('update profiles set crew_id = $1 where id in ($2, $3)', [crew.id, kaiId, luId])
 
   await lu.goto(`${BASE}/crew/${crew.id}`)
-  const leave = lu.getByRole('button', { name: 'Leave', exact: true })
+  const leave = lu.getByRole('button', { name: 'Leave Crew', exact: true })
   await leave.click()
   await sheet(lu).waitFor()
   const title = await sheet(lu).locator('h3').textContent()

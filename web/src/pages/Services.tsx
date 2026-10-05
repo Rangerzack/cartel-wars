@@ -123,8 +123,8 @@ export default function Services() {
             : bank > me.cash ? <div className="why">You have {money(me.cash)} on hand to deposit.</div>
             : bank > me.bank ? <div className="why">You have {money(me.bank)} banked to withdraw.</div> : null}
           <div className="hstack">
-            <button className="btn sm ghost" onClick={() => setBank(me.cash)}>All cash</button>
-            <button className="btn sm ghost" onClick={() => setBank(me.bank)}>All banked</button>
+            <button className="btn sm ghost" onClick={() => setBank(me.cash)}>All Cash</button>
+            <button className="btn sm ghost" onClick={() => setBank(me.bank)}>All Banked</button>
           </div>
         </div>
       </Card>

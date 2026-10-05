@@ -5,6 +5,7 @@ import { money } from '../../lib/format'
 import type { SlotsResult } from '../../lib/types'
 import { Card } from '../ui'
 import { BetPicker, Net, useBet } from './shared'
+import { haptic } from '../../lib/haptics'
 
 const SYM: Record<string, string> = { cherry: '🍒', lemon: '🍋', bell: '🔔', bar: '🅱️', diamond: '💎', seven: '7️⃣' }
 const ALL = Object.keys(SYM)
@@ -28,7 +29,7 @@ export default function Slots() {
     await new Promise(res => setTimeout(res, r ? 600 : 0))
     if (timer.current) window.clearInterval(timer.current)
     // the reels stop on the result, then the cash follows: the top bar never shows the win before the reels do
-    if (r) { setReels(r.reels); setLast(r) } else setReels(before)
+    if (r) { setReels(r.reels); setLast(r); if (r.payout > 0) haptic(r.mult >= 20 ? 'success' : 'light') } else setReels(before)
     setSpinning(false)
     if (r) await refresh()
   }

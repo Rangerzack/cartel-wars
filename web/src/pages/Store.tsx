@@ -77,7 +77,7 @@ export default function Store() {
         <div className="bd stack">
           {storeReady && products && !error && !shown.length && <div className="notice blue">Nothing's on sale right now. Try again later.</div>}
           <div className="small muted">Diamonds buy refills, upgrades, setup slots, boosts and extra grow houses. Diamonds you buy never expire. Only diamonds you earn in the game can be sent to other players.</div>
-          {storeReady && <div className="hstack"><Btn className="ghost sm" onClick={restore}>Restore purchases</Btn><span className="small muted">Brings back a Daily Drop bought on this Apple ID.</span></div>}
+          {storeReady && <div className="hstack"><Btn className="ghost sm" onClick={restore}>Restore Purchases</Btn><span className="small muted">Brings back a Daily Drop bought on this Apple ID.</span></div>}
         </div>
       </Card>
       <DailyDrop />

@@ -7,6 +7,7 @@ import { Btn, Card, Empty, Modal } from '../components/ui'
 import { BailButton } from '../components/Bail'
 import { HealButton } from '../components/Heal'
 import type { ActionDef, RareFind, RecentFind } from '../lib/types'
+import { haptic } from '../lib/haptics'
 
 type Sort = 'default' | 'cash' | 'rep'
 type Result = { a: ActionDef; pay: number; rep: number; busted: boolean; heat: number; stamina: number }
@@ -61,8 +62,9 @@ export default function Actions() {
     const res: Result = { a, pay: r.pay, rep: r.rep, busted: r.busted, heat: r.heat, stamina: r.stamina }
     // net cash: what the job paid less what it cost, so a reputation job that costs $8,000 reads −$8,000, not +$0
     setSession(s => ({ jobs: s.jobs + 1, cash: s.cash + (r.pay || 0) - a.cash_cost, rep: s.rep + (r.rep || 0), finds: s.finds + (r.found ? 1 : 0) }))
-    if (r.found) { setFound({ item: r.found, res }); api.recentFinds(6).then(setFinds).catch(() => {}); return }
-    if (r.busted || a.effect === 'go_to_jail') { setBust(res); return }
+    if (r.found) { haptic('success'); setFound({ item: r.found, res }); api.recentFinds(6).then(setFinds).catch(() => {}); return }
+    if (r.busted || a.effect === 'go_to_jail') { haptic('warning'); setBust(res); return }
+    haptic('light')
     const key = ++flashKey.current
     setFlash(f => ({ ...f, [a.id]: { ...res, key } }))
     setSaid(`${a.name}: ${r.rep > 0 ? `plus ${r.rep} reputation` : `plus ${money(r.pay)}`}. ${r.stamina} stamina left, heat ${r.heat}.`)
@@ -159,7 +161,7 @@ export default function Actions() {
       )}
       {bust && (
         <Modal title={bust.a.effect === 'go_to_jail' ? bust.a.name : 'Busted'} onClose={() => setBust(null)}
-          footer={bust.a.effect === 'go_to_jail' ? <button type="button" className="btn gold block" style={{ marginTop: 14 }} onClick={() => setBust(null)}>Stay inside</button> : undefined}>
+          footer={bust.a.effect === 'go_to_jail' ? <button type="button" className="btn gold block" style={{ marginTop: 14 }} onClick={() => setBust(null)}>Stay Inside</button> : undefined}>
           {bust.a.effect === 'go_to_jail' ? (
             <p>The cops took the money and the hint. You're in jail with your heat maxed out until you post bail, which clears it to 0 — check your jail setup.</p>
           ) : (

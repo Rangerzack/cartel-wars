@@ -53,6 +53,15 @@ export default function Home() {
           above the stats, so the first thing to do is the first thing on screen (Phase 3) */}
       <NextUp />
       <GettingStarted me={me} />
+      {/* back after a while: the latest three things that happened to you come before the stats (Phase 5) */}
+      {away.length > 0 && (
+        <Card title="While you were away" className="away" right={<button className="btn sm ghost" onClick={clearAway}>Clear</button>}>
+          {away.slice(0, 3).map(a => <ActivityRow key={a.id} a={a} fresh />)}
+          <RowLink to="/activity" className="more">
+            <div className="grow small muted">{away.length > 3 ? `${away.length - 3} more · ` : ''}See all activity</div><span className="chev">›</span>
+          </RowLink>
+        </Card>
+      )}
 
       {/* Cash and diamonds are already in the top bar (P3-19); Storage replaces the old Storage card and opens Economy, where Expand is */}
       <div className="grid3">
@@ -73,14 +82,6 @@ export default function Home() {
         ))}
       </nav>
 
-      {away.length > 0 && (
-        <Card title="While you were away" className="away" right={<button className="btn sm ghost" onClick={clearAway}>Clear</button>}>
-          {away.slice(0, 6).map(a => <ActivityRow key={a.id} a={a} fresh />)}
-          <RowLink to="/activity" className="more">
-            <div className="grow small muted">{away.length > 6 ? `${away.length - 6} more · ` : ''}See all activity</div><span className="chev">›</span>
-          </RowLink>
-        </Card>
-      )}
 
       <HomePath />
 

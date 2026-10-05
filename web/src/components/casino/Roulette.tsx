@@ -5,6 +5,7 @@ import { chips, money } from '../../lib/format'
 import type { RouletteBet, RouletteBetType, RouletteResult } from '../../lib/types'
 import { Card } from '../ui'
 import { BetPicker, Net, useBet } from './shared'
+import { haptic } from '../../lib/haptics'
 
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36])
@@ -47,7 +48,7 @@ export default function Roulette() {
     setSpinning(true); setLast(null)
     const r = await run(() => api.rouletteSpin(list), { silent: true, refresh: false })
     await new Promise(res => setTimeout(res, r ? 900 : 0))
-    if (r) setLast(r)
+    if (r) { setLast(r); if (r.payout > 0) haptic('success') }
     setSpinning(false)
     if (r) await refresh()
   }
@@ -93,7 +94,7 @@ export default function Roulette() {
           <div className="table-bar">
             <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip (tap a spot to place it)" />
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
-              <button type="button" className="btn gold flex1" disabled={spinning || !list.length || !!whyNot} onClick={spin}>{spinning ? <span className="spin" role="img" aria-label="Working" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a bet'}</button>
+              <button type="button" className="btn gold flex1" disabled={spinning || !list.length || !!whyNot} onClick={spin}>{spinning ? <span className="spin" role="img" aria-label="Working" /> : list.length ? `Spin · ${money(total)} on the felt` : 'Place a Bet'}</button>
               <button type="button" className="btn ghost" disabled={spinning || !list.length} onClick={() => setBets({})}>Clear</button>
             </div>
             {whyNot && <div className="why">{whyNot}</div>}

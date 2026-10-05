@@ -35,7 +35,7 @@ export function PathCard() {
     return (
       <div className="notice blue spread path-open">
         <span className="small">No path yet: you can run grow houses up to level {lvl} and send hustlers at {money(catalog.config.hustler_price ?? 400)} each. Pick Producer or Trader any time — you'll have to at {num(need)} reputation or to take a grow house past level {lvl}.</span>
-        <Btn className="sm" onClick={() => setOpen(true)}>Choose a path ›</Btn>
+        <Btn className="sm" onClick={() => setOpen(true)}>Choose a Path ›</Btn>
       </div>
     )
   }
@@ -50,7 +50,7 @@ export function PathCard() {
     )
   }
   return (
-    <Card title="Choose your path" right={me.path_required ? <small>{num(me.rep_earned)} rep</small> : <button className="btn sm ghost" onClick={() => setOpen(false)}>Not yet</button>}>
+    <Card title="Choose your path" right={me.path_required ? <small>{num(me.rep_earned)} rep</small> : <button className="btn sm ghost" onClick={() => setOpen(false)}>Not Yet</button>}>
       <div className="bd stack">
         <div className="small">
           {me.path_due === 'grow' ? <>Your grow houses are past level {lvl} — time to pick how you run product.</>

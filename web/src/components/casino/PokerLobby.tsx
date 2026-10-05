@@ -66,7 +66,7 @@ export default function PokerLobby() {
             <div className="small muted">Blinds {money(join.small_blind)}/{money(join.big_blind)}. Bring {money(join.min_buyin)} to {money(join.max_buyin)}. You have {money(me.cash)} on hand.</div>
             <BetPicker value={buyin} onChange={setBuyin} min={join.min_buyin} max={Math.min(join.max_buyin, me.cash)} label="Buy-in" />
             <Btn className="gold block" disabled={buyin < join.min_buyin || buyin > join.max_buyin || buyin > me.cash} onClick={() => sit(join)}>
-              {me.cash < join.min_buyin ? `Need ${money(join.min_buyin)} cash on hand` : `Sit down with ${money(buyin)}`}
+              {me.cash < join.min_buyin ? `Need ${money(join.min_buyin)} Cash on Hand` : `Sit Down with ${money(buyin)}`}
             </Btn>
           </div>
         </Modal>
