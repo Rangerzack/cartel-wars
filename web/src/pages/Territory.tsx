@@ -10,6 +10,7 @@ import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territo
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
 import { useLoad } from '../lib/useLoad'
+import { haptic } from '../lib/haptics'
 
 const ROWS = 'ABCDEFGHI'
 const coord = (h: { gx: number; gy: number }) => `${ROWS[h.gy - 1]}${h.gx}`
@@ -209,7 +210,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
 
   async function attack() {
     const r = await run(() => api.attackBlock(id, force.thugs, force.mercs), { silent: true })
-    if (r) { setResult(r); setIntel(null); setForce(f => ({ thugs: Math.min(f.thugs, Math.max(0, thugs - r.lost_thugs)), mercs: Math.min(f.mercs, Math.max(0, mercs - r.lost_mercs)) })); refresh() }
+    if (r) { haptic(r.captured ? 'success' : r.success ? 'medium' : 'error'); setResult(r); setIntel(null); setForce(f => ({ thugs: Math.min(f.thugs, Math.max(0, thugs - r.lost_thugs)), mercs: Math.min(f.mercs, Math.max(0, mercs - r.lost_mercs)) })); refresh() }
   }
 
   const ally = !!(b?.owner && !b.mine && allies.has(b.owner.id))
@@ -305,10 +306,10 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
                 </div>
               )}
               <div className="hstack">
-                <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || (!b.owner && me.cash < b.claim_price)} onClick={() => me.stamina < rules.stamina ? askRefill(rules.stamina) : attack()}>{result ? 'Attack again' : 'Attack'}</Btn>
+                <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || (!b.owner && me.cash < b.claim_price)} onClick={() => me.stamina < rules.stamina ? askRefill(rules.stamina) : attack()}>{result ? 'Attack Again' : 'Attack'}</Btn>
                 {spies > 0
                   ? <Btn className="sm" onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>
-                  : <button type="button" className="btn sm ghost" aria-expanded={spyOpen} onClick={() => setSpyOpen(v => !v)}>🕶 No spies · hire</button>}
+                  : <button type="button" className="btn sm ghost" aria-expanded={spyOpen} onClick={() => setSpyOpen(v => !v)}>🕶 No Spies · Hire</button>}
               </div>
               {intel && (
                 <div className="notice blue" role="status">Your spy reports resistance <b>{num(intel.resistance)}</b>: {Object.entries(intel.garrison).length === 0 ? 'no garrison' : Object.entries(intel.garrison).map(([k, v]) => `${num(v)} ${hoodlumName(k, v)}`).join(', ')}.</div>

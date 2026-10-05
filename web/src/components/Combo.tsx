@@ -42,7 +42,7 @@ export function SetupCombo({ setup }: { setup: SetupKind }) {
     .sort((a, b) => b.c.tier - a.c.tier)
     .slice(0, 3)
   return (
-    <Card title="Combo" right={<button className="btn sm ghost" onClick={() => nav('/fight?tab=combos')}>How combos work ›</button>}>
+    <Card title="Combo" right={<button className="btn sm ghost" onClick={() => nav('/fight?tab=combos')}>How Combos Work ›</button>}>
       <div className="bd stack">
         {active
           ? <>
@@ -65,7 +65,7 @@ export function SetupCombo({ setup }: { setup: SetupKind }) {
                 )
               })}
             </div>
-            {sc.chosen && <button className="btn sm ghost" onClick={() => run(() => api.setCombo(setup, null), { ok: () => 'Back to the best one' })}>Let the game pick</button>}
+            {sc.chosen && <button className="btn sm ghost" onClick={() => run(() => api.setCombo(setup, null), { ok: () => 'Back to the best one' })}>Let the Game Pick</button>}
           </div>
         )}
         {close.length > 0 && (

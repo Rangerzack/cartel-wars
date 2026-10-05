@@ -94,7 +94,7 @@ export default function PokerTable() {
     if (r) { land(r); setPick(null) }
   }
 
-  if (err && !st) return <div className="page"><div className="notice red">{err}</div><button className="btn" onClick={() => nav('/casino/poker')}>Back to the lobby</button></div>
+  if (err && !st) return <div className="page"><div className="notice red">{err}</div><button className="btn" onClick={() => nav('/casino/poker')}>Back to the Lobby</button></div>
   if (!st) return <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>
   const t = st.table
 
@@ -177,7 +177,7 @@ export default function PokerTable() {
                 <input type="range" min={minTo} max={allInTo} step={Math.max(1, Math.round(t.big_blind / 2))} value={raise ?? minTo} onChange={e => setRaise(Number(e.target.value))} />
                 <div className="hstack">
                   <button className="btn sm" onClick={() => setRaise(minTo)}>Min</button>
-                  <button className="btn sm" onClick={() => setRaise(Math.min(allInTo, Math.max(minTo, Math.round(potNow / 2 + (my.to_call || 0)))))}>½ pot</button>
+                  <button className="btn sm" onClick={() => setRaise(Math.min(allInTo, Math.max(minTo, Math.round(potNow / 2 + (my.to_call || 0)))))}>½ Pot</button>
                   <button className="btn sm" onClick={() => setRaise(Math.min(allInTo, Math.max(minTo, potNow + (my.to_call || 0) * 2)))}>Pot</button>
                   <button className="btn sm" onClick={() => setRaise(allInTo)}>All in</button>
                 </div>
@@ -212,7 +212,7 @@ export default function PokerTable() {
           <div className="stack">
             <div className="small muted">{mine ? `Top up to at most ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.` : `Bring ${money(t.min_buyin)} to ${money(t.max_buyin)}. You have ${money(me.cash)} on hand.`}</div>
             <BetPicker value={buyin} onChange={setBuyin} min={mine ? 100 : t.min_buyin} max={Math.max(100, Math.min(me.cash, mine ? t.max_buyin - stack : t.max_buyin))} label={mine ? 'Add' : 'Buy-in'} />
-            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin) || (!!mine && buyin > t.max_buyin - stack)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit down with ${money(buyin)}`}</Btn>
+            <Btn className="gold block" disabled={buyin > me.cash || (!mine && buyin < t.min_buyin) || (!!mine && buyin > t.max_buyin - stack)} onClick={() => join(pick)}>{mine ? `Add ${money(buyin)}` : `Sit Down with ${money(buyin)}`}</Btn>
             {!mine && me.cash < t.min_buyin && <div className="why">The table takes at least {money(t.min_buyin)} — you have {money(me.cash)} on hand.</div>}
             {mine && buyin > t.max_buyin - stack && <div className="why">Your stack can't go past {money(t.max_buyin)} here — room for {money(t.max_buyin - stack)}.</div>}
           </div>

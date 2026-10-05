@@ -20,7 +20,7 @@ export default function Profile() {
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Card title={<><span style={{ fontSize: 20 }}>{me.avatar}</span> {me.name}</>} right={<small>since {ago(me.created_at)}</small>}>
+      <Card title={<><span style={{ fontSize: 20 }}>{me.avatar}</span> {me.name}</>} right={<small>joined {ago(me.created_at)}</small>}>
         <div className="bd stack">
           {me.bio && !edit && <div className="small" style={{ fontStyle: 'italic' }}>“{me.bio}”</div>}
           {edit ? (
@@ -31,7 +31,7 @@ export default function Profile() {
               </div>
               <div className="hstack"><Btn className="sm gold" onClick={async () => { if (await run(() => api.updateProfile(edit.avatar, edit.bio), { ok: () => 'Profile saved' })) setEdit(null) }}>Save</Btn><Btn className="sm ghost" onClick={() => setEdit(null)}>Cancel</Btn></div>
             </div>
-          ) : <div><Btn className="sm ghost" onClick={() => setEdit({ avatar: me.avatar, bio: me.bio })}>Edit avatar & bio</Btn></div>}
+          ) : <div><Btn className="sm ghost" onClick={() => setEdit({ avatar: me.avatar, bio: me.bio })}>Edit Avatar & Bio</Btn></div>}
           <Ribbons list={me.ribbons} empty="No accolade stripes yet." />
           <div className="grid3 stat-grid">
             <Stat k="Cash" v={money(me.cash)} cls="gold" />

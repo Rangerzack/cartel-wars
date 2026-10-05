@@ -107,7 +107,7 @@ try {
                   on conflict (player_id, commodity) do update set qty = 400`, [aId])
   await db.query('update profiles set free_refills = 2, free_hustlers = 100, stamina = 0, cash = 0 where id = $1', [aId])
   await a.reload()
-  await card.getByRole('button', { name: /2 free refills/ }).click()
+  await card.getByRole('button', { name: /2 Free Refills/ }).click()
   await a.waitForURL(/focus=refills/)
   await a.locator('#refills').getByRole('button', { name: '🎁 Free ×2' }).click()
   await a.getByText(/stamina · 1 free left/).waitFor()

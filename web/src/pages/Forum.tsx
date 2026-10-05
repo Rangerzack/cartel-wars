@@ -157,7 +157,7 @@ function ThreadView({ id }: { id: number }) {
     if (await run(() => api.forumEdit(editing.kind, editing.id, editing.body, editing.title), { silent: true })) { setEditing(null); load() }
   }
 
-  if (gone) return <div className="page"><div className="notice red">That thread is gone.</div><Link to="/forum" className="btn">Back to the forum</Link></div>
+  if (gone) return <div className="page"><div className="notice red">That thread is gone.</div><Link to="/forum" className="btn">Back to the Forum</Link></div>
   if (!data) return <div className="page"><BackBar fallback="/forum" /><Loading error={error} onRetry={load} /></div>
   const t = data.thread, b = board(t.category)!
   return (

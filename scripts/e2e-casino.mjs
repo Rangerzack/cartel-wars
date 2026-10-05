@@ -66,7 +66,7 @@ try {
   await a.locator('.bj-summary').waitFor()
   await a.locator('.bj-hand .bj-tag').first().waitFor()
   await snap(a, 'blackjack')
-  await a.getByRole('button', { name: /^Deal again · \$100$/ }).waitFor()   // hand over → can deal again
+  await a.getByRole('button', { name: /^Deal Again · \$100$/ }).waitFor()   // hand over → can deal again
 
   // craps: pass line, roll, and the table shows the result
   await a.goto(BASE + '/casino/craps')
@@ -129,7 +129,7 @@ try {
   await a.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: 'Sit', exact: true }).click()
   await a.locator('.modal').waitFor()
   await snap(a, 'poker-buyin')
-  await a.getByRole('button', { name: /Sit down with/ }).click()
+  await a.getByRole('button', { name: /Sit Down with/ }).click()
   await toast(a, /Bought in for/)
   await a.locator('.felt').waitFor()
   await a.getByText('Need two players to deal.').waitFor()
@@ -137,7 +137,7 @@ try {
 
   await b.goto(BASE + '/casino/poker')
   await b.locator('.row', { hasText: 'Back Room · 1k/2k' }).first().getByRole('button', { name: 'Sit', exact: true }).click()
-  await b.getByRole('button', { name: /Sit down with/ }).click()
+  await b.getByRole('button', { name: /Sit Down with/ }).click()
   await toast(b, /Bought in for/)
   await b.locator('.felt').waitFor()
 

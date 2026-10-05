@@ -121,7 +121,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
         {(pitch || d.last || credits) && <div className="bd stack">
           {pitch && (
             viaStore ? <>
-                <Btn className="gold block" disabled={!price || delivering} onClick={subscribePaid}>{delivering ? 'Starting your Daily Drop…' : 'Subscribe'}</Btn>
+                <Btn className="gold block" disabled={!price || delivering} onClick={subscribePaid}>{delivering ? 'Starting Your Daily Drop…' : 'Subscribe'}</Btn>
                 {priceFailed
                   ? <div className="why">Couldn't get the price from the App Store. <button type="button" className="linkbtn" onClick={() => setPriceTry(n => n + 1)}>Try again</button></div>
                   : <div className="small muted center">{price ? `${price} per month, renews until cancelled. Cancel any time in your device settings.` : 'Getting the price from the App Store…'}</div>}
@@ -137,8 +137,8 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           {d.last && <div className="small muted">Last crate: <b className={d.last.jackpot ? 'gold' : ''}>{dropIcon[d.last.kind]} {d.last.label}</b> · {ago(d.last.at, now)}</div>}
           {credits && (
             <div className="hstack drop-credits">
-              {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}>⚡ {me.free_refills} free refill{me.free_refills === 1 ? '' : 's'} ›</button>}
-              {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
+              {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}>⚡ {me.free_refills} Free Refill{me.free_refills === 1 ? '' : 's'} ›</button>}
+              {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} Free Hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
             </div>
           )}
         </div>}
@@ -153,7 +153,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           <div className="row small muted">
             <div className="grow">Subscribed {d.since ? ago(d.since, now) : ''}{d.opened ? ` · ${num(d.opened)} crate${d.opened > 1 ? 's' : ''} opened` : ''}{d.drop_paid ? (d.until ? ` · paid through ${new Date(d.until).toLocaleDateString()}` : '') : ' · free plan'}</div>
             {d.drop_paid
-              ? <button className="btn sm ghost" onClick={manageSubscriptions}>Manage subscription</button>
+              ? <button className="btn sm ghost" onClick={manageSubscriptions}>Manage Subscription</button>
               : <Btn className="sm ghost" onClick={cancel}>Cancel</Btn>}
           </div>
         </>}

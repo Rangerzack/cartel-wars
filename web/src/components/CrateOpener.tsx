@@ -5,6 +5,7 @@ import { useGame } from '../lib/game'
 import type { DropResult } from '../lib/types'
 import { Modal } from './ui'
 import { Prize } from './Prize'
+import { haptic } from '../lib/haptics'
 
 /** Opening a crate, wherever the button is (the Daily Drop card, Home's Next up): shake the crate while the server
  *  rolls, for at least a beat, then show what came out, with Open Another while more wait. `sheet` renders the reveal;
@@ -21,7 +22,7 @@ export function useCrateOpener(onResult?: (r: DropResult) => void) {
     const r = await run(api.openCrate, { silent: true })
     if (!r) { if (n === opening.current) setReveal(null); return }
     await new Promise(res => setTimeout(res, Math.max(0, 1100 - (Date.now() - t0))))
-    if (n === opening.current) setReveal({ r })
+    if (n === opening.current) { setReveal({ r }); haptic(r.jackpot ? 'success' : 'medium') }
     onResult?.(r)
   }
   const close = () => { opening.current++; setReveal(null) }

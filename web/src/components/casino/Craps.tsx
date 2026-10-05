@@ -6,6 +6,7 @@ import type { CrapsBetKind, CrapsEvent, CrapsLogLine, CrapsRoll } from '../../li
 import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Die, Net, useBet } from './shared'
 import { useLoad } from '../../lib/useLoad'
+import { haptic } from '../../lib/haptics'
 
 const NUMBERS = [4, 5, 6, 8, 9, 10] as const
 const NUM_LABEL: Record<number, string> = { 4: '4', 5: '5', 6: 'SIX', 8: '8', 9: 'NINE', 10: '10' }
@@ -110,6 +111,7 @@ export default function Craps() {
     window.clearInterval(t)
     if (r) {
       setDice(r.dice); setRoll(r); setSt(r)
+      if (r.net > 0) haptic('success')
       setSession(s => ({ rolls: s.rolls + 1, net: s.net + r.net }))
       const f: Flash = {}
       for (const l of r.log) {
@@ -261,9 +263,9 @@ export default function Craps() {
           <BetPicker part="chips" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} label="Chip — tap the felt to bet" />
           <div className="hstack" style={{ flexWrap: 'nowrap' }}>
             <button type="button" className="btn gold flex1 cr-roll" disabled={rolling || placing || onFelt === 0} onClick={doRoll}>
-              {rolling ? <span className="spin" role="img" aria-label="Working" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a bet to roll'}
+              {rolling ? <span className="spin" role="img" aria-label="Working" /> : onFelt ? <>Roll <small>{money(onFelt)} on the felt</small></> : 'Place a Bet to Roll'}
             </button>
-            <button type="button" className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} aria-label="Take down everything except Pass / Don't Pass once the point is on, and come bets">Take down</button>
+            <button type="button" className="btn ghost" disabled={rolling || onFelt === 0} onClick={takeDown} aria-label="Take down everything except Pass / Don't Pass once the point is on, and come bets">Take Down</button>
           </div>
         </div>
         <BetPicker part="amount" value={chip} onChange={setChip} max={Math.min(500000, me.cash)} />

@@ -144,7 +144,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
           room; a DM names who it's with, and table talk has no seg */}
       <Card className={`chat ${compact ? 'compact' : ''}`} title={title}>
         <div className="log" ref={logRef} onScroll={e => onLogScroll(e.currentTarget)}>
-          {more && <button type="button" className="btn sm ghost load-older" disabled={older} onClick={loadOlder}>{older ? 'Loading…' : 'Load older messages'}</button>}
+          {more && <button type="button" className="btn sm ghost load-older" disabled={older} onClick={loadOlder}>{older ? 'Loading…' : 'Load Older Messages'}</button>}
           {!shown && <Empty><span className="spin" role="status" aria-label="Loading" /></Empty>}
           {shown?.length === 0 && <Empty>Nobody's said anything yet.</Empty>}
           {shown?.map(m => (

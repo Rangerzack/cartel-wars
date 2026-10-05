@@ -143,7 +143,7 @@ export function Loading({ error, onRetry }: { error: string | null; onRetry: () 
     <Empty>
       <div className="stack center load-fail">
         <span className="small muted">{error}</span>
-        <button type="button" className="btn sm" onClick={onRetry}>Try again</button>
+        <button type="button" className="btn sm" onClick={onRetry}>Try Again</button>
       </div>
     </Empty>
   )

@@ -755,6 +755,20 @@ the top bar only says what nothing else does: offline anywhere, the hospital off
 `scripts/ui-shots.mjs` captures 25 screens and states of the demo world at 390 × 844 and
 lists every control under 44 pt, for before/after comparisons.
 
+**Polish** *(Phase 5, 2026-10-05)*: button labels are in title case (Sign Out, Show All 12,
+Deal Again · $100; what follows a "·" is a detail and stays lower case); text links inside
+sentences stay in sentence case. A returning player's Home shows the latest three lines of
+While you were away above the stats. Leave Crew is at the end of the crew page, apart from
+Crew Chat and Territory. In the iPhone app, outcomes are felt: a job paid (light), a rare
+find, a won fight, hand, spin, roll or a taken block (success), a crate (medium), a bust
+(warning), a lost fight or a refused action (error); losses at the casino stay silent.
+Home is the only screen in the first download (565 kB of script, was 780 kB); every other
+screen loads when opened and is fetched in the background once the city is up. A screen
+that fails to draw shows "Something went wrong" with Reload under the top bar instead of a
+blank app, and a screen whose file vanished in a deploy reloads the app once onto the new
+build. Launch shows the same spinner all the way to the city. The App Store screenshots in
+`docs/app-store/` were retaken in the Phase 4 look.
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,

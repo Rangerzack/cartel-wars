@@ -105,7 +105,7 @@ export default function Auth() {
               </div>
             )}
             {why && <div className="why">{why}</div>}
-            <button className="btn doit block" disabled={busy || (mode === 'reset' && sent)} type="submit">{busy ? <span className="spin" role="img" aria-label="Working" /> : mode === 'up' ? 'Enter the City' : mode === 'reset' ? (sent ? 'Link sent' : 'Send reset link') : 'Sign In'}</button>
+            <button className="btn doit block" disabled={busy || (mode === 'reset' && sent)} type="submit">{busy ? <span className="spin" role="img" aria-label="Working" /> : mode === 'up' ? 'Enter the City' : mode === 'reset' ? (sent ? 'Link Sent' : 'Send Reset Link') : 'Sign In'}</button>
           </form>
           <div className="center" style={{ marginTop: 10 }}>
             {mode === 'in' && <button type="button" className="linkbtn small" onClick={() => switchTo('reset')}>Forgot your password?</button>}

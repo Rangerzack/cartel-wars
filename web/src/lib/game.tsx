@@ -7,6 +7,7 @@ import { errorText, isNetworkError, NET_RE, OFFLINE_TEXT } from './errors'
 import { initStore, logOutStore } from './store'
 import { setClock } from './clock'
 import type { Catalog, Me } from './types'
+import { haptic } from './haptics'
 
 export interface Toast { id: number; kind: 'ok' | 'bad' | 'info'; text: string }
 
@@ -126,6 +127,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // pages that toast an error's message themselves get the same plain line for a dropped connection
     const text = kind === 'bad' && NET_RE.test(raw) ? OFFLINE_TEXT : raw
     const id = ++toastId.current
+    if (kind === 'bad') haptic('error')
     // the same words already on screen (a retried action, the poll) don't stack a second copy
     setToasts(t => (t.some(x => x.text === text) ? t : [...t, { id, kind, text }].slice(-3)))
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), kind === 'bad' ? 4500 : 3200)
