@@ -57,10 +57,26 @@ const cases = [
     check: s => s.one.diamonds >= 0 },
   { name: 'open the only crate', stake: `drop_crates = 1`, call: `open_crate()`, max: 1,
     check: s => s.one.crates === 0 },
+  // the Personal Hood: one block's cash collected 12 times at once pays once; 12 attacks on the next block with 2
+  // stamina clear it once and cost 2 stamina (the rest are refused for stamina or "already yours")
+  { name: 'collect the hood 12 times', stake: `cash = 0`, call: `home_collect()`, max: 1,
+    setup: async () => { await q(`update seasons set home_defenders = array[1,1,1,1,1,1,1]`)
+      await q(`insert into home_hoods (player_id, season_id) select $1, id from seasons on conflict do nothing`, [ONE])
+      await q(`insert into home_blocks (player_id, season_id, slot, business, cleared_at, collected_at) select $1, s.id, 1, s.home_businesses[1], now(), now() - interval '24 hours' from seasons s on conflict (player_id, season_id, slot) do update set cleared_at = now(), collected_at = now() - interval '24 hours', level = 1`, [ONE]) },
+    check: async s => s.one.cash === 1500 && (await q(`select collects from home_hoods where player_id = $1`, [ONE]))[0].collects === 1 },
+  { name: 'attack the next block 12 times', stake: `stamina = 2, health = 100`, call: `home_attack(2)`, max: 1,
+    check: async () => { const r = (await q(`select stamina, (select count(*)::int from home_blocks where player_id = $1 and cleared_at is not null) n from profiles where id = $1`, [ONE]))[0]; return r.stamina === 0 && r.n === 2 } },
   { name: 'collect one trip of hustlers', stake: '', call: `collect_hustlers()`, max: N,
     setup: () => q(`insert into hustlers (player_id, commodity, count, units, cash_due, departs_at, returns_at) values ($1, 'herb', 1, 10, 777, now() - interval '2 hours', now() - interval '1 minute')`, [ONE]),
     check: s => s.one.cash === 777 },
 ]
+
+// the hood cases need a running season; an admin starts one if there isn't
+await q(`update profiles set is_admin = true where id = $1`, [ONE])
+if (!(await q(`select 1 from seasons where starts_at <= now() and ends_at > now()`)).length) {
+  const c = await db.connect()
+  try { await c.query(`select set_config('request.jwt.claims', $1, false)`, [JSON.stringify({ sub: ONE })]); await c.query(`select season_start('Race')`) } finally { c.release() }
+}
 
 const failures = []
 for (const c of cases) {

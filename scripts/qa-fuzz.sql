@@ -58,7 +58,15 @@ declare
     ['forum_list(''general'', -5)', 'either'], ['forum_thread(1, -5)', 'either'],
     -- too long is cut to fit (500 for chat, 8 and 200 for the avatar and bio), not refused
     ['send_message(''global'', '''')', 'refuse'], ['send_message(''global'', repeat(''x'', 5000))', 'either'],
-    ['update_profile(repeat(''🔥'', 50), repeat(''x'', 5000))', 'either']
+    ['update_profile(repeat(''🔥'', 50), repeat(''x'', 5000))', 'either'],
+    -- the Personal Hood and the campaign (a season is running when this suite runs)
+    ['home_attack(-1)', 'refuse'], ['home_attack(0)', 'refuse'], ['home_attack(7)', 'refuse'], ['home_attack(2147483647)', 'refuse'],
+    ['home_attack(3)', 'refuse'], ['home_boss()', 'refuse'],
+    ['home_collect(-1)', 'refuse'], ['home_collect(99)', 'refuse'], ['home_collect()', 'refuse'],
+    ['home_upgrade(-1)', 'refuse'], ['home_upgrade(99)', 'refuse'], ['home_upgrade(1)', 'refuse'],
+    ['mission_claim('''')', 'refuse'], ['mission_claim(''bogus'')', 'refuse'], ['mission_claim(''six_blocks'')', 'refuse'],
+    ['mission_claim(repeat(''x'', 5000))', 'refuse'], ['season_start(''Fuzz'')', 'refuse'],
+    ['season_start(''Fuzz'', now(), -1)', 'refuse'], ['season_start(''Fuzz'', now(), 3, array[1])', 'refuse']
   ];
   c text; want text; ok boolean; msg text; p1 profiles; p2 profiles; before1 bigint; before_world bigint; after_world bigint;
   accepted text[] := '{}'; broken text[] := '{}'; n int := 0;
