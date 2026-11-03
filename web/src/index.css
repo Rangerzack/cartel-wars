@@ -1207,3 +1207,34 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .floater { display: none; }
 }
+
+/* Season 1: Your Hood ---------------------------------------------------- */
+/* six private blocks in Territory's tile style: gold edge means yours, the next one up carries its odds, the rest wait */
+.hood-grid .block { min-height: 108px; }
+.block.yours { border-color: var(--gold-edge); background: var(--gold-tint); }
+.block.next { border-color: var(--line-strong); }
+.block.held { opacity: .55; }
+.block.held .em, .block.next .em { font-size: 18px; }
+.hood .row.boss { padding: 0; border: 0; }
+.hood .boss-tile { width: 100%; font: inherit; color: inherit; min-height: 84px; border-color: var(--red-edge); background: var(--red-tint); }
+.hood .boss-tile.sel { outline: 2px solid var(--gold); }
+.hood .hood-plate b { color: var(--gold-hi); }
+.hood .why { margin-top: -2px; }
+.hood .hstack > .btn.grow { flex: 1; }
+.hood-head .bd { padding-top: 0; }
+
+/* Season 1: Marcus and the gate ------------------------------------------ */
+.marcus .hd .mav { font-size: 18px; margin-right: 4px; vertical-align: -2px; }
+.marcus .line { margin: 0; font-size: var(--fs-md); line-height: 1.45; }
+.marcus.complete .hd { background: var(--gold-tint); }
+.marcus.complete .hd > span { color: var(--gold-hi); }
+.marcus .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); }
+.marcus .parts li.done { color: var(--text-2); }
+.marcus .bar.mini { width: 100%; }
+.marcus.card { animation: fadein var(--t-base) var(--ease); }
+.marcus.row.done .mav { font-size: 22px; }
+.marcus.row.done { align-items: center; }
+/* a locked tab or tile: dimmed, a lock where the count badge sits, still 44 pt */
+.tabbar a.locked, .quick a.locked { opacity: .55; cursor: default; }
+.tbadge.lock { background: var(--surface-3); color: var(--text); font-size: 9px; box-shadow: 0 0 0 2px #101013; }
+.locked-screen .hd > span { color: var(--text-2); }

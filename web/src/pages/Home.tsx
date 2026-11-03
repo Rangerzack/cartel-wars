@@ -12,13 +12,15 @@ import { ActivityRow } from '../components/Activity'
 import { HomePath } from '../components/Path'
 import { DailyDrop } from '../components/DailyDrop'
 import { NextUp } from '../components/NextUp'
+import { Marcus } from '../components/Marcus'
+import { gateOf, isLocked, LOCK_LINE } from '../lib/gate'
 
 type Tile = { to: string; ic: string; l: string; badge?: { n: number; tone: 'red' | 'gold'; label: string } }
 
 export default function Home() {
   const me = useMe()
   const off = me.power.offense, def = me.power.defense
-  const { refresh, catalog } = useGame()
+  const { refresh, catalog, toast } = useGame()
   const heatRed = me.heat_red ?? catalog?.config.heat_red ?? 75
   const [fights, setFights] = useState<FightLog[]>([])
   useEffect(() => { api.fights(3).then(setFights).catch(() => {}) }, [me.fights_won, me.fights_lost])
@@ -34,7 +36,11 @@ export default function Home() {
   // The places with no tab, one tap from Home (P2-4). The counts the old rows spelled out ride along as badges.
   const crewWaiting = (me.crew?.applications ?? 0) + (me.crew?.invites ?? 0)
   const stripes = me.ribbons.length
+  const hoodReady = me.home?.ready_cash ?? 0
   const tiles: Tile[] = [
+    // Season 1: your hood first, with what's waiting in it
+    ...(me.season && me.home ? [{ to: '/hood', ic: '🏘', l: 'Your Hood',
+      badge: hoodReady ? { n: Math.min(99, Math.round(hoodReady / 1000)) || 1, tone: 'gold' as const, label: `${money(hoodReady)} waiting` } : undefined } as Tile] : []),
     { to: '/items', ic: '🎒', l: 'Items' },
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', l: me.crew?.name ?? 'Crew',
       badge: crewWaiting ? { n: crewWaiting, tone: 'red', label: `${crewWaiting} waiting on you` } : undefined },
@@ -52,7 +58,8 @@ export default function Home() {
       {/* what needs you now (jail, the hospital, crates, trips back, full houses), then a new player's next step: both
           above the stats, so the first thing to do is the first thing on screen (Phase 3) */}
       <NextUp />
-      <GettingStarted me={me} />
+      {/* Season 1: Marcus and the mission you're on replace the checklist; the checklist stays for a world between seasons */}
+      {me.season ? <Marcus /> : <GettingStarted me={me} />}
       {/* back after a while: the latest three things that happened to you come before the stats (Phase 5) */}
       {away.length > 0 && (
         <Card title="While you were away" className="away" right={<button className="btn sm ghost" onClick={clearAway}>Clear</button>}>
@@ -74,7 +81,12 @@ export default function Home() {
       </div>
 
       <nav className="quick" aria-label="More places">
-        {tiles.map(t => (
+        {tiles.map(t => isLocked(me, gateOf(t.to)) ? (
+          <a key={t.l} href={t.to} className="locked" aria-label={`${t.l}, locked`} onClick={e => { e.preventDefault(); toast(LOCK_LINE, 'bad') }}>
+            <span className="ico">{t.ic}<span className="tbadge lock" aria-hidden>🔒</span></span>
+            <span className="lbl">{t.l}</span>
+          </a>
+        ) : (
           <Link key={t.l} to={t.to} aria-label={t.badge ? `${t.l}, ${t.badge.label}` : undefined}>
             <span className="ico">{t.ic}{t.badge && <span className={`tbadge ${t.badge.tone}`}>{t.badge.n > 99 ? '99+' : t.badge.n}</span>}</span>
             <span className="lbl">{t.l}</span>

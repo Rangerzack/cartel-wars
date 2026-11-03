@@ -55,6 +55,14 @@ export default function Territory() {
         ? <BackBar fallback={biz ? `/territory?biz=${biz}` : '/territory'} right={<span className="muted small">{hood.district} · {coord(hood)}</span>} />
         : <BackBar fallback="/" />}
       {!me.crew && <div className="notice blue">Territory is held by crews. <Link to="/crew">Join or found a crew</Link> to fight for blocks.</div>}
+      {/* Season 1: the six blocks that are yours alone sit off the map */}
+      {me.season && me.home && !hood && (
+        <RowLink to="/hood" className="card hood-link">
+          <span className="ico" aria-hidden>🏘</span>
+          <div className="grow"><div className="t">Your Hood</div><div className="s">{me.home.cleared}/6 blocks{me.home.income_day ? ` · ${money(me.home.income_day)}/day` : ''}{me.home.ready_cash ? ` · ${money(me.home.ready_cash)} waiting` : ''}</div></div>
+          <span className="chev">›</span>
+        </RowLink>
+      )}
       {/* the tiles are the hire buttons: hoodlums are bought where they're used, not two pages away */}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (

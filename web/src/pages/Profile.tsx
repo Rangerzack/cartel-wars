@@ -20,7 +20,7 @@ export default function Profile() {
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Card title={<><span style={{ fontSize: 20 }}>{me.avatar}</span> {me.name}</>} right={<small>joined {ago(me.created_at)}</small>}>
+      <Card title={<><span style={{ fontSize: 20 }}>{me.avatar}</span> {me.name}</>} right={<small>joined {ago(me.created_at)}{me.season && me.home ? <> · {me.season.name}: hood {me.home.cleared}/6{me.home.boss ? ', boss down' : ''}</> : null}</small>}>
         <div className="bd stack">
           {me.bio && !edit && <div className="small" style={{ fontStyle: 'italic' }}>“{me.bio}”</div>}
           {edit ? (

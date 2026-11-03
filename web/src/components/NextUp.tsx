@@ -49,6 +49,13 @@ export function NextUp() {
     s: me.drop && crates >= me.drop.max && me.drop.subscribed ? <span className="gold">Your stack is full — open one or tomorrow's is lost.</span> : undefined,
     act: <Btn className="sm doit" onClick={crate.open}>Open</Btn>,
   })
+  // Season 1: cash waiting on the blocks of your hood (ready after an hour; capped, so it shouldn't sit)
+  const hoodReady = me.home?.ready_cash ?? 0
+  if (me.season && hoodReady >= 500) items.push({
+    key: 'hood', ico: '🏘', tone: 'ready',
+    t: 'Your hood has cash waiting', s: <>{money(hoodReady)} across {me.home?.cleared} block{me.home?.cleared === 1 ? '' : 's'}</>,
+    act: <Btn className="sm doit" onClick={() => run(() => api.homeCollect(), { ok: r => `Collected ${money(r.collected)}` })}>Collect</Btn>,
+  })
   const back = me.hustlers.filter(h => h.back)
   if (back.length > 0) items.push({
     key: 'hustlers', ico: '🚶', tone: 'ready',

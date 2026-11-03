@@ -785,6 +785,51 @@ fails if a migration leaves one open. QA scripts, all against the local stack:
 (concurrent spends) and `scripts/qa-screens.mjs` (every screen at 320 to 844 wide for
 sideways scroll, console errors and failed requests, axe at 390, and 16 broken links).
 
+## Seasons, the Personal Hood and Marcus *(Zack, 2026-10-30)*
+
+A **season** is three months. An admin opens one with `season_start`, which draws six of the
+19 businesses at random (the same six for every player, in slot order) and sets seven
+defender numbers. Everything seasonal is keyed by `season_id` (`seasons`, `home_hoods`,
+`home_blocks`, `missions`; `mission_defs` is content); starting the next season is a new row
+and a new draw, the old rows stay as history, and `profiles` is untouched. With no season
+running the game plays as before: `get_me` reports no season, no hood, no mission, and every
+tab open.
+
+**Your Hood** (`/hood`): six private blocks off the map, one of the season's businesses on
+each, every one held by defenders until the player takes it back. A block's defenders are
+one number (their attack and defense: 12, 22, 32, 45, 60, 75 this season, 95 for the boss),
+fought with the player-fight scores, rolls and combo bonus against the Offensive setup, no
+edges, no heat, no cash, no fight row; 2 stamina a try; a loss costs 10–25 health and never
+takes you below 20. Blocks go in order, the boss after the sixth; beating him raises every
+block's income by half and puts the player's name on the hood. A taken block pays by the
+hour ($1,500 a day at level 1 to $14,000 at level 5, upgrades $5,000 to $100,000; an upgrade
+pays out waiting cash first), capped at 48 hours, collected a block at a time or all at once;
+Next Up says when $500 or more waits. Each taken block gives its business's perk through
+`_perks`: the base at level 1, the ceiling at level 5, and where a crew holds the same
+business the larger of the two counts, never the sum. Nobody can see, attack or spy on a
+hood; it is drawn in Territory's tile style with the gold edge that means "yours".
+
+**Marcus** is the player's right-hand man and the campaign is 15 `mission_defs` rows: a
+title, his line before and after, a label, an objective word, a quantity, a reward, the tabs
+it opens, and a deep link. `_mission_progress` turns the objective into a number from state
+the game already keeps (`hood_open`, `home_clear`, `home_collect`, `home_upgrade`,
+`home_boss`, `attack`, `actions`, `bank`, `grow`, `fight_win`, `moved`, `crew`, `hoodlums`,
+`turf`, `city` = crew + 5 hoodlums + 1 block hit as three ticks); the first `get_me` that sees
+it met remembers it, so a state that changes later can't unfinish it. `{biz1}` in a line is
+the business on block 1. The card at the top of Home (which replaces Getting Started while a
+season runs) shows his line, the objective with its progress and one button to where the job
+gets done; met, it flips to his done line and Claim, which pays and slides the next card in.
+`/missions` is the log. **The gate**: the campaign is not skippable; `get_me.unlocked` is the
+tabs of every claimed mission plus the one the player is on (Get Armed opens the shop it
+needs). Home, Your Hood, Profile, Store, Chat, Forum, Activity and Accolades never lock; Items
+opens with Get Armed (3), Actions with Work (5), Services and the Casino with Bank It (6),
+Economy with Grow (9), Fight with First Blood (11), Crew, Cartel and Territory with The Boss
+Falls (14). A locked tab stays in the bar, dimmed with a lock, and says "Not yet, boss. Finish
+what's on Home first." when tapped; a locked URL shows the same card. The lock is a tutorial
+fence: the RPCs keep their own rules. Tests: `scripts/season-test.sql`, `scripts/e2e-hood.mjs`
+and `scripts/e2e-campaign.mjs` (each starts and ends its own season, so the other suites run
+with none), ui-shots 25–28. The design and the numbers to tune are in the sprint doc.
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,

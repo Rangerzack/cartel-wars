@@ -49,6 +49,7 @@ do $$ declare me jsonb; s seasons := _season(); pal uuid := 'f9f9f9f9-0022-4000-
   assert (me->'home'->>'cleared')::int = 0 and (me->'home'->'next'->>'defender')::int = 12 and (me->'home'->'next'->>'win_pct')::int = 100,
          'block 1 is a sure thing bare-handed: ' || (me->'home')::text;
   assert me->'unlocked' = '["home","hood","profile","store","chat","forum","activity","accolades","missions"]'::jsonb, 'the gate is shut: ' || (me->'unlocked')::text;
+  assert not (me->'unlocked' ? 'items'), 'Six Blocks opens nothing';
 end $$;
 
 -- mission 1 and the claim --------------------------------------------------------------------------------------------------
@@ -163,7 +164,9 @@ end $$;
 
 -- the rest of the campaign: every objective, the gate, the boss ---------------------------------------------------------------
 do $$ declare pal uuid := 'f9f9f9f9-0022-4000-8000-000000000002'; me jsonb; r jsonb; s seasons := _season(); i int; begin
-  -- 3 get armed: attack power 28 (a Baseball Bat on bare 20)
+  -- 3 get armed: the shop is open as soon as Get Armed is the mission (20261103000023), since the mission needs it
+  assert get_me()->'unlocked' ? 'items' and not (get_me()->'unlocked' ? 'actions'), 'the current mission''s unlocks count: ' || (get_me()->'unlocked')::text;
+  -- attack power 28 (a Baseball Bat on bare 20)
   update profiles set cash = 100000, stamina = 50, health = 100 where id = pal;
   perform buy_item((select id from item_defs where name = 'Baseball Bat'), 1);
   perform equip('offense', (select id from item_defs where name = 'Baseball Bat'), 1);

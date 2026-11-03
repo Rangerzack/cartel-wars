@@ -101,7 +101,52 @@ export interface Me {
   slot_cost?: { diamonds: number; cash: number }
   /** 24-hour boost: +amount attack in Offense or defense in Defense. The side is locked on the first buy. */
   boost?: { side: 'attack' | 'defense' | null; until: string | null; active: boolean; amount: number }
+  /** Season 1: the running season (null between seasons), my Personal Hood in brief, the Marcus mission I'm on, and the
+   *  tabs the campaign has opened (every tab when no season runs). */
+  season?: SeasonInfo | null
+  home?: HoodBrief | null
+  mission?: MissionCard | null
+  unlocked?: string[]
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Season 1: the Personal Hood and the campaign
+// ---------------------------------------------------------------------------------------------------------------------
+export interface SeasonInfo { id: number; name: string; starts_at: string; ends_at: string; businesses?: string[] }
+/** The next fight in the hood: the defenders' number (their attack and defense) and the exact odds against my offense. */
+export interface HoodNext { defender: number; win_pct: number; my_att: number; my_def: number; stamina: number }
+export interface HoodBrief {
+  cleared: number; boss: boolean; boss_ready: boolean; ready_cash: number; income_day: number; next: HoodNext | null; opened: boolean
+}
+export interface HoodBlock {
+  slot: number; business: string; name: string; icon: string; perk: string; category: string
+  cleared: boolean; cleared_at: string | null; level: number
+  income_day: number | null; ready: number; cap_at: string | null; upgrade_cost: number | null
+  defender: number; perk_value: number | null
+}
+export interface HomeHood {
+  season: SeasonInfo; opened: boolean
+  boss: { cleared: boolean; cleared_at: string | null; defender: number; ready: boolean }
+  cleared: number; next_slot: number | null; next: HoodNext | null
+  ready_cash: number; income_day: number; collects: number
+  blocks: HoodBlock[]; perks: Record<string, number>; cfg: { cap_hours: number; boss_bonus: number }
+}
+export interface HoodFight {
+  won: boolean; slot: number; boss: boolean; defender: number; my_att: number; my_def: number
+  my_score: number; their_score: number; my_roll: number; their_roll: number; my_combo: string | null; my_combo_bonus: number
+  damage_taken: number; my_health: number; stamina: number; hood: HomeHood
+}
+export interface MissionPart { label: string; done: boolean }
+export interface Mission {
+  key: string; seq: number; n: number; title: string; intro: string; done: string; label: string
+  progress: number; qty: number; complete: boolean; claimed: boolean; claimed_at: string | null
+  reward_cash: number; reward_diamonds: number; unlocks: string[]; link: string; parts: MissionPart[] | null; pass_only: boolean
+  total?: number
+}
+/** The card on Home: the mission I'm on, or `finished` once the campaign is done. */
+export type MissionCard = (Mission & { total: number }) | { finished: true; total: number }
+export interface MissionsState { season: SeasonInfo | null; missions: Mission[]; current: MissionCard | null; unlocked: string[] }
+export interface MissionClaim { claimed: string; reward_cash: number; reward_diamonds: number; unlocks: string[]; next: MissionCard | null; unlocked: string[] }
 
 export type StyleCode = 'armored' | 'antitank' | 'infantry' | 'blitz' | 'blackout'
 /** A fighting style on the counter wheel: it beats two styles and loses to the other two. */
