@@ -13,8 +13,9 @@ export function SeasonBoard() {
   const { data, error, reload } = useLoad(() => api.seasonBoard(10), 'season-board')
   if (!me.season) return null
   if (!data) return <Loading error={error} onRetry={reload} />
+  const total = me.mission?.total ?? 16   // the campaign's length this season, from my own card
   const line = (r: { boss: boolean; cleared: number; claimed: number }) =>
-    r.boss ? `boss down · ${num(r.claimed)} of 15` : `${num(r.cleared)} of 6 blocks · ${num(r.claimed)} of 15`
+    r.boss ? `boss down · ${num(r.claimed)} of ${total}` : `${num(r.cleared)} of 6 blocks · ${num(r.claimed)} of ${total}`
   const inTop = data.rows.some(r => r.me)
   return (
     <Card title={`${data.season?.name ?? 'Season'} board`} className="season-board" right={<small className="tabular">{num(data.players)} player{data.players === 1 ? '' : 's'}</small>}>

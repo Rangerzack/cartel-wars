@@ -5,7 +5,7 @@ import type { Me } from './types'
  * (`me.unlocked`); the client only maps a route to its code. With no season running everything is open. Social and
  * spending screens never lock, and a profile is social: only its Attack locks. This is a tutorial fence, not a security boundary: the RPCs keep their own rules.
  */
-export type GateCode = 'items' | 'actions' | 'services' | 'casino' | 'economy' | 'fight' | 'crew' | 'territory'
+export type GateCode = 'items' | 'actions' | 'services' | 'casino' | 'economy' | 'fight' | 'crew'
 
 /** The gate code a path falls under, or null for a screen that never locks. */
 export function gateOf(pathname: string): GateCode | null {
@@ -18,7 +18,7 @@ export function gateOf(pathname: string): GateCode | null {
     case 'economy': return 'economy'
     case 'fight': return 'fight'   // a player's profile stays open (chat and the forum link there); its Attack button locks
     case 'crew': case 'cartel': return 'crew'
-    case 'territory': return 'territory'
+    // territory is where the hood lives (Season 1), so it never locks
     default: return null
   }
 }
@@ -33,6 +33,7 @@ export const LOCK_LINE = "Not yet, boss. Finish what's on Home first."
 
 /** The label on the Marcus card's button, from where the mission sends you. */
 export function goLabel(link: string): string {
+  if (/focus=hood(&|$)/.test(link)) return 'Open Your Hood'   // not focus=hoodlums, which is Services
   const top = link.split('?')[0].split('/')[1] ?? ''
   switch (top) {
     case 'hood': return 'Open Your Hood'

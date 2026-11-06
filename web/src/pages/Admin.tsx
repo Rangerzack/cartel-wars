@@ -216,7 +216,9 @@ function Words() {
 // ---------------------------------------------------------------------------------------------------------------------
 // Seasons: the one running, the next one scheduled, the ones over (docs/seasons.md is the runbook)
 // ---------------------------------------------------------------------------------------------------------------------
-const DEFENDERS = '12, 22, 32, 45, 60, 75, 95'
+const DEFENDERS = '50000, 150000, 500000, 1000000, 2500000, 5000000, 10000000'
+/** $50k, $2.5M: a garrison's worth in troops, short. */
+const short = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 1 })}M` : `$${Math.round(v / 1000)}k`
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 /** A datetime-local value (local time, to the minute) for an instant. */
 const local = (d: Date) => { const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}` }
@@ -227,7 +229,7 @@ function SeasonLine({ s }: { s: SeasonRow }) {
     <>
       <div className="small muted">{day(s.starts_at)} – {day(s.ends_at)} · {num(s.players)} player{s.players === 1 ? '' : 's'} with a hood · {num(s.bosses)} took the boss</div>
       <div className="hstack wrap">{s.businesses.map((b, i) => <span key={b.code} className="pill"><span aria-hidden>{b.icon}</span> {i + 1} · {b.name}</span>)}</div>
-      <div className="small muted tabular">Defenders {s.defenders.slice(0, 6).join(' · ')} · boss {s.defenders[6]}</div>
+      <div className="small muted tabular">Garrisons {s.defenders.slice(0, 6).map(short).join(' · ')} · boss {short(s.defenders[6])}</div>
     </>
   )
 }
@@ -292,7 +294,8 @@ function Seasons() {
             <label className="small stack" style={{ gap: 4 }}>Name<input className="input" placeholder={nextName} maxLength={40} value={name} onChange={e => setName(e.target.value)} /></label>
             <label className="small stack" style={{ gap: 4 }}>Starts<input className="input" type="datetime-local" value={fromValue} onChange={e => setFrom(e.target.value)} /></label>
             <label className="small stack" style={{ gap: 4 }}>Months<input className="input" type="number" min={1} max={12} value={months} onChange={e => setMonths(Math.max(1, Math.min(12, Math.floor(Number(e.target.value) || 1))))} /></label>
-            <label className="small stack" style={{ gap: 4 }}>Defenders, blocks 1–6 and the boss<input className="input" value={defs} onChange={e => setDefs(e.target.value)} aria-invalid={!defsOk} /></label>
+            <label className="small stack" style={{ gap: 4 }}>Troop value per garrison in dollars, blocks 1–6 and the boss<input className="input" value={defs} onChange={e => setDefs(e.target.value)} aria-invalid={!defsOk} /></label>
+            <div className="small muted">A block is held by that much muscle, half thugs and half enforcers; the player's thugs and mercs take it the way they'd take a city block.</div>
             {!defsOk && <div className="why">Seven whole numbers above zero.</div>}
             <Btn className="doit block" disabled={!defsOk || !Number.isFinite(fromAt.getTime())} onClick={start}>{startsNow ? `Start ${nextName} Now` : `Schedule ${nextName}`}</Btn>
           </div>

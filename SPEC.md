@@ -799,26 +799,36 @@ start time that defaults to the moment the running season ends, `season_end` now
 is a first-season thing: a player with a hood in an earlier season keeps the city open in the
 next one and plays the campaign as a reward track.
 
-**Your Hood** (`/hood`): six private blocks off the map, one of the season's businesses on
-each, every one held by defenders until the player takes it back. A block's defenders are
-one number (their attack and defense: 12, 22, 32, 45, 60, 75 this season, 95 for the boss),
-fought with the player-fight scores, rolls and combo bonus against the Offensive setup, no
-edges, no heat, no cash, no fight row; 2 stamina a try; a loss costs 10–25 health and never
-takes you below 20. Blocks go in order, the boss after the sixth; beating him raises every
-block's income by half and puts the player's name on the hood. A taken block pays by the
-hour ($1,500 a day at level 1 to $14,000 at level 5, upgrades $5,000 to $100,000; an upgrade
-pays out waiting cash first), capped at 48 hours, collected a block at a time or all at once;
-Next Up says when $500 or more waits. Each taken block gives its business's perk through
-`_perks`: the base at level 1, the ceiling at level 5, and where a crew holds the same
-business the larger of the two counts, never the sum. Nobody can see, attack or spy on a
-hood; it is drawn in Territory's tile style with the gold edge that means "yours".
+**Your Hood** (on the Territory page, `/territory?focus=hood`; `/hood` redirects there): six
+private blocks off the map, one of the season's businesses on each, every one held by a
+garrison of thugs and enforcers until the player takes it back *(Zack, 2026-11-07: muscle, not
+attack stats)*. A garrison is worth a troop value in dollars — $50k, $150k, $500k, $1M, $2.5M
+and $5M for blocks 1–6, $10M for the boss, the seven numbers in `seasons.home_defenders` —
+and is derived from it: the resistance that much mercenary muscle would bring (value × 60 ÷
+$4,000), half of it thugs (10 def each) and half enforcers (60 def), so block 1 is 38 thugs and
+7 enforcers at resistance 800 and the boss 7,500 and 1,250 at 150,000. The fight is the
+city's: the player sends thugs (10 att) and mercs (60 att), attack = force × 0.9–1.1, at least
+a quarter of the resistance to get a fight, 3 stamina; the attacker loses min(1, res ÷ atk) ÷
+2 of what was sent and the garrison loses min(1, atk ÷ res) ÷ 2 of itself, so a lost fight
+still bleeds it; attack over resistance takes the block and wipes the garrison. No gear, no
+health, no heat, no fight row. The form on the block's panel shows the garrison, the verdict
+for the force picked ("takes it whatever the roll", "could go either way", "they hold", "too
+small to fight"), the losses to expect, and Just enough / Everything / Hire more. Blocks go in
+order, the boss after the sixth; beating him raises every block's income by half and puts the
+player's name on the hood. A taken block pays by the hour ($1,500 a day at level 1 to $14,000
+at level 5, upgrades $5,000 to $100,000; an upgrade pays out waiting cash first), capped at 48
+hours, collected a block at a time or all at once; Next Up says when $500 or more waits. Each
+taken block gives its business's perk through `_perks`: the base at level 1, the ceiling at
+level 5, and where a crew holds the same business the larger of the two counts, never the
+sum. Nobody can see, attack or spy on a hood; it is drawn in Territory's tile style with the
+gold edge that means "yours", above the city.
 
-**Marcus** is the player's right-hand man and the campaign is 15 `mission_defs` rows: a
+**Marcus** is the player's right-hand man and the campaign is 16 `mission_defs` rows: a
 title, his line before and after, a label, an objective word, a quantity, a reward, the tabs
 it opens, and a deep link. `_mission_progress` turns the objective into a number from state
 the game already keeps (`hood_open`, `home_clear`, `home_collect`, `home_upgrade`,
 `home_boss`, `attack`, `actions`, `bank`, `grow`, `fight_win`, `moved`, `crew`, `hoodlums`,
-`turf`, `city` = crew + 5 hoodlums + 1 block hit as three ticks); the first `get_me` that sees
+`thugs`, `turf`, `city` = crew + 5 hoodlums + 1 block hit as three ticks); the first `get_me` that sees
 it met remembers it, so a state that changes later can't unfinish it. `{biz1}` in a line is
 the business on block 1. The card at the top of Home (which replaces Getting Started while a
 season runs) shows his line, the objective with its progress and one button to where the job
@@ -828,10 +838,13 @@ through the season — the boss down first, then blocks taken, then missions cla
 got there first — and the player's own row and rank when they're not among them; bots are off
 it, and it reads from the hood and mission rows, nothing new is written. **The gate**: the campaign is not skippable; `get_me.unlocked` is the
 tabs of every claimed mission plus the one the player is on (Get Armed opens the shop it
-needs). Home, Your Hood, Profile, Store, Chat, Forum, Activity and Accolades never lock; Items
-opens with Get Armed (3), Actions with Work (5), Services and the Casino with Bank It (6),
-Economy with Grow (9), Fight with First Blood (11), Crew, Cartel and Territory with The Boss
-Falls (14). A locked tab stays in the bar, dimmed with a lock, and says "Not yet, boss. Finish
+needs). The campaign runs the city first, then the hood, since block 1 wants $50k of muscle
+and a new player starts with $10,000: Six Blocks (1, a look at the hood), Work (2, opens
+Actions), Get Armed (3, Items), Bank It (4, Services and the Casino), Grow (5, Economy), First
+Blood (6, Fight), Move Product (7), Hire Muscle (8, thirty thugs from Services), Block One (9),
+Open for Business (10), Build It Up (11), Block Two (12), Blocks Three and Four (13), Blocks
+Five and Six (14), The Boss Falls (15, opens Crew and Cartel), Into the City (16). Home, Your
+Hood, Territory, Profile, Store, Chat, Forum, Activity and Accolades never lock. A locked tab stays in the bar, dimmed with a lock, and says "Not yet, boss. Finish
 what's on Home first." when tapped; a locked URL shows the same card. A player's profile is
 social and stays open (chat, the forum and activity link there); only its Attack locks, with
 the same line. While Economy is locked, Home keeps quiet about it: Next Up skips full grow
@@ -841,14 +854,13 @@ path teaser stays off. The lock is a tutorial fence: the RPCs keep their own rul
 and `scripts/e2e-seasons.mjs` (each starts and ends its own season, so the other suites run
 with none), ui-shots 25–29. The design and the numbers to tune are in the sprint doc.
 
-The defenders against a new player's gear (base 20/20, six slots, the Offensive setup's own
-defense counts against the block's score): a bat wins block 2 four times in five; block 3
-wants about $15,000 of shop gear, block 4 about $40,000, block 5 $40,000–80,000, block 6
-$80,000–160,000 and the boss about $160,000 (sawed-off, Uzi, MAC-10, tactical vest, riot
-shield, Kevlar). The odds step from 0% to 100% over a narrow band, so a tile's percentage is
-the thing to read; the campaign's cash rewards total $40,000 and the hood itself pays the
-rest over the season's first weeks. The numbers are a column on `seasons`
-(`home_defenders`), changed with an update, not a migration.
+What the hood costs a player who starts from nothing: $50k of troops for block 1 and
+$9.2M for all six, $19.2M with the boss, against a campaign that pays $280,000 in cash; the
+troops survive each win (a sure-thing attack loses about a fifth of the force sent, a close
+one up to half), so the real price is the losses plus the hoodlums' rising price. For the 88
+reset players holding $1M on hand and $4M banked, the first four blocks are an afternoon and
+the last three a season's work. The seven values are a column on `seasons`, changed with an
+update, not a migration; Admin › Seasons takes them in dollars.
 
 ## iOS app *(Zack, 2026-10-01)*
 

@@ -57,15 +57,18 @@ const cases = [
     check: s => s.one.diamonds >= 0 },
   { name: 'open the only crate', stake: `drop_crates = 1`, call: `open_crate()`, max: 1,
     check: s => s.one.crates === 0 },
-  // the Personal Hood: one block's cash collected 12 times at once pays once; 12 attacks on the next block with 2
-  // stamina clear it once and cost 2 stamina (the rest are refused for stamina or "already yours")
+  // the Personal Hood: one block's cash collected 12 times at once pays once; 12 attacks on the next block with 3
+  // stamina and 300 thugs (a sure thing against block 2's 2,270) clear it once, cost 3 stamina and one round of losses
+  // (the rest are refused for stamina or "already yours")
   { name: 'collect the hood 12 times', stake: `cash = 0`, call: `home_collect()`, max: 1,
-    setup: async () => { await q(`update seasons set home_defenders = array[1,1,1,1,1,1,1]`)
-      await q(`insert into home_hoods (player_id, season_id) select $1, id from seasons on conflict do nothing`, [ONE])
-      await q(`insert into home_blocks (player_id, season_id, slot, business, cleared_at, collected_at) select $1, s.id, 1, s.home_businesses[1], now(), now() - interval '24 hours' from seasons s on conflict (player_id, season_id, slot) do update set cleared_at = now(), collected_at = now() - interval '24 hours', level = 1`, [ONE]) },
+    setup: async () => {
+      await q(`insert into home_hoods (player_id, season_id) select $1, id from seasons where starts_at <= now() and ends_at > now() and cancelled_at is null on conflict do nothing`, [ONE])
+      await q(`insert into home_blocks (player_id, season_id, slot, business, cleared_at, collected_at) select $1, s.id, 1, s.home_businesses[1], now(), now() - interval '24 hours' from seasons s where s.starts_at <= now() and s.ends_at > now() and s.cancelled_at is null on conflict (player_id, season_id, slot) do update set cleared_at = now(), collected_at = now() - interval '24 hours', level = 1`, [ONE])
+      await q(`insert into home_blocks (player_id, season_id, slot, business, thugs, enforcers) select $1, s.id, 2, s.home_businesses[2], 113, 19 from seasons s where s.starts_at <= now() and s.ends_at > now() and s.cancelled_at is null on conflict (player_id, season_id, slot) do update set cleared_at = null, thugs = 113, enforcers = 19`, [ONE])
+      await q(`insert into player_hoodlums (player_id, code, qty) values ($1, 'thug', 300) on conflict (player_id, code) do update set qty = 300`, [ONE]) },
     check: async s => s.one.cash === 1500 && (await q(`select collects from home_hoods where player_id = $1`, [ONE]))[0].collects === 1 },
-  { name: 'attack the next block 12 times', stake: `stamina = 2, health = 100`, call: `home_attack(2)`, max: 1,
-    check: async () => { const r = (await q(`select stamina, (select count(*)::int from home_blocks where player_id = $1 and cleared_at is not null) n from profiles where id = $1`, [ONE]))[0]; return r.stamina === 0 && r.n === 2 } },
+  { name: 'attack the next block 12 times', stake: `stamina = 3, health = 100`, call: `home_attack(2, 300, 0)`, max: 1,
+    check: async () => { const r = (await q(`select stamina, (select count(*)::int from home_blocks where player_id = $1 and cleared_at is not null) n, (select qty from player_hoodlums where player_id = $1 and code = 'thug') thugs from profiles where id = $1`, [ONE]))[0]; return r.stamina === 0 && r.n === 2 && r.thugs >= 150 && r.thugs < 300 } },
   { name: 'collect one trip of hustlers', stake: '', call: `collect_hustlers()`, max: N,
     setup: () => q(`insert into hustlers (player_id, commodity, count, units, cash_due, departs_at, returns_at) values ($1, 'herb', 1, 10, 777, now() - interval '2 hours', now() - interval '1 minute')`, [ONE]),
     check: s => s.one.cash === 777 },
@@ -94,6 +97,7 @@ for (const c of cases) {
   if (!good) failures.push(c.name)
 }
 await reset()
+await q(`delete from seasons where name = 'Race'`)   // the season this run started, if it did; the other suites expect none
 await db.end()
 if (failures.length) { console.error(`QA RACE FAILED: ${failures.join(', ')}`); process.exit(1) }
 console.log('QA RACE PASSED')

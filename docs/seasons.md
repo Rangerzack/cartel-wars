@@ -10,7 +10,8 @@ when you do it. Rehearsed in `scripts/season-test.sql` (the rollover case) and
 
 Reset (keyed by `season_id`, the old rows stay as history):
 
-- The hood: six held blocks on the new draw, levels back to 1, no cash waiting, no boss.
+- The hood: six held blocks on the new draw, each garrisoned from the season's troop values, levels
+  back to 1, no cash waiting, no boss. The player's own thugs and mercs are theirs and carry over.
 - The hood's perks (`_home_perks` reads the running season only).
 - The campaign: Marcus is back on Six Blocks; every mission can be claimed and paid again.
   Objectives that read permanent state (attack power, actions done, a grow house, a crew) are met
@@ -30,9 +31,9 @@ Everything is on the Admin page's Seasons tab (`/admin?tab=seasons`), admins onl
 
 1. **Before the end** (any time during the season): fill in *Next season* and tap *Schedule*. The
    start defaults to the exact moment the running season ends, so there is no gap, and the six
-   businesses are drawn at that moment, not when you schedule. Name, months and the seven defender
-   numbers (blocks 1–6, then the boss) are editable; 12 · 22 · 32 · 45 · 60 · 75 · 95 is the Season 1
-   curve (SPEC has the odds table). A scheduled season shows with a Cancel button until it starts;
+   businesses are drawn at that moment, not when you schedule. Name, months and the seven troop
+   values in dollars (blocks 1–6, then the boss) are editable; $50k · $150k · $500k · $1M · $2.5M ·
+   $5M · $10M is the Season 1 curve (SPEC says how a value becomes a garrison). A scheduled season shows with a Cancel button until it starts;
    a cancelled season stays in *Past seasons* marked cancelled and never runs.
 2. **At the end**: nothing to do. `_season()` picks whatever season covers the current time, so at
    the scheduled instant the old one is over and the new one is on. Players see it on their next
@@ -55,7 +56,7 @@ service role or insert directly):
 insert into seasons (name, starts_at, ends_at, home_businesses, home_defenders)
 select 'Season 2', s.ends_at, s.ends_at + make_interval(months => 3),
        (select array_agg(code) from (select code from business_defs order by random() limit 6) x),
-       array[12, 22, 32, 45, 60, 75, 95]
+       array[50000, 150000, 500000, 1000000, 2500000, 5000000, 10000000]
   from seasons s where s.starts_at <= now() and s.ends_at > now();
 
 -- end the running season now
@@ -68,9 +69,9 @@ update seasons set starts_at = '2027-02-08 08:00+00', ends_at = '2027-05-08 08:0
 Two seasons must never overlap (`season_start` refuses; a direct insert won't, so check the dates).
 A season with `cancelled_at` set is ignored everywhere: to cancel by hand, set it rather than
 deleting the row.
-A season's `home_defenders` and `home_businesses` can be updated in place at any time; the hoods
-already made keep the businesses they were made with (`home_blocks.business`), so change the draw
-only before a season starts.
+A season's `home_defenders` (the troop values) and `home_businesses` can be updated in place at
+any time; the hoods already made keep the businesses and garrisons they were made with
+(`home_blocks.business`, `thugs`, `enforcers`), so change either only before a season starts.
 
 ## Checks after a rollover
 

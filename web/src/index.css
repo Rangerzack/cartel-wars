@@ -1223,6 +1223,7 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .hood .hood-plate b { color: var(--gold-hi); }
 .hood .why { margin-top: -2px; }
 .hood .hstack > .btn.grow { flex: 1; }
+.hood-grid .nowrap { white-space: nowrap; }
 .hood-head .bd { padding-top: 0; }
 
 /* Season 1: Marcus and the gate ------------------------------------------ */

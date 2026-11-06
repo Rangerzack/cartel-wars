@@ -166,8 +166,8 @@ export const api = {
 
   // Season 1: the Personal Hood and the campaign
   homeState: () => rpc<HomeHood>('home_state'),
-  homeAttack: (slot: number) => rpc<HoodFight>('home_attack', { slot }),
-  homeBoss: () => rpc<HoodFight>('home_boss'),
+  homeAttack: (slot: number, thugs: number, mercs: number) => rpc<HoodFight>('home_attack', { slot, thugs, mercs }),
+  homeBoss: (thugs: number, mercs: number) => rpc<HoodFight>('home_boss', { thugs, mercs }),
   homeCollect: (slot?: number) => rpc<{ collected: number; blocks: number; hood: HomeHood }>('home_collect', { slot: slot ?? null }),
   homeUpgrade: (slot: number) => rpc<{ level: number; cost: number; hood: HomeHood }>('home_upgrade', { slot }),
   missionsState: () => rpc<MissionsState>('missions_state'),

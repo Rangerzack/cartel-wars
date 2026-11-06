@@ -122,11 +122,12 @@ try {
   // Season 1 (Phase 6 sprint): a season of the shots' own, Your Hood with two blocks taken, the Marcus card on a fresh
   // player, a locked tab's toast, and the mission log; the season goes away after, so the other screens stay open
   const season = (await one(`insert into seasons (name, starts_at, ends_at, home_businesses, home_defenders)
-    values ('Season 1', now(), now() + interval '1 day', (select array_agg(code) from (select code from business_defs order by random() limit 6) x), array[12, 22, 32, 45, 60, 75, 95]) returning id`)).id
+    values ('Season 1', now(), now() + interval '1 day', (select array_agg(code) from (select code from business_defs order by random() limit 6) x), array[50000, 150000, 500000, 1000000, 2500000, 5000000, 10000000]) returning id`)).id
   try {
-    await p.goto(BASE + '/hood')
+    await p.goto(BASE + '/territory?focus=hood')
     await p.locator('.hood-grid').waitFor()
-    await db.query(`update home_blocks set cleared_at = now(), collected_at = now() - interval '9 hours', level = case slot when 1 then 2 else 1 end where player_id = $1 and season_id = $2 and slot <= 2`, [me, season])
+    await db.query(`update home_blocks set cleared_at = now(), collected_at = now() - interval '9 hours', level = case slot when 1 then 2 else 1 end, thugs = 0, enforcers = 0 where player_id = $1 and season_id = $2 and slot <= 2`, [me, season])
+    await db.query(`insert into player_hoodlums (player_id, code, qty) values ($1, 'thug', 120), ($1, 'mercenary', 110) on conflict (player_id, code) do update set qty = excluded.qty`, [me])
     await p.reload(); await p.locator('.hood-grid').waitFor(); await p.waitForTimeout(500)
     await p.screenshot({ path: path.join(OUT, '25-hood.png') })
     targets['25-hood'] = await measure(p)

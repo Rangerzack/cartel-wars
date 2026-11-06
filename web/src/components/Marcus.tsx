@@ -34,7 +34,7 @@ export function Marcus() {
   }
   const reward = <>{m.reward_cash ? money(m.reward_cash) : ''}{m.reward_cash && m.reward_diamonds ? ' + ' : ''}{m.reward_diamonds ? `💎${m.reward_diamonds}` : ''}</>
   return (
-    <Card key={m.key} className={`marcus ${m.complete ? 'complete' : ''}`} title={<><span className="mav" aria-hidden>{MARCUS.avatar}</span> {m.title}</>}
+    <Card key={m.key} id={`mission-${m.key}`} className={`marcus ${m.complete ? 'complete' : ''}`} title={<><span className="mav" aria-hidden>{MARCUS.avatar}</span> {m.title}</>}
       right={<small className="tabular"><Link to="/missions" className="hd-link">{num(m.n)} of {num(m.total)} ›</Link></small>}>
       <div className="bd stack">
         <p className="line">“{m.complete ? m.done : m.intro}”<span className="small muted"> — {MARCUS.name}</span></p>

@@ -6,6 +6,7 @@ import { ago, hoodlumIcon, hoodlumName, money, num, timeLeft, toInt } from '../l
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Loading, Modal, Qty, RowLink } from '../components/ui'
 import { HireHoodlums } from '../components/Hire'
+import { HoodPanel } from '../components/HoodPanel'
 import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
@@ -55,14 +56,6 @@ export default function Territory() {
         ? <BackBar fallback={biz ? `/territory?biz=${biz}` : '/territory'} right={<span className="muted small">{hood.district} · {coord(hood)}</span>} />
         : <BackBar fallback="/" />}
       {!me.crew && <div className="notice blue">Territory is held by crews. <Link to="/crew">Join or found a crew</Link> to fight for blocks.</div>}
-      {/* Season 1: the six blocks that are yours alone sit off the map */}
-      {me.season && me.home && !hood && (
-        <RowLink to="/hood" className="card hood-link">
-          <span className="ico" aria-hidden>🏘</span>
-          <div className="grow"><div className="t">Your Hood</div><div className="s">{me.home.cleared}/6 blocks{me.home.income_day ? ` · ${money(me.home.income_day)}/day` : ''}{me.home.ready_cash ? ` · ${money(me.home.ready_cash)} waiting` : ''}</div></div>
-          <span className="chev">›</span>
-        </RowLink>
-      )}
       {/* the tiles are the hire buttons: hoodlums are bought where they're used, not two pages away */}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (
@@ -77,6 +70,9 @@ export default function Territory() {
           <div className="bd"><HireHoodlums key={hire} initial={{ code: hire, n: hire === 'thug' ? Math.max(10, (data?.rules.min_thugs ?? 51) - thugs) : 5 }} /></div>
         </Card>
       ) : <div className="small muted">Thugs and mercs attack blocks; spies size up a garrison. Tap one to hire more.</div>}
+
+      {/* Season 1: the six blocks that are yours alone, above the city (?focus=hood lands on them) */}
+      {me.season && me.home && !hood && <HoodPanel focus={sp.get('focus') === 'hood'} />}
 
       {hood ? (
         <HoodView hood={hood} onBlock={setBlockId} biz={biz} allies={allies} siegeWins={data.rules.siege_wins} />

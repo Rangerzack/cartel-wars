@@ -39,7 +39,7 @@ export default function Home() {
   const hoodReady = me.home?.ready_cash ?? 0
   const tiles: Tile[] = [
     // Season 1: your hood first, with what's waiting in it
-    ...(me.season && me.home ? [{ to: '/hood', ic: '🏘', l: 'Your Hood',
+    ...(me.season && me.home ? [{ to: '/territory?focus=hood', ic: '🏘', l: 'Your Hood',
       badge: hoodReady ? { n: Math.min(99, Math.round(hoodReady / 1000)) || 1, tone: 'gold' as const, label: `${money(hoodReady)} waiting` } : undefined } as Tile] : []),
     { to: '/items', ic: '🎒', l: 'Items' },
     { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', l: me.crew?.name ?? 'Crew',
