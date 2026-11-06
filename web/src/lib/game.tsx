@@ -150,8 +150,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Each refresh takes a number; an answer older than the newest request is dropped, so the minute poll (or a
   // visibility refresh) that was already in flight when an action landed can't put the pre-action state back on screen.
+  // The first calls after a token refresh have, now and then, come back 401 from the API while the same token worked
+  // a moment later (seen twice on staging, Nov 2026: one of the two start-up calls, never both). So the start-up
+  // call gets one more try after a beat (`first`) before its error shows; the poll a minute later would mend it
+  // anyway, but a minute on "Entering the city…" is a long first impression.
   const seq = useRef(0)
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (first = false) => {
     const n = ++seq.current
     const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setClock(m.server_time, gotAt.current); setMeAt(gotAt.current); setMe(m) }
     try {
@@ -161,6 +165,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (e instanceof GameError && /No such player|Not signed in/.test(e.message)) {
         // profile missing (trigger not installed?) — create it
         try { land(await api.ensureProfile()) } catch (e2) { failed(e2, 'me') }
+      } else if (first && !isNetworkError(e) && !loaded.current.me) {
+        setTimeout(() => refresh(), 800)
       } else {
         failed(e, 'me')
       }
@@ -169,8 +175,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!session) return
-    refresh()
-    api.catalog().then(setCatalog).catch(e => failed(e, 'catalog'))
+    refresh(true)
+    // the catalog's first try gets the same second chance as me's (see refresh)
+    api.catalog().then(setCatalog).catch(e => {
+      if (isNetworkError(e) || loaded.current.catalog) { failed(e, 'catalog'); return }
+      setTimeout(() => api.catalog().then(setCatalog).catch(e2 => failed(e2, 'catalog')), 800)
+    })
     const t = setInterval(refresh, 60_000)
     const onVis = () => { if (document.visibilityState === 'visible') refresh() }
     document.addEventListener('visibilitychange', onVis)
@@ -241,7 +251,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); setMe(null) }, [])
   const endRecovery = useCallback(() => setRecovery(false), [])
 
-  const value = useMemo<GameState>(() => ({ session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
+  // the context's refresh takes no argument: the second chance is start-up's alone (a `.then(refresh)` would pass one)
+  const value = useMemo<GameState>(() => ({ session, authReady, me, meAt, catalog, toasts, refresh: () => refresh(), toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer }),
     [session, authReady, me, meAt, catalog, toasts, refresh, toast, run, busy, netDown, signOut, recovery, endRecovery, refillNeed, askRefill, closeRefill, ask, confirmReq, answer])
 
   return <Ctx.Provider value={value}>{offline ? <CantReach onRetry={retry} /> : children}</Ctx.Provider>

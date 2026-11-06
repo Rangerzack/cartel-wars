@@ -825,10 +825,23 @@ needs). Home, Your Hood, Profile, Store, Chat, Forum, Activity and Accolades nev
 opens with Get Armed (3), Actions with Work (5), Services and the Casino with Bank It (6),
 Economy with Grow (9), Fight with First Blood (11), Crew, Cartel and Territory with The Boss
 Falls (14). A locked tab stays in the bar, dimmed with a lock, and says "Not yet, boss. Finish
-what's on Home first." when tapped; a locked URL shows the same card. The lock is a tutorial
-fence: the RPCs keep their own rules. Tests: `scripts/season-test.sql`, `scripts/e2e-hood.mjs`
-and `scripts/e2e-campaign.mjs` (each starts and ends its own season, so the other suites run
-with none), ui-shots 25–28. The design and the numbers to tune are in the sprint doc.
+what's on Home first." when tapped; a locked URL shows the same card. A player's profile is
+social and stays open (chat, the forum and activity link there); only its Attack locks, with
+the same line. While Economy is locked, Home keeps quiet about it: Next Up skips full grow
+houses and trips back (nothing is lost — a full house pauses, a trip keeps its cash) and the
+path teaser stays off. The lock is a tutorial fence: the RPCs keep their own rules. Tests:
+`scripts/season-test.sql`, `scripts/e2e-hood.mjs` and `scripts/e2e-campaign.mjs` (each starts
+and ends its own season, so the other suites run with none), ui-shots 25–28. The design and
+the numbers to tune are in the sprint doc.
+
+The defenders against a new player's gear (base 20/20, six slots, the Offensive setup's own
+defense counts against the block's score): a bat wins block 2 four times in five; block 3
+wants about $15,000 of shop gear, block 4 about $40,000, block 5 $40,000–80,000, block 6
+$80,000–160,000 and the boss about $160,000 (sawed-off, Uzi, MAC-10, tactical vest, riot
+shield, Kevlar). The odds step from 0% to 100% over a narrow band, so a tile's percentage is
+the thing to read; the campaign's cash rewards total $40,000 and the hood itself pays the
+rest over the season's first weeks. The numbers are a column on `seasons`
+(`home_defenders`), changed with an update, not a migration.
 
 ## iOS app *(Zack, 2026-10-01)*
 
@@ -850,7 +863,11 @@ What differs from the web:
 
 Both builds: if the first load can't reach the server (offline, dead Wi-Fi), the
 game shows **Can't reach the city** with a Retry button instead of a spinner.
-Once the player is in, failed requests are toasts as before.
+Once the player is in, failed requests are toasts as before. A start-up call the
+server refuses (now and then the first call after a token refresh comes back 401
+while the same token works a moment later) gets one more try after a beat before
+its error shows; a call that keeps failing toasts, and the minute poll keeps
+trying (`scripts/e2e-startup.mjs`).
 
 **Versioning**: the version (`MARKETING_VERSION` in the Xcode project, 1.0.0 at
 launch) goes up for every App Store release: the last number for fixes, the

@@ -83,7 +83,7 @@ export default function Home() {
       <nav className="quick" aria-label="More places">
         {tiles.map(t => isLocked(me, gateOf(t.to)) ? (
           <a key={t.l} href={t.to} className="locked" aria-label={`${t.l}, locked`} onClick={e => { e.preventDefault(); toast(LOCK_LINE, 'bad') }}>
-            <span className="ico">{t.ic}<span className="tbadge lock" aria-hidden>🔒</span></span>
+            <span className="ico"><span className="ic">{t.ic}</span><span className="tbadge lock" aria-hidden>🔒</span></span>
             <span className="lbl">{t.l}</span>
           </a>
         ) : (

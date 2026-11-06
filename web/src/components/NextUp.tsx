@@ -5,6 +5,7 @@ import { useGame, useMe } from '../lib/game'
 import { money, timeLeft } from '../lib/format'
 import { collectHouses, collectedLine, producedNow } from '../lib/grow'
 import { useNow } from '../lib/useNow'
+import { isLocked } from '../lib/gate'
 import { BailButton } from './Bail'
 import { HealButton } from './Heal'
 import { useCrateOpener } from './CrateOpener'
@@ -56,13 +57,16 @@ export function NextUp() {
     t: 'Your hood has cash waiting', s: <>{money(hoodReady)} across {me.home?.cleared} block{me.home?.cleared === 1 ? '' : 's'}</>,
     act: <Btn className="sm doit" onClick={() => run(() => api.homeCollect(), { ok: r => `Collected ${money(r.collected)}` })}>Collect</Btn>,
   })
-  const back = me.hustlers.filter(h => h.back)
+  // Season 1: while Marcus still has Economy locked, its trips and houses wait quietly (nothing is lost: a full house
+  // only pauses, a trip back keeps its cash) rather than contradicting the lock on the tab
+  const economyLocked = isLocked(me, 'economy')
+  const back = economyLocked ? [] : me.hustlers.filter(h => h.back)
   if (back.length > 0) items.push({
     key: 'hustlers', ico: '🚶', tone: 'ready',
     t: `${back.length} hustler trip${back.length > 1 ? 's are' : ' is'} back`, s: <>{money(back.reduce((n, h) => n + h.cash_due, 0))} to collect</>,
     act: <Btn className="sm doit" onClick={() => run(api.collectHustlers, { ok: r => `Collected ${money(r.cash)}` })}>Collect</Btn>,
   })
-  const full = me.grow_houses.filter(g => g.running && producedNow(g, now, meAt) >= g.cap)
+  const full = economyLocked ? [] : me.grow_houses.filter(g => g.running && producedNow(g, now, meAt) >= g.cap)
   if (full.length > 0 && catalog) items.push({
     key: 'grow', ico: '🌿', tone: 'ready',
     t: `${full.length} grow house${full.length > 1 ? 's are' : ' is'} full`, s: 'Production stops until you collect',

@@ -53,6 +53,16 @@ try {
   await p.locator('.locked-screen').waitFor()
   await p.getByRole('link', { name: 'Back to Home' }).click()
   await p.locator('.marcus').waitFor()
+  // a profile stays open (it's where chat and the forum lead); only its Attack is locked, with Marcus's line
+  const other = (await one('select id from profiles where id <> $1 and not is_bot order by random() limit 1', [me])).id
+  await p.goto(`${BASE}/player/${other}`)
+  await p.getByRole('button', { name: '⚔️ Attack' }).waitFor()
+  if (!(await p.getByRole('button', { name: '⚔️ Attack' }).isDisabled())) throw new Error('Attack is locked until First Blood')
+  await p.getByText('Not yet, boss').waitFor()
+  await p.getByRole('button', { name: '💬 Chat' }).waitFor()
+  await p.goto(BASE)
+  await p.locator('.marcus').waitFor()
+  await p.getByText('Look at your six blocks').waitFor()   // the objective line, not the button's words
   // the hood is open from the start; looking at it is the mission
   await p.getByRole('link', { name: 'Open Your Hood' }).click()
   await p.locator('.hood-grid').waitFor()

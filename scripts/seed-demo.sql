@@ -4,6 +4,10 @@
 \set ON_ERROR_STOP on
 \set QUIET on
 
+-- The demo world runs with no season: the e2e suites expect every tab open, and the ones about Season 1 start a
+-- season of their own. The SQL suites leave one behind (season-test keeps it for the fuzz), so it goes here.
+delete from seasons;
+
 do $$
 declare
   names text[] := array['Escobar','Lalo','Nacho','Tuco','Gus','Hector','Marco','Leonel','Fring','Chapo','Ochoa','Salazar',

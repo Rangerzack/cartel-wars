@@ -3,7 +3,7 @@ import type { Me } from './types'
 /**
  * The campaign's gate (Season 1): tabs open as Marcus's missions are claimed. The server says which are open
  * (`me.unlocked`); the client only maps a route to its code. With no season running everything is open. Social and
- * spending screens never lock. This is a tutorial fence, not a security boundary: the RPCs keep their own rules.
+ * spending screens never lock, and a profile is social: only its Attack locks. This is a tutorial fence, not a security boundary: the RPCs keep their own rules.
  */
 export type GateCode = 'items' | 'actions' | 'services' | 'casino' | 'economy' | 'fight' | 'crew' | 'territory'
 
@@ -16,7 +16,7 @@ export function gateOf(pathname: string): GateCode | null {
     case 'services': return 'services'
     case 'casino': return 'casino'
     case 'economy': return 'economy'
-    case 'fight': case 'player': return 'fight'
+    case 'fight': return 'fight'   // a player's profile stays open (chat and the forum link there); its Attack button locks
     case 'crew': case 'cartel': return 'crew'
     case 'territory': return 'territory'
     default: return null

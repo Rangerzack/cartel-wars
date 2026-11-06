@@ -1213,7 +1213,9 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .hood-grid .block { min-height: 108px; }
 .block.yours { border-color: var(--gold-edge); background: var(--gold-tint); }
 .block.next { border-color: var(--line-strong); }
-.block.held { opacity: .55; }
+.block.held { background: var(--surface-1); border-style: dashed; }   /* dimmed by its edge and icon, never its text (contrast) */
+.block.held .em { opacity: .5; }
+.block.held .biz-name b { font-weight: 500; color: var(--text-2); }
 .block.held .em, .block.next .em { font-size: 18px; }
 .hood .row.boss { padding: 0; border: 0; }
 .hood .boss-tile { width: 100%; font: inherit; color: inherit; min-height: 84px; border-color: var(--red-edge); background: var(--red-tint); }
@@ -1234,7 +1236,9 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .marcus.card { animation: fadein var(--t-base) var(--ease); }
 .marcus.row.done .mav { font-size: 22px; }
 .marcus.row.done { align-items: center; }
-/* a locked tab or tile: dimmed, a lock where the count badge sits, still 44 pt */
-.tabbar a.locked, .quick a.locked { opacity: .55; cursor: default; }
+/* a locked tab or tile: the icon dimmed and a lock where the count badge sits; the label keeps its contrast; still 44 pt */
+.tabbar a.locked, .quick a.locked { cursor: default; }
+.tabbar a.locked .ic, .quick a.locked .ic { opacity: .45; }
+.quick a.locked .lbl { color: var(--text-2); }
 .tbadge.lock { background: var(--surface-3); color: var(--text); font-size: 9px; box-shadow: 0 0 0 2px #101013; }
 .locked-screen .hd > span { color: var(--text-2); }
