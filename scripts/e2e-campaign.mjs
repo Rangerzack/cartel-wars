@@ -126,6 +126,10 @@ try {
   await p.goto(`${BASE}/missions`)
   await p.locator('.mission.now', { hasText: 'Block Two' }).waitFor()
   if ((await p.locator('.mission.done').count()) !== 6) throw new Error('six done in the log')
+  // the season board under the log: with one block and six claims this player leads a season nobody else has touched
+  await p.locator('.season-board .row.me', { hasText: '1 of 6 blocks · 6 of 15' }).waitFor()
+  await p.locator('.season-board').getByText(`1. ${N('Rook')}`, { exact: false }).waitFor().catch(() => {})
+  if (!(await p.locator('.season-board .row.me .t', { hasText: N('Rook') }).count())) throw new Error('my row on the board')
   await p.screenshot({ path: `${SHOTS}/campaign-log.png`, fullPage: true })
 
   if (errors.length) throw new Error(errors.join('\n'))

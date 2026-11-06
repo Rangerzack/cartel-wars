@@ -4,6 +4,7 @@ import { ago, money, num } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 import { BackBar } from '../components/BackBar'
 import { Card, Empty, Loading } from '../components/ui'
+import { SeasonBoard } from '../components/SeasonBoard'
 
 /** The campaign log (Season 1): every mission in order, Marcus's lines for the ones behind you, the one you're on open, the rest locked. */
 export default function Missions() {
@@ -34,6 +35,7 @@ export default function Missions() {
           )
         })}
       </Card>
+      <SeasonBoard />
     </div>
   )
 }

@@ -344,6 +344,38 @@ do $$ declare me jsonb; begin
   assert me->'season'->>'name' = 'Season U' and not (me->'unlocked' ? 'actions') and jsonb_array_length(me->'unlocked') = 9, 'born in Season U, gated: ' || (me->'unlocked')::text;
 end $$;
 
+-- the season board (20261106000027): the boss first, then blocks, then claims, then who got there first ----------------
+select as_user('f9f9f9f9-0022-4000-8000-000000000002');
+do $$ declare pal uuid := 'f9f9f9f9-0022-4000-8000-000000000002'; boss uuid := 'f9f9f9f9-0022-4000-8000-000000000001';
+           rook uuid := 'f9f9f9f9-0022-4000-8000-000000000003'; b jsonb; u seasons := _season(); begin
+  update seasons set home_defenders = array[1, 1, 1, 1, 1, 1, 1];
+  update profiles set stamina = 50, health = 100 where id in (pal, boss);
+  perform home_attack(1); perform home_attack(2);                 -- pal: two blocks, one claim
+  update home_blocks set cleared_at = now() - interval '1 hour' where player_id = boss and season_id = u.id and slot = 1;   -- the admin: one block, earlier
+  b := season_board(10);
+  assert b->'season'->>'name' = 'Season U' and (b->>'players')::int = 3, b::text;
+  assert b->'rows'->0->>'id' = pal::text and (b->'rows'->0->>'rank')::int = 1 and (b->'rows'->0->>'cleared')::int = 2 and (b->'rows'->0->>'me')::boolean, 'pal leads on blocks: ' || (b->'rows'->0)::text;
+  assert b->'rows'->1->>'id' = boss::text and b->'rows'->2->>'id' = rook::text, 'then the admin, then the newcomer: ' || (b->'rows')::text;
+  assert (b->'me'->>'rank')::int = 1 and (b->'me'->>'cleared')::int = 2, (b->'me')::text;
+  -- the boss down beats any number of blocks; a limit of 1 keeps the leader only, and me still says where I am
+  update home_hoods set boss_cleared_at = now() where player_id = boss and season_id = u.id;
+  b := season_board(1);
+  assert jsonb_array_length(b->'rows') = 1 and b->'rows'->0->>'id' = boss::text and (b->'rows'->0->>'boss')::boolean, (b->'rows')::text;
+  assert (b->'me'->>'rank')::int = 2, (b->'me')::text;
+  update home_hoods set boss_cleared_at = null where player_id = boss and season_id = u.id;
+  -- a bot never shows
+  update profiles set is_bot = true where id = rook;
+  assert (season_board()->>'players')::int = 2, 'bots are off the board';
+  update profiles set is_bot = false where id = rook;
+  update seasons set home_defenders = array[12, 22, 32, 45, 60, 75, 95];
+end $$;
+-- with no season the board is empty, not an error
+update seasons set ends_at = now() where cancelled_at is null and ends_at > now();
+do $$ begin
+  assert season_board()->'season' = 'null'::jsonb and jsonb_array_length(season_board()->'rows') = 0, 'no season, no board';
+end $$;
+update seasons set ends_at = starts_at + interval '90 days' where name = 'Season U';
+
 -- clean up what the later suites would trip on: a season stays (the fuzz runs with one), the crew goes
 update profiles set crew_id = null where id = 'f9f9f9f9-0022-4000-8000-000000000002';
 delete from crews where name = 'Season Crew';

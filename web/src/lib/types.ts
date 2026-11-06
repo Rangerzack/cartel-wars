@@ -147,6 +147,9 @@ export interface Mission {
 export type MissionCard = (Mission & { total: number }) | { finished: true; total: number }
 export interface MissionsState { season: SeasonInfo | null; missions: Mission[]; current: MissionCard | null; unlocked: string[] }
 export interface MissionClaim { claimed: string; reward_cash: number; reward_diamonds: number; unlocks: string[]; next: MissionCard | null; unlocked: string[] }
+/** The season board: who's furthest through the season (boss first, then blocks, then claims, then who got there first). */
+export interface SeasonBoardRow { rank: number; id: string; name: string; avatar: string; emblem: string | null; boss: boolean; cleared: number; claimed: number; at: string | null; me: boolean }
+export interface SeasonBoard { season: { id: number; name: string; ends_at: string } | null; rows: SeasonBoardRow[]; me: { rank: number; boss: boolean; cleared: number; claimed: number } | null; players: number }
 /** A season as the admin's list shows it: its draw by name, how many players had a hood and how many took the boss. */
 export interface SeasonRow {
   id: number; name: string; starts_at: string; ends_at: string; cancelled_at?: string | null; status: 'scheduled' | 'running' | 'over' | 'cancelled'

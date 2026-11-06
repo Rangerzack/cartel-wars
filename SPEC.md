@@ -823,7 +823,10 @@ it met remembers it, so a state that changes later can't unfinish it. `{biz1}` i
 the business on block 1. The card at the top of Home (which replaces Getting Started while a
 season runs) shows his line, the objective with its progress and one button to where the job
 gets done; met, it flips to his done line and Claim, which pays and slides the next card in.
-`/missions` is the log. **The gate**: the campaign is not skippable; `get_me.unlocked` is the
+`/missions` is the log, with the **season board** under it (`season_board`): the ten furthest
+through the season — the boss down first, then blocks taken, then missions claimed, then whoever
+got there first — and the player's own row and rank when they're not among them; bots are off
+it, and it reads from the hood and mission rows, nothing new is written. **The gate**: the campaign is not skippable; `get_me.unlocked` is the
 tabs of every claimed mission plus the one the player is on (Get Armed opens the shop it
 needs). Home, Your Hood, Profile, Store, Chat, Forum, Activity and Accolades never lock; Items
 opens with Get Armed (3), Actions with Work (5), Services and the Casino with Bank It (6),

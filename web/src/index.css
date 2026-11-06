@@ -1242,3 +1242,6 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .quick a.locked .lbl { color: var(--text-2); }
 .tbadge.lock { background: var(--surface-3); color: var(--text); font-size: 9px; box-shadow: 0 0 0 2px #101013; }
 .locked-screen .hd > span { color: var(--text-2); }
+
+/* Season board (sprint 2): my own row carries the gold tint that means "yours" everywhere else */
+.season-board .row.me { background: var(--gold-tint); }
