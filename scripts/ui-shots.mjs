@@ -147,12 +147,18 @@ try {
     await r.goto(BASE + '/missions'); await r.locator('.mission').first().waitFor(); await r.waitForTimeout(400)
     await r.screenshot({ path: path.join(OUT, '28-missions.png') })
     await fresh2.close()
+    // the admin's Seasons tab (sprint day 5): the running season and the form for the next
+    await db.query('update profiles set is_admin = true where id = $1', [me])
+    await p.goto(BASE + '/admin?tab=seasons'); await p.locator('#season-running').waitFor(); await p.waitForTimeout(400)
+    await p.screenshot({ path: path.join(OUT, '29-admin-seasons.png'), fullPage: true })
+    targets['29-admin-seasons'] = await measure(p)
+    await db.query('update profiles set is_admin = false where id = $1', [me])
   } finally {
     await db.query('delete from seasons where id = $1', [season])
   }
   fs.writeFileSync(path.join(OUT, 'targets.json'), JSON.stringify(targets, null, 1))
   const total = Object.values(targets).reduce((n, l) => n + l.length, 0)
-  console.log(`ui-shots: ${screens.length + 10} screens in ${OUT}; ${total} controls under 44 pt`)
+  console.log(`ui-shots: ${screens.length + 11} screens in ${OUT}; ${total} controls under 44 pt`)
 } finally {
   await browser.close()
   await db.end()

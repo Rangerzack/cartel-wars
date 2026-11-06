@@ -147,6 +147,11 @@ export interface Mission {
 export type MissionCard = (Mission & { total: number }) | { finished: true; total: number }
 export interface MissionsState { season: SeasonInfo | null; missions: Mission[]; current: MissionCard | null; unlocked: string[] }
 export interface MissionClaim { claimed: string; reward_cash: number; reward_diamonds: number; unlocks: string[]; next: MissionCard | null; unlocked: string[] }
+/** A season as the admin's list shows it: its draw by name, how many players had a hood and how many took the boss. */
+export interface SeasonRow {
+  id: number; name: string; starts_at: string; ends_at: string; status: 'scheduled' | 'running' | 'over'
+  businesses: { code: string; name: string; icon: string }[]; defenders: number[]; players: number; bosses: number
+}
 
 export type StyleCode = 'armored' | 'antitank' | 'infantry' | 'blitz' | 'blackout'
 /** A fighting style on the counter wheel: it beats two styles and loses to the other two. */

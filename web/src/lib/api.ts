@@ -5,7 +5,7 @@ import type {
   BannedWord, BlockedPlayer, ContentReason, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
-  HomeHood, HoodFight, MissionsState, MissionClaim,
+  HomeHood, HoodFight, MissionsState, MissionClaim, SeasonRow,
 } from './types'
 
 export class GameError extends Error {}
@@ -172,6 +172,11 @@ export const api = {
   homeUpgrade: (slot: number) => rpc<{ level: number; cost: number; hood: HomeHood }>('home_upgrade', { slot }),
   missionsState: () => rpc<MissionsState>('missions_state'),
   missionClaim: (key: string) => rpc<MissionClaim>('mission_claim', { key }),
+  // seasons (admins)
+  seasonList: () => rpc<SeasonRow[]>('season_list'),
+  seasonStart: (nm: string, from_at: string, months: number, defenders: number[]) => rpc<SeasonRow>('season_start', { nm, from_at, months, defenders }),
+  seasonEnd: (sid: number) => rpc<SeasonRow>('season_end', { sid }),
+  seasonCancel: (sid: number) => rpc<{ cancelled: number }>('season_cancel', { sid }),
 
   // forum
   forumCategories: () => rpc<ForumCategories>('forum_categories'),

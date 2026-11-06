@@ -262,7 +262,83 @@ do $$ declare me uuid := 'f9f9f9f9-0022-4000-8000-000000000001'; r jsonb; begin
   perform mission_claim('bank_it');
 end $$;
 
--- clean up what the later suites would trip on: the season stays (the fuzz runs with one), the crew goes
+-- the rollover (20261106000025): Season T ends, Season U begins ------------------------------------------------------------
+-- Pal finished Season T's campaign with six blocks and the boss; the admin is on mission 7. Rolling over gives both a
+-- fresh hood and mission 1 again, keeps every Season T row, touches nothing on their profiles, and leaves the city open
+-- for both (a hood in an earlier season makes a veteran). A player born in Season U is gated like anyone's first time.
+select as_user('f9f9f9f9-0022-4000-8000-000000000002');
+do $$ declare pal uuid := 'f9f9f9f9-0022-4000-8000-000000000002'; me jsonb; begin
+  perform expect_error('select season_list()', 'Admins only');
+  perform expect_error('select season_end(1)', 'Admins only');
+  update profiles set cash = 123456, bank = 7890, diamonds = 42 where id = pal;
+  me := get_me();
+  assert (me->'home'->>'cleared')::int = 6 and (me->'home'->>'boss')::boolean, 'Season T: the hood is pal''s: ' || (me->'home')::text;
+  assert (_home_perks(pal)->>(select business from home_blocks where player_id = pal and slot = 1))::numeric > 0, 'Season T perks apply';
+end $$;
+select as_user('f9f9f9f9-0022-4000-8000-000000000001');
+do $$ declare boss uuid := 'f9f9f9f9-0022-4000-8000-000000000001'; pal uuid := 'f9f9f9f9-0022-4000-8000-000000000002';
+           t seasons := _season(); l jsonb; r jsonb; me jsonb; u seasons; before jsonb; after jsonb; rows_t int; begin
+  l := season_list();
+  assert jsonb_array_length(l) = 1 and l->0->>'status' = 'running' and (l->0->>'players')::int = 2 and (l->0->>'bosses')::int = 1
+         and jsonb_array_length(l->0->'businesses') = 6 and l->0->'businesses'->0 ? 'name', 'the list: ' || l::text;
+  perform expect_error('select season_end(999)', 'No such season');
+  perform expect_error(format('select season_cancel(%s)', t.id), 'has started');
+  rows_t := (select count(*) from home_blocks where season_id = t.id) + (select count(*) from missions where season_id = t.id);
+  before := (select to_jsonb(p) - 'last_seen' - 'stamina' - 'health' - 'stamina_tick' - 'health_tick' - 'heat' - 'heat_tick' from profiles p where id = pal);
+  -- the end: no season, every tab open, nothing seasonal on get_me
+  r := season_end(t.id);
+  assert (r->>'ends_at')::timestamptz <= now(), r::text;
+  perform expect_error(format('select season_end(%s)', t.id), 'already over');
+  assert (select id from _season()) is null, 'no season running';
+  me := get_me();
+  assert me->'season' = 'null'::jsonb and me->'home' = 'null'::jsonb and jsonb_array_length(me->'unlocked') = 17, 'between seasons: ' || (me->'season')::text;
+  perform expect_error('select home_state()', 'No season is running');
+  -- a scheduled season can be cancelled; one starting now is the real Season U
+  r := season_start('Season V', now() + interval '10 days', 1);
+  assert (season_list()->0->>'status') = 'scheduled', season_list()::text;
+  perform season_cancel((r->>'id')::int);
+  assert not exists (select 1 from seasons where name = 'Season V'), 'cancelled';
+  r := season_start('Season U');
+  u := _season();
+  assert u.name = 'Season U' and u.id <> t.id, 'Season U is on';
+  l := season_list();
+  assert jsonb_array_length(l) = 2 and l->0->>'name' = 'Season U' and l->0->>'status' = 'running' and l->1->>'status' = 'over', l::text;
+end $$;
+-- pal, the veteran
+select as_user('f9f9f9f9-0022-4000-8000-000000000002');
+do $$ declare pal uuid := 'f9f9f9f9-0022-4000-8000-000000000002'; u seasons := _season(); me jsonb; h jsonb; begin
+  me := get_me();
+  assert me->'season'->>'name' = 'Season U', (me->'season')::text;
+  assert (me->'home'->>'cleared')::int = 0 and not (me->'home'->>'boss')::boolean and (me->'home'->>'opened')::boolean is not true, 'a fresh hood: ' || (me->'home')::text;
+  assert (select array_agg(business order by slot) from home_blocks where player_id = pal and season_id = u.id) = u.home_businesses, 'the new draw';
+  assert me->'mission'->>'key' = 'six_blocks' and (me->'mission'->>'n')::int = 1, 'mission 1 again: ' || (me->'mission')::text;
+  assert jsonb_array_length(me->'unlocked') = 17, 'a veteran keeps the city: ' || (me->'unlocked')::text;
+  assert _home_perks(pal) = '{}'::jsonb, 'the old hood''s perks are gone: ' || _home_perks(pal)::text;
+  h := home_state();
+  assert (h->>'cleared')::int = 0 and (h->>'next_slot')::int = 1, h::text;
+  -- Season T is history, untouched
+  assert (select count(*) from home_blocks where player_id = pal and season_id <> u.id and cleared_at is not null) = 6, 'Season T blocks kept';
+  assert (select count(*) from missions where player_id = pal and season_id <> u.id and claimed_at is not null) = 15, 'Season T missions kept';
+  assert (select cash from profiles where id = pal) = 123456 and (select bank from profiles where id = pal) = 7890 and (select diamonds from profiles where id = pal) = 42, 'the profile is untouched';
+  -- the campaign still pays a veteran
+  perform mission_claim('six_blocks');
+  assert (get_me()->'mission'->>'key') = 'block_one', 'on to Block One';
+  assert (select cash from profiles where id = pal) = 123956, 'paid $500';
+end $$;
+-- the admin is a veteran too (a hood in Season T on mission 7); a newcomer is not
+select as_user('f9f9f9f9-0022-4000-8000-000000000001');
+do $$ declare me jsonb; begin
+  me := get_me();
+  assert jsonb_array_length(me->'unlocked') = 17 and me->'mission'->>'key' = 'six_blocks', 'the admin keeps the city, starts the campaign over: ' || (me->'unlocked')::text;
+end $$;
+insert into auth.users (id, raw_user_meta_data) values ('f9f9f9f9-0022-4000-8000-000000000003', '{"name":"SeasonRook"}');
+select as_user('f9f9f9f9-0022-4000-8000-000000000003');
+do $$ declare me jsonb; begin
+  me := get_me();
+  assert me->'season'->>'name' = 'Season U' and not (me->'unlocked' ? 'actions') and jsonb_array_length(me->'unlocked') = 9, 'born in Season U, gated: ' || (me->'unlocked')::text;
+end $$;
+
+-- clean up what the later suites would trip on: a season stays (the fuzz runs with one), the crew goes
 update profiles set crew_id = null where id = 'f9f9f9f9-0022-4000-8000-000000000002';
 delete from crews where name = 'Season Crew';
 update seasons set home_defenders = array[12, 22, 32, 45, 60, 75, 95];

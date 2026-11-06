@@ -83,7 +83,7 @@ try {
 
   // 3. get armed: the shop opens, a bat makes 28
   if ((await mission()) !== 'get_armed') throw new Error('mission 3 is Get Armed')
-  await p.getByRole('link', { name: 'Items' }).waitFor()   // the Home tile unlocked
+  await p.locator('.quick a[href="/items"]:not(.locked)').waitFor()   // the Home tile unlocked
   await p.getByRole('link', { name: 'Open the Shop' }).click()
   await p.locator('.row', { hasText: 'Baseball Bat' }).waitFor({ timeout: 10000 }).catch(async () => { await p.screenshot({ path: `${SHOTS}/campaign-shop-fail.png` }); throw new Error('the shop opens on weapons: ' + p.url()) })
   await p.locator('.row', { hasText: 'Baseball Bat' }).getByRole('button', { name: /\$2,000/ }).click()
@@ -103,7 +103,7 @@ try {
 
   // 5. work: three jobs, the progress on the card
   if ((await mission()) !== 'work') throw new Error('mission 5 is Work')
-  await p.getByRole('link', { name: 'Actions' }).waitFor()
+  await p.locator('.tabbar a[href="/actions"]:not(.locked)').waitFor()
   await p.getByRole('link', { name: 'Go to Actions' }).click()
   await p.locator('.row.action').first().waitFor()
   for (let i = 0; i < 3; i++) { await p.getByRole('button', { name: 'Do It' }).first().click(); await p.locator('.toast').first().waitFor(); await p.waitForTimeout(600) }
@@ -120,7 +120,7 @@ try {
   const dia = (await one('select diamonds from profiles where id = $1', [me])).diamonds
   await claim('bank_it', '💎10')
   if ((await one('select diamonds from profiles where id = $1', [me])).diamonds !== dia + 10) throw new Error('ten diamonds')
-  await p.getByRole('link', { name: 'Casino' }).waitFor()
+  await p.locator('.quick a[href="/casino"]:not(.locked)').waitFor()
   await p.getByRole('link', { name: 'Fight, locked' }).waitFor()
   // the log shows six done and the seventh open
   await p.goto(`${BASE}/missions`)

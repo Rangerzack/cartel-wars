@@ -54,7 +54,11 @@ async function rpc(fn, args, claims) {
   sig.names.forEach((name, i) => {
     if (!(name in args)) return
     const v = args[name]
-    vals.push(v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v))
+    // a JSON array for an array parameter becomes a Postgres array literal, as PostgREST does (season_start's defenders)
+    const lit = Array.isArray(v) && sig.types[i].endsWith('[]')
+      ? '{' + v.map(x => x === null ? 'NULL' : typeof x === 'number' ? String(x) : '"' + String(x).replace(/(["\\])/g, '\\$1') + '"').join(',') + '}'
+      : v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v)
+    vals.push(lit)
     parts.push(`${name} := $${vals.length}::${sig.types[i]}`)
   })
   const client = await pool.connect()

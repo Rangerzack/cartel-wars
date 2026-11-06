@@ -793,7 +793,11 @@ defender numbers. Everything seasonal is keyed by `season_id` (`seasons`, `home_
 `home_blocks`, `missions`; `mission_defs` is content); starting the next season is a new row
 and a new draw, the old rows stay as history, and `profiles` is untouched. With no season
 running the game plays as before: `get_me` reports no season, no hood, no mission, and every
-tab open.
+tab open. Admins run seasons from **Admin › Seasons** (`season_list`, `season_start` with a
+start time that defaults to the moment the running season ends, `season_end` now,
+`season_cancel` for one not yet started); `docs/seasons.md` is the rollover runbook. The gate
+is a first-season thing: a player with a hood in an earlier season keeps the city open in the
+next one and plays the campaign as a reward track.
 
 **Your Hood** (`/hood`): six private blocks off the map, one of the season's businesses on
 each, every one held by defenders until the player takes it back. A block's defenders are
@@ -830,9 +834,9 @@ social and stays open (chat, the forum and activity link there); only its Attack
 the same line. While Economy is locked, Home keeps quiet about it: Next Up skips full grow
 houses and trips back (nothing is lost — a full house pauses, a trip keeps its cash) and the
 path teaser stays off. The lock is a tutorial fence: the RPCs keep their own rules. Tests:
-`scripts/season-test.sql`, `scripts/e2e-hood.mjs` and `scripts/e2e-campaign.mjs` (each starts
-and ends its own season, so the other suites run with none), ui-shots 25–28. The design and
-the numbers to tune are in the sprint doc.
+`scripts/season-test.sql` (with the rollover), `scripts/e2e-hood.mjs`, `scripts/e2e-campaign.mjs`
+and `scripts/e2e-seasons.mjs` (each starts and ends its own season, so the other suites run
+with none), ui-shots 25–29. The design and the numbers to tune are in the sprint doc.
 
 The defenders against a new player's gear (base 20/20, six slots, the Offensive setup's own
 defense counts against the block's score): a bat wins block 2 four times in five; block 3
