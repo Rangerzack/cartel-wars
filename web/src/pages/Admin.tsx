@@ -243,7 +243,7 @@ function Seasons() {
   const [months, setMonths] = useState(3)
   const [defs, setDefs] = useState(DEFENDERS)
   if (!list) return <Loading error={error} onRetry={reload} />
-  const nextName = name || `Season ${list.length + 1}`
+  const nextName = name || `Season ${list.filter(s => s.status !== 'cancelled').length + 1}`
   // the next season starts the moment this one ends (to the second, so the two never overlap), unless the form says otherwise
   const fromAt = from ? new Date(from) : running ? new Date(running.ends_at) : new Date(now)
   const fromValue = from || local(fromAt)
@@ -264,7 +264,7 @@ function Seasons() {
   const cancel = async (s: SeasonRow) => {
     if (!await ask(`Cancel ${s.name}? It hasn't started; nothing else changes.`, { title: `Cancel ${s.name}?`, yes: 'Cancel It', tone: 'red' })) return
     const r = await run(() => api.seasonCancel(s.id), { ok: () => `${s.name} cancelled` })
-    if (r) set(list.filter(x => x.id !== s.id))
+    if (r) set(list.map(x => (x.id === s.id ? { ...x, status: 'cancelled' as const, cancelled_at: r.season.cancelled_at } : x)))
   }
   return (
     <>
@@ -289,7 +289,7 @@ function Seasons() {
         <Card title="Next season" id="season-next">
           <div className="bd stack">
             <div className="small muted">Starts {running ? `the moment ${running.name} ends unless you pick a time` : 'now unless you pick a time'}. The six businesses are drawn when it starts.</div>
-            <label className="small stack" style={{ gap: 4 }}>Name<input className="input" placeholder={`Season ${list.length + 1}`} maxLength={40} value={name} onChange={e => setName(e.target.value)} /></label>
+            <label className="small stack" style={{ gap: 4 }}>Name<input className="input" placeholder={nextName} maxLength={40} value={name} onChange={e => setName(e.target.value)} /></label>
             <label className="small stack" style={{ gap: 4 }}>Starts<input className="input" type="datetime-local" value={fromValue} onChange={e => setFrom(e.target.value)} /></label>
             <label className="small stack" style={{ gap: 4 }}>Months<input className="input" type="number" min={1} max={12} value={months} onChange={e => setMonths(Math.max(1, Math.min(12, Math.floor(Number(e.target.value) || 1))))} /></label>
             <label className="small stack" style={{ gap: 4 }}>Defenders, blocks 1–6 and the boss<input className="input" value={defs} onChange={e => setDefs(e.target.value)} aria-invalid={!defsOk} /></label>
@@ -299,10 +299,11 @@ function Seasons() {
         </Card>
       )}
       <Card title="Past seasons" right={<small>{list.filter(s => s.status === 'over').length}</small>}>
-        {list.filter(s => s.status === 'over').length === 0 && <Empty>None yet.</Empty>}
-        {list.filter(s => s.status === 'over').map(s => (
+        {list.filter(s => s.status === 'over' || s.status === 'cancelled').length === 0 && <Empty>None yet.</Empty>}
+        {list.filter(s => s.status === 'over' || s.status === 'cancelled').map(s => (
           <div key={s.id} className="row">
-            <div className="grow"><div className="t">{s.name}</div><div className="s">{day(s.starts_at)} – {day(s.ends_at)} · {num(s.players)} players · {num(s.bosses)} took the boss</div></div>
+            <div className="grow"><div className="t">{s.name}{s.status === 'cancelled' && <span className="muted"> · cancelled</span>}</div>
+              <div className="s">{s.status === 'cancelled' ? `was to start ${day(s.starts_at)}` : `${day(s.starts_at)} – ${day(s.ends_at)} · ${num(s.players)} players · ${num(s.bosses)} took the boss`}</div></div>
           </div>
         ))}
       </Card>

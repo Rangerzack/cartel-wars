@@ -296,13 +296,19 @@ do $$ declare boss uuid := 'f9f9f9f9-0022-4000-8000-000000000001'; pal uuid := '
   -- a scheduled season can be cancelled; one starting now is the real Season U
   r := season_start('Season V', now() + interval '10 days', 1);
   assert (season_list()->0->>'status') = 'scheduled', season_list()::text;
+  perform expect_error('select season_start(''Clash'', now() + interval ''20 days'', 1)', 'overlaps a season');
   perform season_cancel((r->>'id')::int);
-  assert not exists (select 1 from seasons where name = 'Season V'), 'cancelled';
+  assert (select cancelled_at is not null from seasons where name = 'Season V'), 'cancelled, kept';
+  perform expect_error(format('select season_cancel(%s)', (r->>'id')::int), 'already cancelled');
+  -- a cancelled season is out of the way: it overlaps nothing and never runs
+  r := season_start('Season W', now() + interval '20 days', 1);
+  perform season_cancel((r->>'id')::int);
   r := season_start('Season U');
   u := _season();
   assert u.name = 'Season U' and u.id <> t.id, 'Season U is on';
   l := season_list();
-  assert jsonb_array_length(l) = 2 and l->0->>'name' = 'Season U' and l->0->>'status' = 'running' and l->1->>'status' = 'over', l::text;
+  assert jsonb_array_length(l) = 4 and l->0->>'status' = 'cancelled' and l->1->>'status' = 'cancelled'
+         and l->2->>'name' = 'Season U' and l->2->>'status' = 'running' and l->3->>'status' = 'over', l::text;
 end $$;
 -- pal, the veteran
 select as_user('f9f9f9f9-0022-4000-8000-000000000002');

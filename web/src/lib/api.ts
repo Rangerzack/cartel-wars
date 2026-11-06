@@ -176,7 +176,7 @@ export const api = {
   seasonList: () => rpc<SeasonRow[]>('season_list'),
   seasonStart: (nm: string, from_at: string, months: number, defenders: number[]) => rpc<SeasonRow>('season_start', { nm, from_at, months, defenders }),
   seasonEnd: (sid: number) => rpc<SeasonRow>('season_end', { sid }),
-  seasonCancel: (sid: number) => rpc<{ cancelled: number }>('season_cancel', { sid }),
+  seasonCancel: (sid: number) => rpc<{ cancelled: number; season: SeasonRow }>('season_cancel', { sid }),
 
   // forum
   forumCategories: () => rpc<ForumCategories>('forum_categories'),

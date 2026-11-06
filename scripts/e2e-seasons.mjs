@@ -83,6 +83,7 @@ try {
   await a.locator('.toast', { hasText: 'cancelled' }).waitFor()
   await a.locator('#season-scheduled').waitFor({ state: 'detached' })
   await a.locator('#season-next').waitFor()
+  await a.locator('.card', { hasText: 'Past seasons' }).getByText('· cancelled').waitFor()   // kept, marked
 
   // 3. end it now: the past list has it; the player is between seasons
   await a.getByRole('button', { name: 'End Season Now' }).click()

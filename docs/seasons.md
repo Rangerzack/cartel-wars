@@ -32,7 +32,8 @@ Everything is on the Admin page's Seasons tab (`/admin?tab=seasons`), admins onl
    start defaults to the exact moment the running season ends, so there is no gap, and the six
    businesses are drawn at that moment, not when you schedule. Name, months and the seven defender
    numbers (blocks 1–6, then the boss) are editable; 12 · 22 · 32 · 45 · 60 · 75 · 95 is the Season 1
-   curve (SPEC has the odds table). A scheduled season shows with a Cancel button until it starts.
+   curve (SPEC has the odds table). A scheduled season shows with a Cancel button until it starts;
+   a cancelled season stays in *Past seasons* marked cancelled and never runs.
 2. **At the end**: nothing to do. `_season()` picks whatever season covers the current time, so at
    the scheduled instant the old one is over and the new one is on. Players see it on their next
    `get_me` (within a minute, or on their next load): a fresh hood on the next look, Marcus's first
@@ -65,6 +66,8 @@ update seasons set starts_at = '2027-02-08 08:00+00', ends_at = '2027-05-08 08:0
 ```
 
 Two seasons must never overlap (`season_start` refuses; a direct insert won't, so check the dates).
+A season with `cancelled_at` set is ignored everywhere: to cancel by hand, set it rather than
+deleting the row.
 A season's `home_defenders` and `home_businesses` can be updated in place at any time; the hoods
 already made keep the businesses they were made with (`home_blocks.business`), so change the draw
 only before a season starts.

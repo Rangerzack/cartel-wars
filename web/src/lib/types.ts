@@ -149,7 +149,7 @@ export interface MissionsState { season: SeasonInfo | null; missions: Mission[];
 export interface MissionClaim { claimed: string; reward_cash: number; reward_diamonds: number; unlocks: string[]; next: MissionCard | null; unlocked: string[] }
 /** A season as the admin's list shows it: its draw by name, how many players had a hood and how many took the boss. */
 export interface SeasonRow {
-  id: number; name: string; starts_at: string; ends_at: string; status: 'scheduled' | 'running' | 'over'
+  id: number; name: string; starts_at: string; ends_at: string; cancelled_at?: string | null; status: 'scheduled' | 'running' | 'over' | 'cancelled'
   businesses: { code: string; name: string; icon: string }[]; defenders: number[]; players: number; bosses: number
 }
 
