@@ -769,6 +769,80 @@ blank app, and a screen whose file vanished in a deploy reloads the app once ont
 build. Launch shows the same spinner all the way to the city. The App Store screenshots in
 `docs/app-store/` were retaken in the Phase 4 look.
 
+**QA** *(Phase 6, 2026-10-05)*: a money call fired 12 times at once (a double tap, a retry,
+two tabs) goes through as many times as the money allows and no more; every spend locks the
+player's row first. Not enough money says what you have ("You have $40 in the bank"), not
+"Invalid amount". Roulette refuses a bet it can never pay (a number past 36, a fourth dozen)
+before the stake comes off. List reads stop at 100 rows, and a player search treats % and _
+as letters. A pasted amount too big for the server, or a link with a mangled id, gets one
+plain line ("That amount doesn't work…", "That link doesn't go anywhere.") in place of the
+database's wording, on every screen. Each screen has a main landmark and its name as a
+level-1 heading for VoiceOver; links inside a sentence are underlined, not just blue.
+Private helpers (`_name`) can't be called through the API by anyone, and the SQL suite
+fails if a migration leaves one open. QA scripts, all against the local stack:
+`scripts/grants-test.sql` and `scripts/qa-test.sql` (run by `local-db.sh test`),
+`scripts/qa-fuzz.sql` (89 tampered calls, also in `local-db.sh test`), `scripts/qa-race.mjs`
+(concurrent spends) and `scripts/qa-screens.mjs` (every screen at 320 to 844 wide for
+sideways scroll, console errors and failed requests, axe at 390, and 16 broken links).
+
+## Seasons, the Personal Hood and Marcus *(Zack, 2026-10-30)*
+
+A **season** is three months. An admin opens one with `season_start`, which draws six of the
+19 businesses at random (the same six for every player, in slot order) and sets seven
+defender numbers. Everything seasonal is keyed by `season_id` (`seasons`, `home_hoods`,
+`home_blocks`, `missions`; `mission_defs` is content); starting the next season is a new row
+and a new draw, the old rows stay as history, and `profiles` is untouched. With no season
+running the game plays as before: `get_me` reports no season, no hood, no mission, and every
+tab open.
+
+**Your Hood** (`/hood`): six private blocks off the map, one of the season's businesses on
+each, every one held by defenders until the player takes it back. A block's defenders are
+one number (their attack and defense: 12, 22, 32, 45, 60, 75 this season, 95 for the boss),
+fought with the player-fight scores, rolls and combo bonus against the Offensive setup, no
+edges, no heat, no cash, no fight row; 2 stamina a try; a loss costs 10–25 health and never
+takes you below 20. Blocks go in order, the boss after the sixth; beating him raises every
+block's income by half and puts the player's name on the hood. A taken block pays by the
+hour ($1,500 a day at level 1 to $14,000 at level 5, upgrades $5,000 to $100,000; an upgrade
+pays out waiting cash first), capped at 48 hours, collected a block at a time or all at once;
+Next Up says when $500 or more waits. Each taken block gives its business's perk through
+`_perks`: the base at level 1, the ceiling at level 5, and where a crew holds the same
+business the larger of the two counts, never the sum. Nobody can see, attack or spy on a
+hood; it is drawn in Territory's tile style with the gold edge that means "yours".
+
+**Marcus** is the player's right-hand man and the campaign is 15 `mission_defs` rows: a
+title, his line before and after, a label, an objective word, a quantity, a reward, the tabs
+it opens, and a deep link. `_mission_progress` turns the objective into a number from state
+the game already keeps (`hood_open`, `home_clear`, `home_collect`, `home_upgrade`,
+`home_boss`, `attack`, `actions`, `bank`, `grow`, `fight_win`, `moved`, `crew`, `hoodlums`,
+`turf`, `city` = crew + 5 hoodlums + 1 block hit as three ticks); the first `get_me` that sees
+it met remembers it, so a state that changes later can't unfinish it. `{biz1}` in a line is
+the business on block 1. The card at the top of Home (which replaces Getting Started while a
+season runs) shows his line, the objective with its progress and one button to where the job
+gets done; met, it flips to his done line and Claim, which pays and slides the next card in.
+`/missions` is the log. **The gate**: the campaign is not skippable; `get_me.unlocked` is the
+tabs of every claimed mission plus the one the player is on (Get Armed opens the shop it
+needs). Home, Your Hood, Profile, Store, Chat, Forum, Activity and Accolades never lock; Items
+opens with Get Armed (3), Actions with Work (5), Services and the Casino with Bank It (6),
+Economy with Grow (9), Fight with First Blood (11), Crew, Cartel and Territory with The Boss
+Falls (14). A locked tab stays in the bar, dimmed with a lock, and says "Not yet, boss. Finish
+what's on Home first." when tapped; a locked URL shows the same card. A player's profile is
+social and stays open (chat, the forum and activity link there); only its Attack locks, with
+the same line. While Economy is locked, Home keeps quiet about it: Next Up skips full grow
+houses and trips back (nothing is lost — a full house pauses, a trip keeps its cash) and the
+path teaser stays off. The lock is a tutorial fence: the RPCs keep their own rules. Tests:
+`scripts/season-test.sql`, `scripts/e2e-hood.mjs` and `scripts/e2e-campaign.mjs` (each starts
+and ends its own season, so the other suites run with none), ui-shots 25–28. The design and
+the numbers to tune are in the sprint doc.
+
+The defenders against a new player's gear (base 20/20, six slots, the Offensive setup's own
+defense counts against the block's score): a bat wins block 2 four times in five; block 3
+wants about $15,000 of shop gear, block 4 about $40,000, block 5 $40,000–80,000, block 6
+$80,000–160,000 and the boss about $160,000 (sawed-off, Uzi, MAC-10, tactical vest, riot
+shield, Kevlar). The odds step from 0% to 100% over a narrow band, so a tile's percentage is
+the thing to read; the campaign's cash rewards total $40,000 and the hood itself pays the
+rest over the season's first weeks. The numbers are a column on `seasons`
+(`home_defenders`), changed with an update, not a migration.
+
 ## iOS app *(Zack, 2026-10-01)*
 
 The App Store build is the same React app inside a native shell (Capacitor 8,
@@ -789,7 +863,11 @@ What differs from the web:
 
 Both builds: if the first load can't reach the server (offline, dead Wi-Fi), the
 game shows **Can't reach the city** with a Retry button instead of a spinner.
-Once the player is in, failed requests are toasts as before.
+Once the player is in, failed requests are toasts as before. A start-up call the
+server refuses (now and then the first call after a token refresh comes back 401
+while the same token works a moment later) gets one more try after a beat before
+its error shows; a call that keeps failing toasts, and the minute poll keeps
+trying (`scripts/e2e-startup.mjs`).
 
 **Versioning**: the version (`MARKETING_VERSION` in the Xcode project, 1.0.0 at
 launch) goes up for every App Store release: the last number for fixes, the

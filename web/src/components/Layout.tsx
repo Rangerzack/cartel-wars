@@ -9,6 +9,7 @@ import { ConfirmSheet } from './Confirm'
 import type { Me } from '../lib/types'
 import { NamePrompt } from './NamePrompt'
 import { ScreenBoundary } from './ScreenBoundary'
+import { gateOf, isLocked, lockedPath, LOCK_LINE, type GateCode } from '../lib/gate'
 
 type Badge = { n: number; tone?: 'red' | 'gold'; dot?: boolean; label: string } | null
 
@@ -58,6 +59,28 @@ function TopLink({ to, label, className = '', children }: { to: string; label: s
 /** A new screen starts at the top: opening a crew from the bottom of another crew's page, or Profile from the end of
  *  Home, used to land mid-page. Back (a POP) is left to the browser, which puts the scroll back where it was. A change
  *  of query only (a tab, a filter) keeps the scroll. */
+/** The screen's name as its one level-1 heading: VoiceOver's rotor and the heading list say where you are (Phase 6). */
+const TITLES: Record<string, string> = {
+  '': 'Home', actions: 'Actions', economy: 'Economy', fight: 'Fight', player: 'Player', services: 'Services', items: 'Items',
+  crew: 'Crew', cartel: 'Cartel', territory: 'Territory', chat: 'Chat', profile: 'Profile', admin: 'Admin', accolades: 'Accolades',
+  activity: 'Activity', store: 'Store', casino: 'Casino', forum: 'Forum', hood: 'Your Hood', missions: 'Missions',
+}
+
+/** A screen the campaign hasn't opened yet (Season 1): the same line a locked tab gives, with the way back to the mission. */
+function LockedScreen() {
+  return (
+    <div className="page">
+      <div className="card locked-screen">
+        <div className="hd"><span>🔒 Not yet</span></div>
+        <div className="bd stack">
+          <div className="small muted">{LOCK_LINE} This part of the city opens as the campaign goes on.</div>
+          <Link to="/" className="btn doit block">Back to Home</Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation()
   const how = useNavigationType()
@@ -66,7 +89,7 @@ function ScrollToTop() {
 }
 
 export default function Layout() {
-  const { me, catalog, netDown } = useGame()
+  const { me, catalog, netDown, toast } = useGame()
   const now = useNow()
   const { pathname } = useLocation()
   const onHome = pathname === '/'
@@ -78,14 +101,18 @@ export default function Layout() {
     const n = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
     try { if (unread) n.setAppBadge?.(unread)?.catch(() => {}); else n.clearAppBadge?.()?.catch(() => {}) } catch { /* unsupported */ }
   }, [unread])
-  const tabs = [
-    { to: '/', ic: '🏠', l: 'Home' },
-    { to: '/actions', ic: '💼', l: 'Actions' },
-    { to: '/economy', ic: '🌿', l: 'Economy' },
-    { to: '/fight', ic: '🔫', l: 'Fight' },
-    { to: '/services', ic: '🏦', l: 'Services' },
-    { to: '/chat', ic: '💬', l: 'Chat' },
+  const tabs: { to: string; ic: string; l: string; gate: GateCode | null }[] = [
+    { to: '/', ic: '🏠', l: 'Home', gate: null },
+    { to: '/actions', ic: '💼', l: 'Actions', gate: 'actions' },
+    { to: '/economy', ic: '🌿', l: 'Economy', gate: 'economy' },
+    { to: '/fight', ic: '🔫', l: 'Fight', gate: 'fight' },
+    { to: '/services', ic: '🏦', l: 'Services', gate: 'services' },
+    { to: '/chat', ic: '💬', l: 'Chat', gate: null },
   ]
+  // Season 1's gate: a locked tab stays in the bar, dimmed with a lock, and says why when tapped; a locked route shows
+  // the same instead of its screen
+  const locked = (code: GateCode | null) => isLocked(me, code)
+  const routeLocked = !!me && lockedPath(me, pathname) && gateOf(pathname) !== null
   return (
     <div className="app">
       <Toasts />
@@ -118,6 +145,8 @@ export default function Layout() {
       )}
       {/* the strip only says what nothing else on screen does: offline anywhere, the hospital off Home (the top bar's
           JAIL tag covers jail, and Home's Next up covers both) */}
+      <main id="main">
+      {me && <h1 className="sr-only">{TITLES[pathname.split('/')[1] ?? ''] ?? 'Cartel Wars'}</h1>}
       {me && (netDown || (me.hospital && !onHome)) && (
         <div className="status-strip">
           {netDown && <span className="pill red">📡 Offline · retrying</span>}
@@ -128,14 +157,20 @@ export default function Layout() {
       {/* a screen that fails to draw shows a way out instead of a blank app; a screen still downloading shows a spinner */}
       <ScreenBoundary key={pathname}>
         <Suspense fallback={<div className="page"><div className="empty"><span className="spin" role="status" aria-label="Loading" /></div></div>}>
-          <Outlet />
+          {routeLocked ? <LockedScreen /> : <Outlet />}
         </Suspense>
       </ScreenBoundary>
+      </main>
       <RefillSheet />
       <ConfirmSheet />
-      <nav className="tabbar">
+      <nav className="tabbar" aria-label="Tabs">
         <div className="inner">
-          {tabs.map(t => (
+          {tabs.map(t => locked(t.gate) ? (
+            <a key={t.to} href={t.to} className="locked" aria-label={`${t.l}, locked`} data-locked={t.gate ?? undefined}
+              onClick={e => { e.preventDefault(); toast(LOCK_LINE, 'bad') }}>
+              <span className="icw"><span className="ic">{t.ic}</span><span className="tbadge lock" aria-hidden>🔒</span></span>{t.l}
+            </a>
+          ) : (
             <NavLink key={t.to} to={t.to} end={t.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}
               aria-label={b[t.to] ? `${t.l}, ${b[t.to]!.label}` : undefined}>
               <span className="icw"><span className="ic">{t.ic}</span>{b[t.to] && <span className={`tbadge ${b[t.to]!.tone ?? 'red'} ${b[t.to]!.dot ? 'dot' : ''}`}>{b[t.to]!.dot ? '' : b[t.to]!.n > 99 ? '99+' : b[t.to]!.n}</span>}</span>{t.l}

@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { money, num } from '../lib/format'
 import { Btn, Card } from './ui'
 import type { Catalog, Me, Path } from '../lib/types'
+import { isLocked } from '../lib/gate'
 
 function pathInfo(catalog: Catalog): Record<Path, { icon: string; name: string; does: string; gives_up: string }> {
   const lvl = catalog.config.path_grow_level ?? 5
@@ -79,6 +80,8 @@ export function HomePath() {
   const me = useMe()
   const { catalog } = useGame()
   if (!catalog || me.path) return null
+  // Season 1: paths are an Economy matter; nothing about them on Home until Marcus opens Economy
+  if (isLocked(me, 'economy')) return null
   if (me.path_required) return <PathCard />
   const need = catalog.config.path_rep ?? 100
   if (me.rep_earned < need * 0.5) return null

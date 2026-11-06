@@ -30,6 +30,8 @@ const pages = {
   Forum: () => import('./pages/Forum'),
   Admin: () => import('./pages/Admin'),
   Store: () => import('./pages/Store'),
+  Hood: () => import('./pages/Hood'),
+  Missions: () => import('./pages/Missions'),
 }
 const Actions = lazy(pages.Actions)
 const Economy = lazy(pages.Economy)
@@ -49,6 +51,8 @@ const PokerTable = lazy(pages.PokerTable)
 const Forum = lazy(pages.Forum)
 const Admin = lazy(pages.Admin)
 const Store = lazy(pages.Store)
+const Hood = lazy(pages.Hood)
+const Missions = lazy(pages.Missions)
 let prefetched = false
 /** Fetch the other screens while nothing else is going on, so opening one later is instant. */
 function prefetch() {
@@ -92,6 +96,8 @@ function Gate() {
         <Route path="/accolades" element={<Accolades />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/store" element={<Store />} />
+        <Route path="/hood" element={<Hood />} />
+        <Route path="/missions" element={<Missions />} />
         <Route path="/casino" element={<Casino />} />
         {features.casinoGames.length > 1 && <Route path="/casino/table/:id" element={<PokerTable />} />}
         <Route path="/casino/:game" element={<Casino />} />

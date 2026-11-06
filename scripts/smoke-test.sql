@@ -107,7 +107,7 @@ do $$ declare me jsonb; r jsonb; h uuid; begin
 
   -- bank
   perform bank_deposit(1000);
-  perform expect_error('select bank_withdraw(5000)', 'Invalid');
+  perform expect_error('select bank_withdraw(5000)', 'in the bank');
   perform bank_withdraw(500);
   me := get_me(); assert (me->>'bank')::int = 500;
 
@@ -269,7 +269,7 @@ do $$ declare r jsonb; c jsonb; begin
   assert (select count(*) from messages where channel = 'crew:' || (select id from crews where name = 'Los Pollos')) >= 2, 'crew notified';
   r := send_diamonds('11111111-1111-1111-1111-111111111111', 5);
   assert (select diamonds from profiles where name = 'Tuco') = 20, 'diamonds sent';
-  perform expect_error('select send_diamonds(''11111111-1111-1111-1111-111111111111'', 999)', 'Invalid');
+  perform expect_error('select send_diamonds(''11111111-1111-1111-1111-111111111111'', 999)', 'diamonds');
 end $$;
 
 -- Don vote: Tuco's crew joins Juárez, then both capos vote Tuco in

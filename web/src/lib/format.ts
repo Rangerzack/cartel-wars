@@ -3,8 +3,10 @@ export const money = (n: number | null | undefined) => { const v = Math.round(n 
 export const num = (n: number | null | undefined) => Math.round(n ?? 0).toLocaleString('en-US')
 /** "a, b and c" */
 export const andList = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] ?? ''
-/** What an amount field means as a whole number: "1,000" is 1000, "2.5" is 2, "" is 0 (RPCs take integers). */
-export const toInt = (v: string) => { const n = Math.floor(Number(v.replace(/[^0-9.]/g, ''))); return Number.isFinite(n) && n > 0 ? n : 0 }
+/** What an amount field means as a whole number: "1,000" is 1000, "2.5" is 2, "" is 0 (RPCs take integers). A pasted
+ *  run of digits past what the server's numbers hold stops at the largest safe one, so the answer is "not enough cash",
+ *  not a database overflow message (Phase 6). */
+export const toInt = (v: string) => { const n = Math.floor(Number(v.replace(/[^0-9.]/g, ''))); return Number.isFinite(n) && n > 0 ? Math.min(n, Number.MAX_SAFE_INTEGER) : 0 }
 
 export function timeLeft(iso: string | null | undefined, now = clockNow()): string {
   if (!iso) return ''

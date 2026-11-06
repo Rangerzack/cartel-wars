@@ -65,7 +65,7 @@ const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0,
 export function Die({ n, rolling, size = 44 }: { n: number; rolling?: boolean; size?: number }) {
   const on = new Set(PIPS[n] ?? [])
   return (
-    <span className={`die ${rolling ? 'rolling' : ''}`} aria-label={`die showing ${n}`}
+    <span className={`die ${rolling ? 'rolling' : ''}`} role="img" aria-label={`die showing ${n}`}
       style={{ width: size, height: size, padding: Math.round(size * 0.13), gap: Math.max(1, Math.round(size * 0.05)), borderRadius: Math.round(size * 0.18) }}>
       {Array.from({ length: 9 }, (_, i) => <i key={i} className={on.has(i) ? 'on' : ''} />)}
     </span>

@@ -15,6 +15,7 @@ import { ReportModal } from '../components/Report'
 import { ModButtons } from './Admin'
 import { useLoad } from '../lib/useLoad'
 import { haptic } from '../lib/haptics'
+import { isLocked, LOCK_LINE } from '../lib/gate'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -36,7 +37,9 @@ export default function Player() {
   const isMe = p.id === me.id
   // jail is its own room: inmates only fight inmates
   const jailWall = me.jailed !== p.jailed
-  const cantFight = isMe || me.hospital || p.hospital || jailWall
+  // Season 1: Fight opens with Marcus's First Blood; until then a profile is for looking and talking
+  const fightLocked = isLocked(me, 'fight')
+  const cantFight = isMe || me.hospital || p.hospital || jailWall || fightLocked
   const tired = me.stamina < 2   // not a dead button: Attack offers a refill
 
   async function fight() {
@@ -83,10 +86,11 @@ export default function Player() {
               {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
             </div>
           )}
-          {!isMe && me.hospital && <><div className="why">You're in the hospital — heal to full to fight again, or wait it out.</div><HealButton /></>}
+          {!isMe && fightLocked && <div className="why">{LOCK_LINE}</div>}
+          {!isMe && !fightLocked && me.hospital && <><div className="why">You're in the hospital — heal to full to fight again, or wait it out.</div><HealButton /></>}
           {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
           {!isMe && !cantFight && tired && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}, or tap Attack to refill.</div>}
-          {!isMe && pv && !p.hospital && !me.hospital && !jailWall && <Odds pv={pv} name={p.name} />}
+          {!isMe && pv && !p.hospital && !me.hospital && !jailWall && !fightLocked && <Odds pv={pv} name={p.name} />}
           {!isMe && p.blocked && <div className="small muted">You've blocked them — no messages either way</div>}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
         </div>

@@ -5,6 +5,7 @@ import type {
   BannedWord, BlockedPlayer, ContentReason, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
+  HomeHood, HoodFight, MissionsState, MissionClaim,
 } from './types'
 
 export class GameError extends Error {}
@@ -162,6 +163,15 @@ export const api = {
   pokerAct: (action: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) => rpc<PokerState>('poker_act', { action, amount: amount ?? null }),
   pokerState: (tid: number) => rpc<PokerState>('poker_state', { tid }),
   casinoHistory: (limit_n = 30) => rpc<CasinoHistory>('casino_history', { limit_n }),
+
+  // Season 1: the Personal Hood and the campaign
+  homeState: () => rpc<HomeHood>('home_state'),
+  homeAttack: (slot: number) => rpc<HoodFight>('home_attack', { slot }),
+  homeBoss: () => rpc<HoodFight>('home_boss'),
+  homeCollect: (slot?: number) => rpc<{ collected: number; blocks: number; hood: HomeHood }>('home_collect', { slot: slot ?? null }),
+  homeUpgrade: (slot: number) => rpc<{ level: number; cost: number; hood: HomeHood }>('home_upgrade', { slot }),
+  missionsState: () => rpc<MissionsState>('missions_state'),
+  missionClaim: (key: string) => rpc<MissionClaim>('mission_claim', { key }),
 
   // forum
   forumCategories: () => rpc<ForumCategories>('forum_categories'),

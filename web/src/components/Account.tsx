@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useGame } from '../lib/game'
 import { isNative, WEB_URL } from '../lib/platform'
 import { Btn, Card, Modal, Toasts } from './ui'
+import { errorText } from '../lib/errors'
 
 /** Where password-reset emails send people back to: this build's own address (live or staging).
  *  The iOS app's origin is capacitor://localhost, which Supabase won't redirect to, so its links open the live web app. */
@@ -22,7 +23,7 @@ function NewPasswordFields({ onDone, submitLabel }: { onDone: () => void; submit
       setSaving(true)
       try {
         const { error } = await supabase.auth.updateUser({ password: pw })
-        if (error) { toast(error.message, 'bad'); return }
+        if (error) { toast(errorText(error), 'bad'); return }
         toast('Password updated', 'ok'); setPw(''); setPw2(''); onDone()
       } finally { setSaving(false) }
     }}>
@@ -76,7 +77,7 @@ function DeleteAccount({ onClose, onDeleted }: { onClose: () => void; onDeleted:
           <input className="input" value={typed} onChange={e => setTyped(e.target.value)} placeholder={me?.name} autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
         </label>
         <Btn className="red block" disabled={!matches} onClick={async () => {
-          try { await api.deleteAccount(typed) } catch (e) { toast((e as Error).message, 'bad'); return }
+          try { await api.deleteAccount(typed) } catch (e) { toast(errorText(e), 'bad'); return }
           await signOut()
           toast('Your account is deleted', 'ok')
           onDeleted()

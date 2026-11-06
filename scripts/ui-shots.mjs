@@ -1,6 +1,7 @@
 // UI review screenshots (Phase 4): the same screens, the same player, every time, so a style change can be judged
 // side by side. Signs in as bot01 of the demo world and captures each screen at iPhone 13/14 size (390×844 @2x),
-// one phone screen each, plus the signed-out screen, sign-up, a new player's Home, Next up, the refill sheet and a toast. It also measures every control on each screen and lists the
+// one phone screen each, plus the signed-out screen, sign-up, a new player's Home, Next up, the refill sheet, a toast,
+// and (Season 1) Your Hood, the Marcus card, a locked tab and the mission log. It also measures every control on each screen and lists the
 // ones under 44 pt (Apple's minimum touch target) to <OUT>/targets.json.
 // Needs the local stack with the demo world: scripts/local-db.sh reset, then demo; dev-server.mjs; vite.
 // Usage: OUT=/tmp/shots/before node scripts/ui-shots.mjs
@@ -62,8 +63,11 @@ try {
     await p.waitForFunction(() => !document.querySelector('.spin, .toast'), null, { timeout: 15000 }).catch(() => {})
     await p.waitForTimeout(500)
     await p.screenshot({ path: path.join(OUT, `${s.file}.png`) })
-    // controls smaller than 44 pt in either direction, counting a ::after hit area that reaches further
-    targets[s.file] = await p.evaluate(() => {
+    targets[s.file] = await measure(p)
+  }
+  // controls smaller than 44 pt in either direction, counting a ::after hit area that reaches further
+  async function measure(p) {
+    return p.evaluate(() => {
       const small = []
       for (const el of document.querySelectorAll('button, a[href], input, select, [role="button"], summary')) {
         const r = el.getBoundingClientRect()
@@ -115,9 +119,40 @@ try {
   await q.waitForTimeout(500)
   await q.screenshot({ path: path.join(OUT, '24-new-home.png') })
   await fresh.close()
+  // Season 1 (Phase 6 sprint): a season of the shots' own, Your Hood with two blocks taken, the Marcus card on a fresh
+  // player, a locked tab's toast, and the mission log; the season goes away after, so the other screens stay open
+  const season = (await one(`insert into seasons (name, starts_at, ends_at, home_businesses, home_defenders)
+    values ('Season 1', now(), now() + interval '1 day', (select array_agg(code) from (select code from business_defs order by random() limit 6) x), array[12, 22, 32, 45, 60, 75, 95]) returning id`)).id
+  try {
+    await p.goto(BASE + '/hood')
+    await p.locator('.hood-grid').waitFor()
+    await db.query(`update home_blocks set cleared_at = now(), collected_at = now() - interval '9 hours', level = case slot when 1 then 2 else 1 end where player_id = $1 and season_id = $2 and slot <= 2`, [me, season])
+    await p.reload(); await p.locator('.hood-grid').waitFor(); await p.waitForTimeout(500)
+    await p.screenshot({ path: path.join(OUT, '25-hood.png') })
+    targets['25-hood'] = await measure(p)
+    const fresh2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
+    const r = await fresh2.newPage()
+    const nm = 'Ms' + Date.now().toString(36).slice(-5)
+    await r.goto(BASE)
+    await r.getByRole('button', { name: 'New Player' }).click()
+    await r.getByLabel('Street name').fill(nm)
+    await r.getByLabel('Email').fill(`${nm}@shots.local`)
+    await r.getByLabel('Password').fill('secret123')
+    await r.getByRole('button', { name: 'Enter the City' }).click()
+    await r.locator('.marcus').waitFor(); await r.waitForTimeout(500)
+    await r.screenshot({ path: path.join(OUT, '26-marcus.png') })
+    await r.getByRole('link', { name: 'Actions, locked' }).click()
+    await r.locator('.toast').waitFor()
+    await r.screenshot({ path: path.join(OUT, '27-locked-tab.png') })
+    await r.goto(BASE + '/missions'); await r.locator('.mission').first().waitFor(); await r.waitForTimeout(400)
+    await r.screenshot({ path: path.join(OUT, '28-missions.png') })
+    await fresh2.close()
+  } finally {
+    await db.query('delete from seasons where id = $1', [season])
+  }
   fs.writeFileSync(path.join(OUT, 'targets.json'), JSON.stringify(targets, null, 1))
   const total = Object.values(targets).reduce((n, l) => n + l.length, 0)
-  console.log(`ui-shots: ${screens.length + 6} screens in ${OUT}; ${total} controls under 44 pt`)
+  console.log(`ui-shots: ${screens.length + 10} screens in ${OUT}; ${total} controls under 44 pt`)
 } finally {
   await browser.close()
   await db.end()

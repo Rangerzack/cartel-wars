@@ -1,6 +1,7 @@
 import { api } from './api'
 import { andList, num } from './format'
 import type { Catalog, Me } from './types'
+import { errorText } from './errors'
 
 type House = Me['grow_houses'][number]
 
@@ -22,7 +23,7 @@ export async function collectHouses(houses: House[], catalog: Catalog) {
       if (r.left > 0) { stop = 'storage is full'; break }
     } catch (e) {
       if (!got.length) throw e
-      stop = (e as Error).message.toLowerCase()
+      stop = errorText(e).toLowerCase()
       break
     }
   }

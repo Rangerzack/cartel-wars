@@ -10,6 +10,7 @@ import { useNow } from '../lib/useNow'
 import type { DropPrize, RecentDrop } from '../lib/types'
 import { Btn, Card, RowLink } from './ui'
 import { useCrateOpener } from './CrateOpener'
+import { errorText } from '../lib/errors'
 
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
@@ -75,7 +76,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   // An App Store purchase: StoreKit takes the payment, then the webhook turns the plan on, so wait for get_me to show it.
   const subscribePaid = async () => {
     let r
-    try { r = await buyDrop(dropProduct) } catch (e) { toast((e as Error).message, 'bad'); return }
+    try { r = await buyDrop(dropProduct) } catch (e) { toast(errorText(e), 'bad'); return }
     if (r === 'cancelled') { toast('Purchase cancelled', 'info'); return }
     if (r === 'pending') { toast('Waiting for approval. The Daily Drop starts once Apple approves it.', 'info'); return }
     setDelivering(true)

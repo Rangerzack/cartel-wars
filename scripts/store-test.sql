@@ -68,7 +68,7 @@ do $$ declare u uuid := 'ee111111-1111-1111-1111-111111111111'; pal uuid := 'ee2
   assert p.diamonds = 650 and p.diamonds_bought_unspent = 650, 'a gift comes out of earned diamonds: ' || row_to_json(p)::text;
   assert (select diamonds_bought_unspent from profiles where id = pal) = 0, 'a gift is earned for the one who gets it';
   perform expect_error(format('select send_diamonds(%L, 1)', pal), 'You can only send diamonds you earned');
-  perform expect_error(format('select send_diamonds(%L, 9999)', pal), 'Invalid amount');
+  perform expect_error(format('select send_diamonds(%L, 9999)', pal), 'You have 650 diamonds');   -- says what's short (20261005000021_qa)
 
   -- a diamond refill (6) spends purchased diamonds first
   update profiles set stamina = 0 where id = u;
