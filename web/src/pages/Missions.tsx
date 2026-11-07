@@ -5,6 +5,7 @@ import { useLoad } from '../lib/useLoad'
 import { BackBar } from '../components/BackBar'
 import { Card, Empty, Loading } from '../components/ui'
 import { SeasonBoard } from '../components/SeasonBoard'
+import { Icon } from '../components/Icon'
 
 /** The campaign log (Season 1): every mission in order, Marcus's lines for the ones behind you, the one you're on open, the rest locked. */
 export default function Missions() {
@@ -22,7 +23,7 @@ export default function Missions() {
           const state = m.claimed ? 'done' : m.key === current ? 'now' : 'later'
           return (
             <div key={m.key} className={`row mission ${state}`} data-mission={m.key}>
-              <span className="check" aria-hidden>{state === 'done' ? '✅' : state === 'now' ? '▶' : '🔒'}</span>
+              <span className="check" aria-hidden><Icon name={state === 'done' ? 'checksquare' : state === 'now' ? 'arrow' : 'lock'} size={18} className={state === 'done' || state === 'now' ? 'gold' : 'muted'} /></span>
               <div className="grow">
                 <div className="t"><span className="muted tabular">{num(m.n)}.</span> {m.title}</div>
                 {state === 'done' && <div className="s">“{m.done}”{m.claimed_at ? <span className="muted"> · {ago(m.claimed_at)}</span> : null}</div>}
@@ -30,7 +31,7 @@ export default function Missions() {
                 {state === 'now' && <div className="small muted">{m.label}{m.qty > 1 ? ` · ${num(m.progress)} of ${num(m.qty)}` : ''}</div>}
                 {state === 'later' && <div className="s muted">{m.label}</div>}
               </div>
-              <span className="small tabular muted nowrap">{m.reward_cash ? money(m.reward_cash) : ''}{m.reward_cash && m.reward_diamonds ? ' + ' : ''}{m.reward_diamonds ? `💎${m.reward_diamonds}` : ''}</span>
+              <span className="small tabular muted nowrap">{m.reward_cash ? money(m.reward_cash) : ''}{m.reward_cash && m.reward_diamonds ? ' + ' : ''}{m.reward_diamonds ? <span className="dia"><Icon name="gem" size={13} />{m.reward_diamonds}</span> : ''}</span>
             </div>
           )
         })}

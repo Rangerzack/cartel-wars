@@ -1,5 +1,6 @@
 import { accoladeMeta } from '../lib/format'
 import type { Ribbon } from '../lib/types'
+import { Glyph } from './Icon'
 
 /** Weekly accolade stripes (top-3 finishes from last week). */
 export function Ribbons({ list, empty }: { list: Ribbon[] | undefined; empty?: string }) {
@@ -8,7 +9,7 @@ export function Ribbons({ list, empty }: { list: Ribbon[] | undefined; empty?: s
     <div className="ribbons">
       {list.map(r => (
         <span key={r.kind} className={`ribbon r${r.rank}`} title={`#${r.rank} ${accoladeMeta[r.kind]?.label ?? r.kind} last week`}>
-          {accoladeMeta[r.kind]?.icon} #{r.rank} {accoladeMeta[r.kind]?.label ?? r.kind}
+          <Glyph e={accoladeMeta[r.kind]?.icon} size={12} /> #{r.rank} {accoladeMeta[r.kind]?.label ?? r.kind}
         </span>
       ))}
     </div>

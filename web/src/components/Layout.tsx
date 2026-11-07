@@ -9,6 +9,7 @@ import { ConfirmSheet } from './Confirm'
 import type { Me } from '../lib/types'
 import { NamePrompt } from './NamePrompt'
 import { ScreenBoundary } from './ScreenBoundary'
+import { Icon, type IconName } from './Icon'
 import { gateOf, isLocked, lockedPath, LOCK_LINE, type GateCode } from '../lib/gate'
 
 type Badge = { n: number; tone?: 'red' | 'gold'; dot?: boolean; label: string } | null
@@ -31,11 +32,11 @@ function badges(me: Me): Record<string, Badge> {
 }
 
 /** `mark`: a value to draw a 1 px tick at on the track (heat: where red, the bust risk, starts). */
-function Bar({ cls, label, value, max, extra, mark }: { cls: string; label: string; value: number; max: number; extra?: string; mark?: number }) {
+function Bar({ cls, label, icon, value, max, extra, mark }: { cls: string; label?: string; icon: IconName; value: number; max: number; extra?: string; mark?: number }) {
   const pct = (v: number) => Math.max(0, Math.min(100, (v / Math.max(1, max)) * 100))
   return (
     <div className={`bar ${cls}`}>
-      <div className="lbl"><span>{label}</span><span>{num(value)}/{num(max)}{extra ? ` · ${extra}` : ''}</span></div>
+      <div className="lbl"><span><Icon name={icon} size={13} />{label}</span><span>{num(value)}/{num(max)}{extra ? ` · ${extra}` : ''}</span></div>
       <div className="track"><div className="fill" style={{ width: pct(value) + '%' }} />{mark !== undefined && mark < max && <i className="mark" style={{ left: pct(mark) + '%' }} />}</div>
     </div>
   )
@@ -71,7 +72,7 @@ function LockedScreen() {
   return (
     <div className="page">
       <div className="card locked-screen">
-        <div className="hd"><span>🔒 Not yet</span></div>
+        <div className="hd"><span><Icon name="lock" size={18} />Not yet</span></div>
         <div className="bd stack">
           <div className="small muted">{LOCK_LINE} This part of the city opens as the campaign goes on.</div>
           <Link to="/" className="btn doit block">Back to Home</Link>
@@ -101,13 +102,13 @@ export default function Layout() {
     const n = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
     try { if (unread) n.setAppBadge?.(unread)?.catch(() => {}); else n.clearAppBadge?.()?.catch(() => {}) } catch { /* unsupported */ }
   }, [unread])
-  const tabs: { to: string; ic: string; l: string; gate: GateCode | null }[] = [
-    { to: '/', ic: '🏠', l: 'Home', gate: null },
-    { to: '/actions', ic: '💼', l: 'Actions', gate: 'actions' },
-    { to: '/economy', ic: '🌿', l: 'Economy', gate: 'economy' },
-    { to: '/fight', ic: '🔫', l: 'Fight', gate: 'fight' },
-    { to: '/services', ic: '🏦', l: 'Services', gate: 'services' },
-    { to: '/chat', ic: '💬', l: 'Chat', gate: null },
+  const tabs: { to: string; ic: IconName; l: string; gate: GateCode | null }[] = [
+    { to: '/', ic: 'home', l: 'Home', gate: null },
+    { to: '/actions', ic: 'work', l: 'Actions', gate: 'actions' },
+    { to: '/economy', ic: 'leaf', l: 'Economy', gate: 'economy' },
+    { to: '/fight', ic: 'fight', l: 'Fight', gate: 'fight' },
+    { to: '/services', ic: 'bank', l: 'Services', gate: 'services' },
+    { to: '/chat', ic: 'chat', l: 'Chat', gate: null },
   ]
   // Season 1's gate: a locked tab stays in the bar, dimmed with a lock, and says why when tapped; a locked route shows
   // the same instead of its screen
@@ -125,20 +126,20 @@ export default function Layout() {
           </Link>
           <div className="money tabular">
             <TopLink to="/services?focus=bank" className="cash" label={`${money(me.cash)} cash: bank`}>{money(me.cash)}</TopLink>
-            <TopLink to="/store" className="dia" label={`${num(me.diamonds)} diamonds: store`}>💎 {num(me.diamonds)}</TopLink>
+            <TopLink to="/store" className="dia" label={`${num(me.diamonds)} diamonds: store`}><Icon name="gem" size={15} />{num(me.diamonds)}</TopLink>
             {/* locked up, the heat corner says so (heat is maxed inside anyway) and takes you to bail */}
             {me.jailed
-              ? <TopLink to="/services?focus=jail" className="jail-tag" label="In jail until you post bail: jail">🔒 Jail</TopLink>
+              ? <TopLink to="/services?focus=jail" className="jail-tag" label="In jail until you post bail: jail"><Icon name="lock" size={13} />Jail</TopLink>
               : <TopLink to="/services?focus=police" label={`Heat ${num(me.heat)} of ${num(me.heat_max)}: police`}>
-                  <Bar cls={`heat mini ${me.heat_level}`} label="🔥" value={me.heat} max={me.heat_max} mark={me.heat_red ?? catalog?.config.heat_red} />
+                  <Bar cls={`heat mini ${me.heat_level}`} icon="flame" value={me.heat} max={me.heat_max} mark={me.heat_red ?? catalog?.config.heat_red} />
                 </TopLink>}
           </div>
           <div className="bars">
             <TopLink to="/services?focus=refills" label={`Stamina ${num(me.stamina)} of ${num(me.stamina_max)}: refills`}>
-              <Bar cls="stamina" label="⚡ Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
+              <Bar cls="stamina" icon="bolt" label="Stamina" value={me.stamina} max={me.stamina_max} extra={me.stamina < me.stamina_max ? timeLeft(me.next_tick, now) : undefined} />
             </TopLink>
             <TopLink to="/services?focus=hospital" label={`Health ${num(me.health)} of ${num(me.health_max)}: hospital`}>
-              <Bar cls="health" label="❤️ Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
+              <Bar cls="health" icon="heart" label="Health" value={me.health} max={me.health_max} extra={me.health < me.health_max ? timeLeft(me.health_next, now) : undefined} />
             </TopLink>
           </div>
         </header>
@@ -149,8 +150,8 @@ export default function Layout() {
       {me && <h1 className="sr-only">{TITLES[pathname.split('/')[1] ?? ''] ?? 'Cartel Wars'}</h1>}
       {me && (netDown || (me.hospital && !onHome)) && (
         <div className="status-strip">
-          {netDown && <span className="pill red">📡 Offline · retrying</span>}
-          {me.hospital && !onHome && <span className="pill red">🏥 Hospitalized</span>}
+          {netDown && <span className="pill red"><Icon name="warn" size={13} />Offline · retrying</span>}
+          {me.hospital && !onHome && <span className="pill red"><Icon name="cross" size={13} />Hospitalized</span>}
         </div>
       )}
       {me && <NamePrompt />}
@@ -168,12 +169,12 @@ export default function Layout() {
           {tabs.map(t => locked(t.gate) ? (
             <a key={t.to} href={t.to} className="locked" aria-label={`${t.l}, locked`} data-locked={t.gate ?? undefined}
               onClick={e => { e.preventDefault(); toast(LOCK_LINE, 'bad') }}>
-              <span className="icw"><span className="ic">{t.ic}</span><span className="tbadge lock" aria-hidden>🔒</span></span>{t.l}
+              <span className="icw"><span className="ic"><Icon name={t.ic} size={24} stroke={1.7} /></span><span className="tbadge lock" aria-hidden><Icon name="lock" size={9} stroke={2.4} /></span></span>{t.l}
             </a>
           ) : (
             <NavLink key={t.to} to={t.to} end={t.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}
               aria-label={b[t.to] ? `${t.l}, ${b[t.to]!.label}` : undefined}>
-              <span className="icw"><span className="ic">{t.ic}</span>{b[t.to] && <span className={`tbadge ${b[t.to]!.tone ?? 'red'} ${b[t.to]!.dot ? 'dot' : ''}`}>{b[t.to]!.dot ? '' : b[t.to]!.n > 99 ? '99+' : b[t.to]!.n}</span>}</span>{t.l}
+              <span className="icw"><span className="ic"><Icon name={t.ic} size={24} stroke={1.7} /></span>{b[t.to] && <span className={`tbadge ${b[t.to]!.tone ?? 'red'} ${b[t.to]!.dot ? 'dot' : ''}`}>{b[t.to]!.dot ? '' : b[t.to]!.n > 99 ? '99+' : b[t.to]!.n}</span>}</span>{t.l}
             </NavLink>
           ))}
         </div>

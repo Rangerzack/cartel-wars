@@ -10,6 +10,7 @@ import { BackBar } from '../components/BackBar'
 import { PlayerLink } from '../components/Linked'
 import { HelpPolicies } from '../components/HelpPolicies'
 import { useLoad } from '../lib/useLoad'
+import { Icon } from '../components/Icon'
 
 export default function Profile() {
   const me = useMe()
@@ -36,8 +37,8 @@ export default function Profile() {
           <div className="grid3 stat-grid">
             <Stat k="Cash" v={money(me.cash)} cls="gold" />
             <Stat k="Bank" v={money(me.bank)} />
-            <Stat k="Diamonds" v={`💎 ${num(me.diamonds)}`} cls="dia" />
-            <Stat k="Reputation" v={`⭐ ${num(me.reputation)}`} cls="dia" />
+            <Stat k="Diamonds" icon="gem" iconCls="dia" v={num(me.diamonds)} cls="dia" />
+            <Stat k="Reputation" icon="star" iconCls="dia" v={num(me.reputation)} />
             <Stat k="Actions" v={num(me.actions_done)} />
             <Stat k="Fights" v={`${me.fights_won}W · ${me.fights_lost}L`} cls="sm" />
             <Stat k="Product moved" v={num(me.imports)} />
@@ -57,10 +58,10 @@ export default function Profile() {
       </Card>
       <Card title="Crew & Cartel">
         <RowLink to={me.crew ? `/crew/${me.crew.id}` : '/crew'}><div className="grow t">{me.crew ? `${me.crew.emblem} ${me.crew.name}` : 'No crew'}</div><span className="chev">›</span></RowLink>
-        <RowLink to={me.cartel ? `/cartel/${me.cartel.id}` : '/cartel'}><div className="grow t">{me.cartel ? `🕴 ${me.cartel.name}` : 'No cartel'}</div><span className="chev">›</span></RowLink>
+        <RowLink to={me.cartel ? `/cartel/${me.cartel.id}` : '/cartel'}><div className="grow t">{me.cartel ? <><Icon name="users" size={15} className="muted" /> {me.cartel.name}</> : 'No cartel'}</div><span className="chev">›</span></RowLink>
       </Card>
       {me.is_admin && (
-        <Card title="🛡 Admin">
+        <Card title={<><Icon name="shield" size={18} />Admin</>}>
           <RowLink to="/admin"><div className="grow t">Reports, moderation log and word filter</div>{(me.reports_open ?? 0) > 0 && <span className="pill red">{me.reports_open} open</span>}<span className="chev">›</span></RowLink>
         </Card>
       )}

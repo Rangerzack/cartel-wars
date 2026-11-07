@@ -11,6 +11,7 @@ import { LinkedText, PlayerLink } from '../components/Linked'
 import { useNow } from '../lib/useNow'
 import { ReportModal } from '../components/Report'
 import { errorText } from '../lib/errors'
+import { Icon } from '../components/Icon'
 
 export default function Chat() {
   const me = useMe()
@@ -138,7 +139,7 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
     if (await run(() => api.blockPlayer(m.sender_id), { ok: () => `${m.sender_name} blocked` }) && other) api.player(other.id).then(setOther).catch(() => {})
   }
 
-  const title = other ? `💬 ${other.name}` : channel.startsWith('table') ? 'Table Talk' : undefined
+  const title = other ? other.name : channel.startsWith('table') ? 'Table Talk' : undefined
   return (
     <>
       {/* Live Chat, Crew and Cartel are named by the seg above them, so their card has no header and the log gets its
@@ -169,8 +170,8 @@ export function Channel({ channel, compact }: { channel: string; compact?: boole
         <Modal title={menu.sender_name} onClose={() => setMenu(null)}>
           <div className="stack">
             <div className="report-quote small">“{menu.body}”</div>
-            <Btn className="block" onClick={() => { setReporting(menu); setMenu(null) }}>🚩 Report</Btn>
-            {!blocked?.includes(menu.sender_id) && <Btn className="block" onClick={() => block(menu)}>🚫 Block</Btn>}
+            <Btn className="block" onClick={() => { setReporting(menu); setMenu(null) }}><Icon name="flag" size={15} /> Report</Btn>
+            {!blocked?.includes(menu.sender_id) && <Btn className="block" onClick={() => block(menu)}><Icon name="x" size={15} /> Block</Btn>}
           </div>
         </Modal>
       )}

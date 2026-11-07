@@ -175,10 +175,10 @@ try {
   await other.getByRole('button', { name: /^Call/ }).waitFor({ timeout: 8000 })
 
   // table chat
-  await a.locator('button', { hasText: '💬' }).click()
+  await a.getByRole('button', { name: 'Table talk' }).click()
   await a.getByPlaceholder('Say something…').fill('nice hand')
   await a.getByRole('button', { name: 'Send' }).click()
-  await b.locator('button', { hasText: '💬' }).click()
+  await b.getByRole('button', { name: 'Table talk' }).click()
   await b.locator('.msg', { hasText: 'nice hand' }).last().waitFor({ timeout: 8000 })
   await snap(b, 'poker-chat')
 
@@ -194,7 +194,7 @@ try {
 
   // accolades board has the gambler category
   await a.goto(BASE + '/accolades')
-  await a.getByText('🎰 Gambler').waitFor()
+  await a.getByText('Gambler').waitFor()
   console.log('E2E CASINO PASSED')
 } catch (e) {
   console.error('E2E FAILED:', e.message)

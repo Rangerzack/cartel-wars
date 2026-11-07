@@ -3,6 +3,7 @@ import { useMe } from '../lib/game'
 import { num } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 import { Card, Empty, Loading, RowLink } from './ui'
+import { Icon } from './Icon'
 
 /**
  * The season board (sprint 2): the ten furthest through the season — the boss down first, then blocks taken, then
@@ -25,7 +26,7 @@ export function SeasonBoard() {
           <span className="muted tabular" style={{ width: 26 }}>{r.rank}.</span>
           <span aria-hidden>{r.avatar}</span>
           <div className="grow"><div className="t">{r.emblem ? `${r.emblem} ` : ''}{r.name}{r.me ? <span className="muted"> · you</span> : null}</div><div className="s">{line(r)}</div></div>
-          {r.boss && <span aria-hidden>👑</span>}
+          {r.boss && <Icon name="crown" size={14} className="gold" label="boss down" />}
         </RowLink>
       ))}
       {data.me && !inTop && (

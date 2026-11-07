@@ -20,7 +20,7 @@ let asked = ''
 const adminId = (await one(`select id from auth.users where email = 'bot01@demo.local'`)).id
 const palId = (await one(`select id from auth.users where email = 'bot02@demo.local'`)).id
 await db.query(`update profiles set is_admin = true where id = $1`, [adminId])
-if (await one(`select 1 from seasons where ends_at > now()`)) throw new Error('this suite needs no season running or scheduled')
+if (await one(`select 1 from seasons where ends_at > now() and cancelled_at is null`)) throw new Error('this suite needs no season running or scheduled')
 const signIn = async (ctx, email) => {
   const p = await ctx.newPage()
   p.on('pageerror', e => errors.push(e.message))
@@ -84,7 +84,7 @@ try {
   await a.locator('.toast', { hasText: 'cancelled' }).waitFor()
   await a.locator('#season-scheduled').waitFor({ state: 'detached' })
   await a.locator('#season-next').waitFor()
-  await a.locator('.card', { hasText: 'Past seasons' }).getByText('· cancelled').waitFor()   // kept, marked
+  await a.locator('.card', { hasText: 'Past seasons' }).getByText('· cancelled').first().waitFor()   // kept, marked
 
   // 3. end it now: the past list has it; the player is between seasons
   await a.getByRole('button', { name: 'End Season Now' }).click()

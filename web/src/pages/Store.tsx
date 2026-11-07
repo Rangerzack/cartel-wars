@@ -10,6 +10,7 @@ import { BackBar } from '../components/BackBar'
 import { DailyDrop } from '../components/DailyDrop'
 import { Btn, Card, Loading } from '../components/ui'
 import { errorText } from '../lib/errors'
+import { Icon } from '../components/Icon'
 
 /**
  * The store (#15): diamond packs, then the Daily Drop. Purchases go through Apple in the iOS app only (guideline
@@ -63,12 +64,12 @@ export default function Store() {
     <div className="page">
       <BackBar fallback="/" />
       <h2>Store</h2>
-      <Card id="diamonds" title="💎 Diamonds" right={<small className="dia tabular">💎 {num(me.diamonds)}</small>}>
+      <Card id="diamonds" title={<><Icon name="gem" size={18} />Diamonds</>} right={<small className="dia tabular"><Icon name="gem" size={12} /> {num(me.diamonds)}</small>}>
         {!storeReady && <div className="bd"><div className="notice blue">{isNative ? 'Purchases aren\'t available in this build.' : 'Diamonds are sold in the iPhone app. Everything they buy can also be earned: milestones, the Daily Drop and the casino pay out in diamonds.'}</div></div>}
         {storeReady && error && !products && <Loading error={error} onRetry={reload} />}
         {shown.map(p => (
           <div key={p.id} className={`row store-pack${storeReady ? '' : ' off'}`}>
-            <span className="ico">💎</span>
+            <span className="ico blue"><Icon name="gem" size={18} /></span>
             <div className="grow t tabular">{num(p.diamonds)} diamonds</div>
             {storeReady && (delivering === p.id
               ? <span className="small muted nowrap"><span className="spin" aria-hidden /> Delivering…</span>

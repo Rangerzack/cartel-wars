@@ -6,6 +6,7 @@ import { Card, Empty, Loading, RowLink, Seg } from '../components/ui'
 import { Ribbons } from '../components/Ribbons'
 import { BackBar } from '../components/BackBar'
 import { useLoad } from '../lib/useLoad'
+import { Glyph } from '../components/Icon'
 
 const KINDS = ['fight_win', 'defense', 'action', 'import', 'market', 'turf', 'gambler'] as const
 
@@ -26,7 +27,7 @@ export default function Accolades() {
         const rows = board[k] ?? []
         const m = accoladeMeta[k]
         return (
-          <Card key={k} title={<>{m.icon} {m.label}</>}>
+          <Card key={k} title={<><Glyph e={m.icon} size={18} />{m.label}</>}>
             {rows.length === 0 && <Empty>Nobody on the board yet.</Empty>}
             {rows.map((r, i) => (
               <RowLink key={r.id} to={`/player/${r.id}`}>

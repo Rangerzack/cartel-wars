@@ -1,15 +1,21 @@
 /* ==========================================================================================================
-   Cartel Wars design system (Phase 4, 2026-10-05)
+   Cartel Wars design system — "Border Night" (redesign, 2026-11-07; the tokens began in Phase 4, 2026-10-05)
    One set of tokens, used everywhere below. The rules of thumb:
-   - Depth comes from lightness, not gradients: --bg < --surface-1 (cards, bars, sheets) < --surface-2 (tiles,
-     wells inside cards) < --surface-3 (buttons, the selected tab) < --surface-4 (pressed). Inputs and tracks sit
-     below the card in --sunken. Raised things get the one bevel, --hl (a top hairline), and --shadow-1.
-   - Gold is the brand and means money or "this one": filled gold spends or confirms, tinted gold is a screen's main
-     action, a gold edge marks what's ready or selected. Red is danger and attacks, green is gains and "yours",
-     blue is information. Each has a -tint (fill), -edge (border) and a readable text colour.
-   - Gradients only where they're a material: the playing cards, dice, felts, chips, medals and the logo.
+   - The ground is a deep teal-black with a faint diagonal grain and one warm light at the top. Cards are a short
+     top-to-bottom gradient with a 1 px highlight on the top edge and a deep, soft shadow; wells (stat tiles, inputs,
+     scorelines) sit one step darker inside or beside them. Hairlines are white at 6–12 %, never a grey.
+     --bg < --surface-1 (cards, bars, sheets) > --surface-2 (wells) ; --surface-3 (buttons, the selected tab) >
+     --surface-4 (pressed). Inputs and tracks sit in --sunken.
+   - Amber is the money and the one thing to tap: cash is amber in the display face, and a screen gets one filled
+     amber button (--btn-gold / .doit). An amber edge marks what's ready, selected or yours. Rust is danger, attacks
+     and losses; green is gains and "yours" on the city map; ice-teal is information and diamonds. Each has a -tint
+     (fill), -edge (border) and a readable text colour. The old --gold names stay: every rule below says gold.
+   - Gradients are the surfaces' depth and the metal of the two filled buttons; the casino's cards, dice, felts, chips
+     and the medals keep their own materials.
    - Oswald (--display, uppercase, tracked) is the game's voice for titles, labels, big numbers and the navigation
-     chrome (tabs, segmented tabs, Back). Everything you press or read is --body.
+     chrome (tabs, segmented tabs, Back). Everything you press or read is --body (Inter).
+   - Icons are the one line set in components/Icon.tsx (24-unit, 1.8 stroke), drawn in currentColor. No emoji in the
+     chrome; a player's avatar and a crew's emblem stay theirs.
    - Type: 11 / 12.5 / 14 / 15 / 17 / 21 / 28. Radius: 4 / 8 / 12 / 16 / pill. Space: 4 / 8 / 12 / 16 / 24.
    - Motion: --t-fast (presses, hovers), --t-base (fades, toggles), --t-slow (sheets, toasts), all on --ease.
      Animations are feedback for something that happened (a deal, a roll, a win); nothing loops for decoration.
@@ -18,50 +24,57 @@
    ========================================================================================================== */
 :root {
   /* surfaces */
-  --bg: #0a0a0c;
-  --surface-1: #141418;
-  --surface-2: #1b1b21;
-  --surface-3: #26262e;
-  --surface-4: #31313b;
-  --sunken: #0b0b0e;
-  --line: #2a2a33;
-  --line-strong: #3a3a46;
-  --line-soft: rgba(255,255,255,.06);
+  --bg: #0a1214;
+  --surface-1: #141e1c;
+  --surface-2: #0f1816;
+  --surface-3: #22302d;
+  --surface-4: #2b3b37;
+  --sunken: #081012;
+  --line: rgba(255,255,255,.07);
+  --line-strong: rgba(255,255,255,.13);
+  --line-soft: rgba(255,255,255,.05);
+  /* the two surface gradients: a card, and a tile inside the page (quick tiles, blocks) */
+  --grad-card: linear-gradient(180deg, #17221f 0%, #111a18 100%);
+  --grad-tile: linear-gradient(180deg, #141f1d 0%, #0e1614 100%);
+  --grad-tile-gold: linear-gradient(180deg, #2b2618 0%, #161d18 100%);
+  --grad-tile-red: linear-gradient(180deg, #2a1a16 0%, #17110f 100%);
   /* text */
-  --text: #ececf0;
-  --text-2: #9b9ba8;
-  --text-3: #6e6e7c;
-  /* brand */
-  --gold: #e3b341;
-  --gold-hi: #f6d77a;
-  --gold-lo: #9c7424;
-  --gold-ink: #1d1503;
-  --gold-muted: #b3a37a;
-  --gold-tint: rgba(227,179,65,.12);
-  --gold-edge: rgba(227,179,65,.5);
-  --gold-soft: #f3dc98;
+  --text: #f2e8d5;
+  --text-2: #b5ab97;
+  --text-3: #908a78;
+  /* brand: the amber */
+  --gold: #f2a33a;
+  --gold-hi: #ffc46b;
+  --gold-lo: #b86e14;
+  --gold-ink: #1f1200;
+  --gold-muted: #c9a070;
+  --gold-tint: rgba(242,163,58,.12);
+  --gold-edge: rgba(242,163,58,.5);
+  --gold-soft: #ffd9a0;
+  --btn-gold: linear-gradient(180deg, #ffc46b 0%, #e08f2a 55%, #b86e14 100%);
   /* semantic */
-  --green: #4cc26b;
-  --green-tint: rgba(76,194,107,.12);
-  --green-edge: rgba(76,194,107,.42);
-  --green-soft: #a6e8b9;
-  --red: #e0483f;
-  /* red as text on cards: --red is 4.2:1 on a card, this is 5.3:1 (P2-7) */
-  --red-text: #f0625a;
-  --red-fill: #c53a31;
-  --red-tint: rgba(224,72,63,.12);
-  --red-edge: rgba(224,72,63,.45);
-  --red-soft: #ffb0a8;
-  --blue: #5aa9ff;
-  --blue-tint: rgba(90,169,255,.12);
-  --blue-edge: rgba(90,169,255,.42);
-  --blue-soft: #bcdaff;
-  --yellow: #e8c547;
-  --diamond: #8fd3ff;
+  --green: #58c47a;
+  --green-tint: rgba(88,196,122,.12);
+  --green-edge: rgba(88,196,122,.42);
+  --green-soft: #b0ecc3;
+  --red: #e0552b;
+  /* red as text on cards: --red is 4.3:1 on a card, this is 5.4:1 (P2-7) */
+  --red-text: #f5825e;
+  --red-fill: #b3381c;
+  --red-tint: rgba(224,85,43,.12);
+  --red-edge: rgba(224,85,43,.45);
+  --red-soft: #ffb8a3;
+  --btn-red: linear-gradient(180deg, #e0552b 0%, #b3381c 60%, #8c2a14 100%);
+  --blue: #4fd1c5;
+  --blue-tint: rgba(79,209,197,.12);
+  --blue-edge: rgba(79,209,197,.42);
+  --blue-soft: #bdf0ea;
+  --yellow: #f2c94c;
+  --diamond: #7fe3d8;
   --purple-soft: #d6c8ff;
   /* type */
   --display: "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --body: "Inter", -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --fs-xs: 11px;
   --fs-sm: 12.5px;
   --fs-md: 14px;
@@ -84,7 +97,8 @@
   --hl: inset 0 1px 0 rgba(255,255,255,.05);
   --shadow-1: 0 1px 2px rgba(0,0,0,.45);
   --shadow-2: 0 10px 28px rgba(0,0,0,.55);
-  --glow-win: 0 0 16px rgba(227,179,65,.55);
+  --shadow-card: var(--hl), 0 10px 28px rgba(0,0,0,.45);
+  --glow-win: 0 0 16px rgba(242,163,58,.55);
   /* motion */
   --t-fast: .12s;
   --t-base: .2s;
@@ -98,7 +112,7 @@
   --panel-2: var(--surface-2);
   --line-hi: var(--line-strong);
   --muted: var(--text-2);
-  --card-shadow: var(--hl), var(--shadow-1);
+  --card-shadow: var(--shadow-card);
   color-scheme: dark;
   font-family: var(--body);
   font-size: var(--fs-base);
@@ -110,15 +124,22 @@
 }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; }
-/* one faint gold light over the city, nothing else behind the cards */
-body { background: radial-gradient(120% 45% at 50% -10%, rgba(227,179,65,.07), transparent 60%), var(--bg); background-attachment: fixed; }
+/* one warm light over the city and a faint diagonal grain, nothing else behind the cards */
+body {
+  background: radial-gradient(120% 45% at 50% -10%, rgba(242,163,58,.10), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.012) 0 2px, transparent 2px 5px), var(--bg);
+  background-attachment: fixed;
+}
 a { color: var(--blue); text-decoration: none; cursor: pointer; }
+/* the line icons (components/Icon.tsx): sized by their own width/height, coloured by the text around them */
+.svgi { display: inline-block; vertical-align: -.18em; flex: none; }
+.glyph { display: inline-block; line-height: 1; }
 /* a link inside a sentence is underlined too, so it doesn't rely on color alone (Phase 6, WCAG 1.4.1); links that are
    buttons, rows or header links all carry a class */
 a:not([class]) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 button { font: inherit; }
 input, select, textarea { font: inherit; }
-::selection { background: rgba(227,179,65,.35); }
+::selection { background: rgba(242,163,58,.35); }
 
 /* a fieldset used only to switch everything inside it off at once (the casino while jailed, a felt mid-spin): no box of its own */
 fieldset.lockable { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -127,13 +148,13 @@ fieldset.lockable:disabled { pointer-events: none; }
 /* App shell -------------------------------------------------------------- */
 .app { max-width: 520px; margin: 0 auto; min-height: 100dvh; padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px); }
 @media (min-width: 540px) {
-  .app { box-shadow: 0 0 0 1px var(--line), 0 0 80px rgba(0,0,0,.7); background: rgba(10,10,12,.6); }
+  .app { box-shadow: 0 0 0 1px var(--line), 0 0 80px rgba(0,0,0,.7); background: rgba(10,18,20,.6); }
 }
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 1px 0 rgba(227,179,65,.16), 0 6px 18px rgba(0,0,0,.45);
+  background: linear-gradient(180deg, #18231f 0%, #121c1a 100%);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 6px 18px rgba(0,0,0,.45);
   padding: calc(8px + env(safe-area-inset-top)) 12px 9px;
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 10px; align-items: center;
 }
@@ -151,16 +172,18 @@ fieldset.lockable:disabled { pointer-events: none; }
 /* the heat bar (or the JAIL tag) at the end of the money row is shorter than the numbers beside it */
 .money > .tb-link:last-child::after { inset: -11px -4px; }
 .tb-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* the avatar in an amber ring: what the player chose, on a dark disc */
 .av {
-  width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 20px; line-height: 1;
-  background: var(--surface-3); box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 3.5px var(--gold-lo);
+  width: 38px; height: 38px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 20px; line-height: 1;
+  background: var(--surface-2); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold-lo), 0 0 0 4.5px rgba(255,196,107,.5);
 }
 .topbar .who { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
-.topbar .who b { font-family: var(--display); font-weight: 600; font-size: var(--fs-lg); letter-spacing: .7px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .who b { font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: .7px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar .who small { color: var(--text-2); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar .money { display: flex; align-items: center; justify-content: flex-end; gap: 9px; font-variant-numeric: tabular-nums; }
-.topbar .cash { font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.5; letter-spacing: .3px; color: var(--gold); }
-.topbar .dia { font-family: var(--display); font-weight: 500; font-size: 16px; line-height: 1.75; color: var(--diamond); white-space: nowrap; }
+.topbar .cash { font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.3; letter-spacing: .3px; color: var(--gold); }
+.topbar .dia { display: inline-flex; align-items: center; gap: 3px; font-family: var(--display); font-weight: 500; font-size: 16px; line-height: 1.75; color: var(--text); white-space: nowrap; }
+.topbar .dia .svgi { color: var(--diamond); }
 /* in jail, the heat corner is a red JAIL tag the same width as the heat bar it stands in for */
 .topbar .jail-tag {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 70px; height: 26px; border-radius: var(--r-pill);
@@ -169,17 +192,23 @@ fieldset.lockable:disabled { pointer-events: none; }
 }
 .bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .bar { font-size: var(--fs-xs); color: var(--text-2); }
-.bar .lbl { display: flex; justify-content: space-between; margin-bottom: 3px; font-variant-numeric: tabular-nums; font-size: var(--fs-xs); letter-spacing: .3px; }
-.bar .lbl span:first-child { text-transform: uppercase; letter-spacing: .7px; font-weight: 600; }
-.bar .track { position: relative; height: 8px; background: var(--sunken); border-radius: var(--r-pill); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+.bar .lbl { display: flex; justify-content: space-between; margin-bottom: 4px; font-variant-numeric: tabular-nums; font-size: var(--fs-xs); letter-spacing: .3px; }
+.bar .lbl span:first-child { display: inline-flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: .9px; font-weight: 600; color: var(--text-3); }
+.bar .lbl span:last-child { font-family: var(--display); font-size: 13px; letter-spacing: 0; color: var(--text); }
+.bar .track { position: relative; height: 6px; background: var(--sunken); border-radius: var(--r-pill); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
 .bar .fill { position: relative; height: 100%; border-radius: var(--r-pill); transition: width .5s var(--ease); }
 .bar.mini { width: 70px; font-weight: 500; }
-.bar.mini .lbl { margin-bottom: 1px; }
-.bar.mini .track { height: 6px; }
+.bar.mini .lbl { margin-bottom: 2px; }
+.bar.mini .lbl span:last-child { font-size: 12px; }
+.bar.mini .track { height: 5px; }
 /* where red heat (the bust risk) starts on the top-bar heat bar */
 .bar .track .mark { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; background: #ff8a80; }
-.bar.stamina .fill { background: #3d9be9; }
-.bar.health .fill { background: var(--green); }
+/* stamina is the amber of energy, health the green of being whole; each bar's icon takes the bar's colour */
+.bar.stamina .fill { background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); }
+.bar.stamina .svgi { color: var(--gold); }
+.bar.health .fill { background: linear-gradient(90deg, #2f8a4e, var(--green)); }
+.bar.health .svgi { color: var(--green); }
+.bar.heat .svgi { color: var(--red); }
 .bar.heat.green .fill { background: var(--green); }
 .bar.heat.yellow .fill { background: var(--yellow); }
 .bar.heat.red .fill { background: var(--red); }
@@ -187,7 +216,8 @@ fieldset.lockable:disabled { pointer-events: none; }
 .status-strip { display: flex; gap: 6px; padding: 10px 12px 0; flex-wrap: wrap; }
 /* Pills and tags: one shape (a pill), five tones; they label, they don't press */
 .pill {
-  font-size: 12px; padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); color: #b0b0bc;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); color: var(--text-2);
   background: var(--surface-2);
 }
 .pill.red { border-color: var(--red-edge); background: var(--red-tint); color: var(--red-soft); }
@@ -197,47 +227,48 @@ fieldset.lockable:disabled { pointer-events: none; }
 .tabbar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; height: calc(var(--tab-h) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: #101013;
-  border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.45);
+  background: linear-gradient(180deg, #121c1a 0%, #0c1416 100%);
+  border-top: 1px solid rgba(255,255,255,.08); box-shadow: 0 -10px 24px rgba(0,0,0,.5);
 }
 .tabbar .inner { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); height: var(--tab-h); }
 .tabbar a {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: var(--text-2); font-family: var(--display); font-size: 11.5px; font-weight: 500; letter-spacing: .4px; text-transform: uppercase;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  color: var(--text-2); font-family: var(--display); font-size: 11.5px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase;
   transition: color var(--t-fast);
 }
-.tabbar a .ic { font-size: 21px; line-height: 1; filter: grayscale(1) brightness(1.05) opacity(.75); transition: filter var(--t-fast); }
+/* the icon is a line drawing in the tab's own colour: ash at rest, amber on the tab you're on */
+.tabbar a .ic { display: inline-flex; line-height: 1; color: var(--text-2); transition: color var(--t-fast); }
 /* hover only where there's a pointer: iOS keeps :hover after a tap, leaving a stray chevron or lifted tile (P3-2) */
-@media (hover: hover) { .tabbar a:hover .ic { filter: grayscale(.4) opacity(.95); } }
-/* the tab you're on: gold label, the icon in colour, a gold line along the top edge */
+@media (hover: hover) { .tabbar a:hover .ic { color: var(--text); } }
+/* the tab you're on: amber label and icon, an amber bar along the top edge */
 .tabbar a.active { color: var(--gold-hi); }
-.tabbar a.active .ic { filter: none; }
+.tabbar a.active .ic { color: var(--gold); }
 .tabbar a.active::before {
-  content: ''; position: absolute; top: -1px; left: 26%; right: 26%; height: 2px; border-radius: 0 0 2px 2px; background: var(--gold);
+  content: ''; position: absolute; top: -1px; left: 50%; width: 28px; height: 3px; margin-left: -14px; border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi), var(--gold-lo));
 }
 
 /* Page building blocks --------------------------------------------------- */
 .page { padding: 12px; display: flex; flex-direction: column; gap: 12px; animation: fadein var(--t-base) var(--ease); }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
 h1, h2, h3 { margin: 0; }
+/* a section heading in the page: small tracked caps in ash, with a hairline running on from it */
 h2 {
   display: flex; align-items: center; gap: 10px; padding: 2px 2px 0;
-  font-family: var(--display); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.8px; color: var(--gold-muted);
+  font-family: var(--display); font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: var(--text-3);
 }
-h2::after { content: ''; flex: 1; height: 1px; background: rgba(227,179,65,.22); }
+h2::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
 .card {
-  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
-  box-shadow: var(--hl), var(--shadow-1);
+  background: var(--grad-card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 .card .hd {
-  position: relative; padding: 11px 12px 10px 15px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--display); font-weight: 600; font-size: var(--fs-base); letter-spacing: .8px; text-transform: uppercase;
+  position: relative; padding: 13px 14px 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: 1px; text-transform: uppercase; color: var(--text);
 }
-/* the card's gold rule: the one ornament every card header shares */
-.card .hd::before {
-  content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--gold);
-}
+.card .hd > span:first-child { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.card .hd .svgi { color: var(--gold); }
 .card .hd small { font-family: var(--body); text-transform: none; letter-spacing: 0; color: var(--text-2); font-weight: 400; font-size: var(--fs-sm); }
 .card .hd small.gold { color: var(--gold); font-weight: 600; }
 /* a control in a card header (Market's product filter) reads in the body face, not the header's lettering */
@@ -260,7 +291,7 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 /* one focus ring for everything that can take focus, in the house colour (buttons and inputs already had theirs) */
 :where(a, button, summary, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @media (hover: hover) { .row.link:hover { background: rgba(255,255,255,.025); } }
-.row.link:active { background: rgba(227,179,65,.07); }
+.row.link:active { background: rgba(242,163,58,.07); }
 .chev { color: var(--text-3); font-size: 20px; line-height: 1; transition: transform var(--t-fast); }
 @media (hover: hover) { .row.link:hover .chev { transform: translateX(2px); color: var(--gold); } }
 .muted { color: var(--text-2); }
@@ -278,12 +309,13 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 /* a number tile: a well in the page, its label small and its value in the display face */
 .stat {
-  position: relative; border-radius: var(--r-md); padding: 8px 10px 9px; overflow: hidden;
-  background: var(--surface-2); border: 1px solid var(--line);
+  position: relative; border-radius: var(--r-md); padding: 9px 10px 9px; overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
 }
 /* 11 px for legibility (P2-7); the tracking came down from .9 px so labels take the same width and wrap where they did */
-.stat .k { font-size: var(--fs-xs); color: var(--text-2); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
-.stat .v { font-family: var(--display); font-size: var(--fs-xl); font-weight: 600; letter-spacing: .3px; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.25; }
+.stat .k { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+.stat .v { font-family: var(--display); font-size: var(--fs-xl); font-weight: 500; letter-spacing: .3px; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.25; margin-top: 3px; }
+.stat .v .svgi { vertical-align: -.12em; margin-right: 2px; }
 /* last-resort ellipsis for a value that still doesn't fit */
 .stat .v { overflow: hidden; text-overflow: ellipsis; }
 .stat .v.sm { font-size: 16px; }
@@ -303,10 +335,10 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
    main action · grey (plain) = everything else · ghost = minor, beside a stronger one · red = attacks · ghost red =
    leave, kick, delete. All 44 pt tall, the label in the body face; .sm is 36 pt drawn and still 44 pt to the touch */
 .btn {
-  appearance: none; position: relative; border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 10px 16px; cursor: pointer;
+  appearance: none; position: relative; border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: 10px 16px; cursor: pointer;
   font-family: var(--body); font-weight: 600; font-size: var(--fs-base); line-height: 1.2; text-transform: none; letter-spacing: .1px; white-space: nowrap;
   color: var(--text); min-height: var(--tap);
-  background: var(--surface-3);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03)), var(--surface-3);
   box-shadow: var(--hl), var(--shadow-1);
   transition: transform var(--t-fast) var(--ease), filter var(--t-fast), background-color var(--t-fast);
 }
@@ -314,40 +346,42 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 .btn:active:not(:disabled) { transform: scale(.97); filter: brightness(.9); }
 .btn:disabled { opacity: .4; cursor: default; filter: saturate(.4); }
 .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* the amber that spends, confirms or is the screen's one hero action (.gold): the metal. A row's main action in a list
+   (.doit: Do It, Collect, Claim) is amber-tinted with an amber edge, so a list of jobs isn't a wall of gold */
 .btn.doit {
   font-weight: 700; min-width: 92px; color: var(--gold-hi);
-  background: var(--gold-tint); border-color: var(--gold-edge); box-shadow: var(--shadow-1);
+  background: linear-gradient(180deg, rgba(242,163,58,.18), rgba(242,163,58,.10)); border-color: var(--gold-edge); box-shadow: var(--hl), var(--shadow-1);
 }
 .btn.gold {
-  color: var(--gold-ink); font-weight: 700;
-  background: var(--gold); border-color: #b5882c;
-  box-shadow: inset 0 1px 0 rgba(255,244,205,.55), var(--shadow-1);
+  color: var(--gold-ink); font-weight: 700; min-width: 92px;
+  background: var(--btn-gold); border-color: rgba(0,0,0,.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(0,0,0,.25), 0 6px 18px rgba(242,163,58,.22);
 }
 .btn.red {
   color: #fff; font-weight: 700;
-  background: var(--red-fill); border-color: #7f211b;
-  box-shadow: inset 0 1px 0 rgba(255,190,182,.35), var(--shadow-1);
+  background: var(--btn-red); border-color: rgba(0,0,0,.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.3), 0 6px 18px rgba(179,56,28,.3);
 }
 .btn.blue { color: var(--blue-soft); background: var(--blue-tint); border-color: var(--blue-edge); box-shadow: var(--shadow-1); }
-.btn.sm { padding: 6px 10px; min-height: 36px; min-width: 36px; font-size: var(--fs-md); border-radius: var(--r-sm); }
+.btn.sm { padding: 6px 10px; min-height: 36px; min-width: 36px; font-size: var(--fs-md); border-radius: 10px; }
 /* 44 pt to the touch without a bigger button: an invisible hit area 4 px all round (keep 8 px between small buttons so
    neighbouring areas meet rather than overlap). Insets count from inside the 1 px border */
 .btn.sm::after { content: ''; position: absolute; inset: -5px; }
 .btn.doit.sm { min-width: 0; }
 .btn.block { width: 100%; }
 .btn.ghost {
-  background: transparent; border: 1px solid var(--line-strong); color: #b4b4c0; box-shadow: none;
+  background: rgba(255,255,255,.03); border: 1px solid var(--line-strong); color: var(--text-2); box-shadow: none;
 }
-.btn.ghost.red { color: #ff968d; border-color: var(--red-edge); }
+.btn.ghost.red { color: var(--red-soft); border-color: var(--red-edge); }
 
 /* Forms ------------------------------------------------------------------ */
 /* 16 px in every field: iOS zooms the page into any focused field set smaller, and the zoom stays after typing */
 .input, select.input, textarea.input {
-  width: 100%; color: var(--text); padding: 10px 12px; min-height: var(--tap); outline: none; border-radius: var(--r-sm); font-size: 16px;
-  background: var(--sunken); border: 1px solid var(--line-strong);
+  width: 100%; color: var(--text); padding: 10px 12px; min-height: var(--tap); outline: none; border-radius: 10px; font-size: 16px;
+  background: var(--sunken); border: 1px solid var(--line-strong); box-shadow: inset 0 2px 6px rgba(0,0,0,.45);
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.input::placeholder { color: #7c7c8a; }
+.input::placeholder { color: var(--text-3); }
 .input:focus { border-color: var(--gold-edge); box-shadow: 0 0 0 3px var(--gold-tint); }
 .input.sm { padding: 6px 10px; width: 84px; }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); color: var(--text-2); }
@@ -371,7 +405,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
      wouldn't work here because the ellipsis needs overflow: hidden, which would clip it */
   border: 0 solid transparent; border-width: 7px 0; margin: -7px 0; border-radius: 9px / 16px; background-clip: padding-box;
 }
-@media (hover: hover) { .seg button:hover { color: #c5c5d0; } }
+@media (hover: hover) { .seg button:hover { color: var(--text); } }
 .seg button.on {
   color: var(--gold-hi);
   background: var(--surface-3); background-clip: padding-box; box-shadow: var(--hl);
@@ -393,8 +427,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .toast.ok { background: rgba(31,92,52,.96); color: #eaffef; }
-.toast.bad { background: rgba(128,36,30,.96); color: #ffe4e1; }
-.toast.info { background: rgba(44,44,53,.96); color: #fff; }
+.toast.bad { background: rgba(128,40,24,.96); color: #ffe4e1; }
+.toast.info { background: rgba(34,48,45,.96); color: #fff; }
 @keyframes pop { from { transform: translateY(-10px) scale(.97); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes toastin { from { transform: translateY(10px) scale(.97); opacity: 0 } to { transform: none; opacity: 1 } }
 
@@ -409,7 +443,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
 @keyframes fadebg { from { opacity: 0 } to { opacity: 1 } }
 .modal {
   position: relative; width: 100%; max-width: 500px; max-height: min(90dvh, 100%); overflow-y: auto; padding: 22px 16px 16px;
-  background: var(--surface-1); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  background: var(--grad-card); border: 1px solid var(--line-strong); border-radius: 20px;
   box-shadow: var(--hl), var(--shadow-2);
   animation: up var(--t-slow) var(--ease);
 }
@@ -426,7 +460,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
   margin: -22px -16px 0; padding: 22px 16px 10px;
 }
 .modal-hd h3 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.modal.scrolled .modal-hd { background: var(--surface-1); box-shadow: 0 1px 0 var(--line); }
+.modal.scrolled .modal-hd { background: #16211e; box-shadow: 0 1px 0 var(--line); }
 .modal-x {
   flex: none; width: var(--tap); height: var(--tap); margin: -8px -10px -8px 0; display: grid; place-items: center; padding: 0 0 2px;
   background: none; border: 0; border-radius: 50%; color: var(--text-2); font-size: 26px; line-height: 1; cursor: pointer;
@@ -450,7 +484,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
 .auth {
   min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
   padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
-  background: radial-gradient(ellipse at 50% 0%, rgba(227,179,65,.12), transparent 55%), var(--bg);
+  background: radial-gradient(ellipse at 50% 0%, rgba(242,163,58,.14), transparent 55%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.012) 0 2px, transparent 2px 5px), var(--bg);
 }
 .logo { text-align: center; }
 /* the logo is the one place the chrome lettering stays: it's the brand mark */
@@ -476,20 +511,23 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
 /* the tile class is also the .btn.block modifier (a full-width button), so the tile rules stay off buttons.
    Who holds a block is its tint and edge: green yours, red a rival's, blue your cartel's (allies aren't targets) */
 .block:not(.btn) {
-  position: relative; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 6px; text-align: center; font-size: 12px; cursor: pointer;
-  min-height: 62px; display: flex; flex-direction: column; justify-content: center; gap: 3px;
-  background: var(--surface-2); box-shadow: var(--hl);
+  position: relative; border: 1px solid var(--line); border-radius: 14px; padding: 8px 6px; text-align: center; font-size: 12px; cursor: pointer;
+  min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: var(--grad-tile); box-shadow: var(--hl);
   transition: transform var(--t-fast) var(--ease), border-color var(--t-fast);
 }
 @media (hover: hover) { .block:not(.btn):hover { transform: translateY(-1px); border-color: var(--line-strong); } }
 .block b { font-family: var(--display); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; font-size: 13px; }
-.block.mine { border-color: var(--green-edge); background: var(--green-tint); }
-.block.enemy { border-color: var(--red-edge); background: var(--red-tint); }
-.block.ally { border-color: var(--blue-edge); background: var(--blue-tint); }
+.block.mine { border-color: var(--green-edge); background: linear-gradient(180deg, rgba(88,196,122,.14), rgba(88,196,122,.04)), var(--grad-tile); }
+.block.enemy { border-color: var(--red-edge); background: var(--grad-tile-red); }
+.block.ally { border-color: var(--blue-edge); background: linear-gradient(180deg, rgba(79,209,197,.12), rgba(79,209,197,.03)), var(--grad-tile); }
 .attack-result { line-height: 1.4; }
 .block.sel { outline: 2px solid var(--gold); }
-.block .em { font-size: 20px; }
-.blocks6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 12px; }
+/* a tile's icon: the line icon in ash, or the player's own emblem where the tile is theirs */
+.block .em { font-size: 20px; line-height: 1; color: var(--text-2); display: inline-flex; }
+.block.mine .em { color: var(--green); }
+.block.enemy .em { color: var(--red-text); }
+.blocks6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
 .blocks6 .block { min-height: 100px; }
 
 /* City grid: 9x9 hoods, each a 2x3 mini map of its blocks (a game board: its cells are under 44 pt by design) */
@@ -504,17 +542,17 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
 }
 @media (hover: hover) { .hcell:hover { transform: scale(1.08); z-index: 1; position: relative; border-color: var(--line-strong); } }
 /* the hoods nearest the centre pay most: r0 is the centre, shading warmer the closer in */
-.hcell.r0 { background: #2c2310; border-color: #8a6d26; }
-.hcell.r1 { background: #221c10; border-color: #3d3218; }
-.hcell.r2 { background: #1d1a13; }
-.hcell.own-mine { border-color: #34b35a; }
-.hcell.own-enemy { border-color: #b8372f; }
+.hcell.r0 { background: #2b2616; border-color: #9a7a2a; }
+.hcell.r1 { background: #212218; border-color: #3f3a22; }
+.hcell.r2 { background: #171f1c; }
+.hcell.own-mine { border-color: #3fb566; }
+.hcell.own-enemy { border-color: #c2452a; }
 .hcell .mini { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; }
-.hcell .mini i, .legend i { border-radius: 2px; background: #2c2c35; display: block; }
-.hcell .mini i.mine, .legend i.mine { background: #3cb867; }
-.hcell .mini i.enemy, .legend i.enemy { background: #c94238; }
+.hcell .mini i, .legend i { border-radius: 2px; background: #2a3835; display: block; }
+.hcell .mini i.mine, .legend i.mine { background: #3fb566; }
+.hcell .mini i.enemy, .legend i.enemy { background: #c94a2e; }
 .hcell .mini i.siege, .legend i.siege { box-shadow: 0 0 0 1px var(--gold-hi); }
-.hcell .lbl { font-family: var(--display); font-size: 10px; line-height: 1; color: #a3a3b0; text-align: center; white-space: nowrap; overflow: hidden; letter-spacing: .3px; }
+.hcell .lbl { font-family: var(--display); font-size: 10px; line-height: 1; color: var(--text-2); text-align: center; white-space: nowrap; overflow: hidden; letter-spacing: .3px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 10px; height: 10px; }
@@ -633,9 +671,15 @@ textarea.input { resize: vertical; font: inherit; }
 
 /* Round icon badge for list rows (matches the top-bar avatar) */
 .ico {
-  width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 19px; line-height: 1;
-  background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-strong);
+  width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; font-size: 19px; line-height: 1; color: var(--text-2);
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line);
 }
+.ico .svgi { vertical-align: 0; }
+/* a tinted badge says what kind of thing the row is: amber for money and what's ready, rust for a fight or a loss, teal for news */
+.ico.gold { color: var(--gold); background: var(--gold-tint); box-shadow: none; }
+.ico.red { color: var(--red-text); background: var(--red-tint); box-shadow: none; }
+.ico.blue { color: var(--blue); background: var(--blue-tint); box-shadow: none; }
+.ico.green { color: var(--green); background: var(--green-tint); box-shadow: none; }
 @media (hover: hover) { .row.link:hover .ico { box-shadow: inset 0 0 0 1px var(--gold-edge); } }
 /* big storage / stat numbers read better in the display face */
 .bignum { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .3px; }
@@ -666,11 +710,11 @@ textarea.input { resize: vertical; font: inherit; }
    gold ring once so you see which one you came for */
 .card[id] { scroll-margin-top: calc(112px + env(safe-area-inset-top)); }
 .card.focused { animation: focusring 1.6s ease-out 1; }
-@keyframes focusring { 0%, 35% { box-shadow: 0 0 0 2px var(--gold), var(--hl), var(--shadow-1); } 100% { box-shadow: var(--hl), var(--shadow-1); } }
+@keyframes focusring { 0%, 35% { box-shadow: 0 0 0 2px var(--gold), var(--shadow-card); } 100% { box-shadow: var(--shadow-card); } }
 
 /* inline action results */
 .row.action { position: relative; }
-.row.action.flashing { background: rgba(227,179,65,.07); }
+.row.action.flashing { background: rgba(242,163,58,.07); }
 .action-result { margin-top: 4px; font-size: 13px; animation: fadein var(--t-base) var(--ease); }
 .doit-wrap { position: relative; display: flex; }
 /* what a job paid, rising off its Do It */
@@ -680,7 +724,7 @@ textarea.input { resize: vertical; font: inherit; }
   text-shadow: 0 1px 2px #000; animation: floatup 1.1s ease-out forwards;
 }
 @keyframes floatup { 0% { opacity: 0; transform: translate(-50%, 14px) scale(.9) } 18% { opacity: 1; transform: translate(-50%, 2px) scale(1.05) } 100% { opacity: 0; transform: translate(-50%, -22px) scale(1) } }
-.session-tally { font-size: 13px; color: #c9c9d3; }
+.session-tally { font-size: 13px; color: var(--text-2); }
 .toggle { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-2); white-space: nowrap; user-select: none; }
 /* the label is 18 px tall; a tap up to 13 px above or 7 px below still flips the box (P2-6). Less below, because the
    control under it (Actions' sort, Admin's Add Word) sits 8–12 px away and reaches up too */
@@ -690,8 +734,8 @@ textarea.input { resize: vertical; font: inherit; }
 
 /* why a button is disabled — said before the tap, not after */
 .why {
-  font-size: var(--fs-sm); color: #f0b4a0; padding: 6px 10px; border-radius: var(--r-sm);
-  background: rgba(224,72,63,.08); border: 1px solid rgba(224,72,63,.24);
+  font-size: var(--fs-sm); color: var(--red-soft); padding: 6px 10px; border-radius: var(--r-sm);
+  background: rgba(224,85,43,.08); border: 1px solid rgba(224,85,43,.24);
 }
 .why::before { content: '⚠ '; opacity: .8; }
 
@@ -701,10 +745,10 @@ textarea.input { resize: vertical; font: inherit; }
   position: absolute; top: -6px; left: calc(100% - 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px;
   font-family: var(--body); font-size: 10.5px; font-weight: 800; line-height: 17px; letter-spacing: 0; text-align: center; text-transform: none;
   color: #fff; pointer-events: none;
-  box-shadow: 0 0 0 2px #101013; animation: pop var(--t-base) ease-out;
+  box-shadow: 0 0 0 2px #0e1718; animation: pop var(--t-base) ease-out;
 }
 .tbadge.red { background: var(--red-fill); }
-.tbadge.gold { background: var(--gold); color: var(--gold-ink); }
+.tbadge.gold { background: var(--btn-gold); color: var(--gold-ink); }
 .tbadge.dot { min-width: 0; width: 10px; height: 10px; padding: 0; top: -2px; left: calc(100% - 4px); }
 .tbadge.inline { position: static; display: inline-block; margin-left: 6px; vertical-align: 1px; box-shadow: none; }
 
@@ -714,11 +758,11 @@ textarea.input { resize: vertical; font: inherit; }
 .row.activity .t2 { font-size: var(--fs-md); line-height: 1.35; }
 .row.activity .t2 b { font-weight: 600; }
 /* something new: a gold edge and a faint gold wash (one tint for "new" everywhere: activity, action results, Next up) */
-.row.activity.fresh { background: rgba(227,179,65,.06); box-shadow: inset 3px 0 0 var(--gold); }
-.card.away .hd { background: rgba(227,179,65,.08); }
+.row.activity.fresh { background: rgba(242,163,58,.06); box-shadow: inset 3px 0 0 var(--gold); }
+.card.away .hd { background: rgba(242,163,58,.08); }
 .row.more { padding-top: 8px; padding-bottom: 8px; }
 .row.unread .t { color: #fff; }
-.row.unread .s { color: #c9c9d3; font-weight: 600; }
+.row.unread .s { color: var(--text-2); font-weight: 600; }
 
 /* path teaser on Home */
 .card.link { cursor: pointer; }
@@ -731,14 +775,14 @@ textarea.input { resize: vertical; font: inherit; }
 .odds.green .fill { background: var(--green); }
 .odds.gold .fill { background: var(--gold); }
 .odds.red .fill { background: var(--red); }
-.warn { font-size: var(--fs-sm); color: var(--gold-soft); padding: 6px 10px; border-radius: var(--r-sm); background: rgba(227,179,65,.08); border: 1px solid rgba(227,179,65,.26); }
+.warn { font-size: var(--fs-sm); color: var(--gold-soft); padding: 6px 10px; border-radius: var(--r-sm); background: rgba(242,163,58,.08); border: 1px solid rgba(242,163,58,.26); }
 .warn::before { content: '⚠ '; opacity: .8; }
 
 /* smaller segmented control (Actions sort) */
 .seg.sm button { font-size: 12px; padding: 5px 4px; border-width: 9px 0; margin: -9px 0; border-radius: 9px / 18px; }
 
 /* rookie poker table */
-.row.rookie { background: rgba(227,179,65,.06); }
+.row.rookie { background: rgba(242,163,58,.06); }
 
 /* Casino tables ----------------------------------------------------------- */
 /* shared: table-sized cards, chip stacks, drawn dice */
@@ -955,7 +999,7 @@ textarea.input { resize: vertical; font: inherit; }
 .drop-credits { flex-wrap: wrap; gap: 6px; }
 .drop-odds .row { padding-top: 7px; padding-bottom: 7px; }
 .drop-odds .row .ico { width: 24px; text-align: center; }
-.drop-odds .row.jackpot { background: rgba(227,179,65,.08); }
+.drop-odds .row.jackpot { background: rgba(242,163,58,.08); }
 .drop-odds .row.jackpot .t, .drop-odds .row.jackpot b { color: var(--gold); }
 .drop-odds .pill { margin-left: 6px; font-size: 10.5px; }
 .crate-open { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 6px; }
@@ -987,8 +1031,8 @@ textarea.input { resize: vertical; font: inherit; }
 .meta-bars .k { color: var(--text-2); }
 .meta-bars .bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .meta-bars .fill { height: 100%; border-radius: 3px; }
-.meta-bars .fill.off { background: #e0574d; }
-.meta-bars .fill.def { background: #4d93e0; }
+.meta-bars .fill.off { background: var(--red); }
+.meta-bars .fill.def { background: var(--blue); }
 .meta-bars b { text-align: right; }
 .combo-row .t .pill { margin-left: 6px; font-size: 10.5px; }
 .combo-parts span { color: #9a9aa6; }
@@ -1047,18 +1091,21 @@ button, .btn, .row.link, .seg button, .tabbar a { touch-action: manipulation; }
 .kb .app { padding-bottom: 6px; }
 .kb .chat:not(.compact) { height: calc(100dvh - 176px - env(safe-area-inset-top)); }
 
-/* Home quick grid: the places with no tab, 3 × 3 under the stats, drawn like a stat tile ------------------------- */
+/* Home quick grid: the places with no tab, 3 × 3 under the stats; a tile is a line icon over its name ------------- */
 .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .quick a {
-  position: relative; min-width: 0; min-height: 68px; padding: 8px 4px 7px; border-radius: var(--r-md);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-  color: inherit; text-decoration: none; background: var(--surface-2); border: 1px solid var(--line);
+  position: relative; min-width: 0; min-height: 84px; padding: 10px 4px 9px; border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  color: inherit; text-decoration: none; background: var(--grad-tile); border: 1px solid var(--line); box-shadow: var(--hl);
   transition: background-color var(--t-fast);
 }
-.quick a:active { background: #221d12; }
-.quick .ico { position: relative; }
-.quick .lbl { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.quick .tbadge { top: -5px; left: calc(100% - 10px); }
+.quick a:active { background: var(--gold-tint); }
+.quick .ico { position: relative; width: 30px; height: 30px; background: none; box-shadow: none; color: var(--text-2); font-size: 24px; }
+.quick .lbl { max-width: 100%; font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quick .tbadge { top: -7px; left: calc(100% - 10px); box-shadow: 0 0 0 2px #10191a; }
+/* the tile for what's yours and ready (Your Hood): amber edge, amber icon, a warm tile */
+.quick a.gold { border-color: var(--gold-edge); background: var(--grad-tile-gold); }
+.quick a.gold .ico { color: var(--gold); }
 
 /* Profile: "Product moved" and "Market sales" wrap to two lines in a 3-up tile; values sit on one baseline per row */
 .stat-grid .stat { display: flex; flex-direction: column; justify-content: space-between; }
@@ -1072,11 +1119,11 @@ button, .btn, .row.link, .seg button, .tabbar a { touch-action: manipulation; }
 .svc-nav::-webkit-scrollbar { display: none; }
 .svc-nav a, .chip-nav button {
   flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill);
-  font: inherit; font-size: 13.5px; font-weight: 600; color: #c9c9d3; text-decoration: none; white-space: nowrap; cursor: pointer;
-  background: var(--surface-1); border: 1px solid var(--line); transition: color var(--t-fast), border-color var(--t-fast);
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text-2); text-decoration: none; white-space: nowrap; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--line-strong); transition: color var(--t-fast), border-color var(--t-fast);
 }
 .svc-nav a.on, .chip-nav button.on { color: var(--gold-hi); border-color: var(--gold-edge); background: var(--gold-tint); }
-.svc-nav a.alert { color: #ffa39b; border-color: var(--red-edge); }
+.svc-nav a.alert { color: var(--red-soft); border-color: var(--red-edge); }
 
 /* a code-run text link inside a notice (Open →, Deal me in) reads like the notice's other links */
 .notice .linkbtn { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
@@ -1092,7 +1139,8 @@ a.card { display: block; color: inherit; text-decoration: none; }
 
 /* Layout helpers --------------------------------------------------------------------------------------------- */
 /* a link drawn as a button (Forum ›, Sit, Back to the forum): <a> is inline, which would drop the button's min-height */
-a.btn { display: inline-flex; align-items: center; justify-content: center; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.nowrap { white-space: nowrap; }
 /* a button that takes the rest of its row (Collect next to Upgrade, Roll next to Take down) */
 .btn.flex1 { flex: 1 1 0; min-width: 0; }
 /* pushes the last control of an .hstack to the right edge (Abandon, away from Stop) */
@@ -1130,7 +1178,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
    row. A card's overflow: hidden would make the card the sticky bar's scroll box and pin it in place, so table cards let
    it show, and round their header themselves. */
 .card.table-card { overflow: visible; }
-.card.table-card > .hd { border-radius: 11px 11px 0 0; }
+.card.table-card > .hd { border-radius: 15px 15px 0 0; }
 .table-bar {
   position: sticky; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px); z-index: 5;
   display: flex; flex-direction: column; gap: 8px; margin: 0 -6px; padding: 8px;
@@ -1153,7 +1201,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .stat-btn .stat-add { position: absolute; top: 7px; right: 9px; font-size: var(--fs-xs); font-weight: 700; color: var(--gold); letter-spacing: .3px; }
 .stat-btn.on { border-color: var(--gold-edge); background: var(--gold-tint); }
 .stat-btn:active { filter: brightness(1.12); }
-.hire-inline { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: var(--r-md); background: rgba(227,179,65,.06); border: 1px solid rgba(227,179,65,.24); }
+.hire-inline { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: var(--r-md); background: rgba(242,163,58,.06); border: 1px solid rgba(242,163,58,.24); }
 
 /* the Milestones card on Services: a repeating step with its progress bar toward the next one */
 .milestone-row .track { height: 6px; margin-top: 6px; border-radius: var(--r-pill); overflow: hidden; background: var(--sunken); box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
@@ -1165,8 +1213,8 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .fight-find .input[type=search] { flex: 1; min-width: 0; }
 .fight-find select.input { width: auto; flex: none; max-width: 42%; }
 .chip-nav { display: flex; flex-wrap: wrap; gap: 6px; }   /* wraps rather than scrolls: every filter in sight */
-.chip-nav .n { font-size: 11.5px; font-weight: 700; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(255,255,255,.08); color: #a9a9b6; text-align: center; }
-.chip-nav button.on .n { background: rgba(227,179,65,.16); color: var(--gold-hi); }
+.chip-nav .n { font-size: 11.5px; font-weight: 700; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(255,255,255,.08); color: var(--text-2); text-align: center; }
+.chip-nav button.on .n { background: rgba(242,163,58,.16); color: var(--gold-hi); }
 .online-dot { display: inline-block; width: 8px; height: 8px; margin: 0 6px 1px 0; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(0,0,0,.5); vertical-align: middle; }
 .row.cant .ico, .row.cant .t { opacity: .55; }
 .row.cant .s { opacity: .8; }   /* the reason stays readable: 4.7:1 */
@@ -1177,13 +1225,13 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* Home's Next up: what needs you, most urgent first. A red edge for a state that stops play (jail, the hospital), gold
    for something ready to take; paying is a full-width button under the line, collecting sits at its right */
-.next-up .row.urgent { box-shadow: inset 3px 0 0 var(--red); background: rgba(224,72,63,.07); }
+.next-up .row.urgent { box-shadow: inset 3px 0 0 var(--red); background: rgba(224,85,43,.07); }
 .next-up .row.ready { box-shadow: inset 3px 0 0 var(--gold); }
 .next-up .row.wide { align-items: flex-start; }
 .next-up .row .act { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .next-up .row > .btn { flex: none; min-width: 84px; }
 /* Getting started: the next step, gold-edged; the rest open under it */
-.getting-started .row.next { box-shadow: inset 3px 0 0 var(--gold); background: rgba(227,179,65,.06); }
+.getting-started .row.next { box-shadow: inset 3px 0 0 var(--gold); background: rgba(242,163,58,.06); }
 .getting-started .row.done { opacity: .5; }
 .getting-started .check { width: 22px; text-align: center; flex: none; }
 .getting-started .row.more { min-height: var(--tap); padding-top: 8px; padding-bottom: 8px; }
@@ -1198,7 +1246,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); bottom: auto; flex-direction: column; }
 
 /* Phase 4: small pieces that were inline styles ------------------------------------------------------------- */
-.stam { color: #7dd3fc; }
+.stam { color: var(--gold-hi); }
 .grow-fill { background: var(--green); }
 
 /* Motion off ----------------------------------------------------------------------------------------------- */
@@ -1209,25 +1257,38 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 }
 
 /* Season 1: Your Hood ---------------------------------------------------- */
-/* six private blocks in Territory's tile style: gold edge means yours, the next one up carries its odds, the rest wait */
-.hood-grid .block { min-height: 108px; }
-.block.yours { border-color: var(--gold-edge); background: var(--gold-tint); }
-.block.next { border-color: var(--line-strong); }
-.block.held { background: var(--surface-1); border-style: dashed; }   /* dimmed by its edge and icon, never its text (contrast) */
-.block.held .em { opacity: .5; }
+/* six private blocks in Territory's tile style: amber edge means yours, the next one up is rust-edged, the rest wait dashed */
+.hood-grid .block { min-height: 112px; }
+.block.yours { border-color: var(--gold-edge); background: var(--grad-tile-gold); box-shadow: var(--hl), 0 0 0 1px rgba(242,163,58,.12); }
+.block.yours .em { color: var(--gold); }
+.block.next { border-color: rgba(224,85,43,.55); background: var(--grad-tile-red); }
+.block.next .em { color: var(--red-text); }
+.block.held { background: var(--grad-tile); border-style: dashed; border-color: var(--line-strong); }   /* dimmed by its edge and icon, never its text (contrast) */
+.block.held .em { color: var(--text-3); }
 .block.held .biz-name b { font-weight: 500; color: var(--text-2); }
-.block.held .em, .block.next .em { font-size: 18px; }
 .hood .row.boss { padding: 0; border: 0; }
-.hood .boss-tile { width: 100%; font: inherit; color: inherit; min-height: 84px; border-color: var(--red-edge); background: var(--red-tint); }
+.hood .boss-tile { width: 100%; font: inherit; color: inherit; min-height: 84px; border-color: var(--red-edge); background: var(--grad-tile-red); }
 .hood .boss-tile.sel { outline: 2px solid var(--gold); }
 .hood .hood-plate b { color: var(--gold-hi); }
 .hood .why { margin-top: -2px; }
 .hood .hstack > .btn.grow { flex: 1; }
 .hood-grid .nowrap { white-space: nowrap; }
+.hood-grid .block .small { font-size: 11.5px; white-space: nowrap; }
 .hood-head .bd { padding-top: 0; }
+/* the hood's header card is the warm one on Territory */
+.card.hood-head { border-color: rgba(242,163,58,.25); background: linear-gradient(180deg, #221f14 0%, #121a18 100%); }
 
 /* Season 1: Marcus and the gate ------------------------------------------ */
-.marcus .hd .mav { font-size: 18px; margin-right: 4px; vertical-align: -2px; }
+/* Marcus's mark: an M in an amber ring, until he has a face */
+.mring {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 6px; border-radius: 50%; flex: none;
+  font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--gold); background: var(--surface-2);
+  box-shadow: 0 0 0 2px var(--gold-lo), 0 0 0 2.5px rgba(255,196,107,.5);
+}
+.marcus.card { border-color: rgba(242,163,58,.28); background: linear-gradient(180deg, #262012 0%, #1a1a14 38%, #121a18 100%); }
+.marcus .line { font-style: italic; }
+.marcus .objective { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.05); }
+.marcus .objective .pay { font-family: var(--display); font-size: 14px; color: var(--gold); white-space: nowrap; }
 .marcus .line { margin: 0; font-size: var(--fs-md); line-height: 1.45; }
 .marcus.complete .hd { background: var(--gold-tint); }
 .marcus.complete .hd > span { color: var(--gold-hi); }
@@ -1235,13 +1296,13 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .marcus .parts li.done { color: var(--text-2); }
 .marcus .bar.mini { width: 100%; }
 .marcus.card { animation: fadein var(--t-base) var(--ease); }
-.marcus.row.done .mav { font-size: 22px; }
 .marcus.row.done { align-items: center; }
 /* a locked tab or tile: the icon dimmed and a lock where the count badge sits; the label keeps its contrast; still 44 pt */
 .tabbar a.locked, .quick a.locked { cursor: default; }
-.tabbar a.locked .ic, .quick a.locked .ic { opacity: .45; }
+.tabbar a.locked .ic, .quick a.locked .ic, .quick a.locked .ico { opacity: .45; }
 .quick a.locked .lbl { color: var(--text-2); }
-.tbadge.lock { background: var(--surface-3); color: var(--text); font-size: 9px; box-shadow: 0 0 0 2px #101013; }
+.tbadge.lock { display: inline-grid; place-items: center; width: 17px; padding: 0; background: var(--surface-3); color: var(--text); font-size: 9px; box-shadow: 0 0 0 2px #0e1718; border: 1px solid var(--line-strong); }
+.quick .tbadge.lock { opacity: 1; }
 .locked-screen .hd > span { color: var(--text-2); }
 
 /* Season board (sprint 2): my own row carries the gold tint that means "yours" everywhere else */

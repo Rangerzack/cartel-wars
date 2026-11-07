@@ -60,10 +60,10 @@ try {
   // a profile stays open (it's where chat and the forum lead); only its Attack is locked, with Marcus's line
   const other = (await one('select id from profiles where id <> $1 and not is_bot order by random() limit 1', [me])).id
   await p.goto(`${BASE}/player/${other}`)
-  await p.getByRole('button', { name: '⚔️ Attack' }).waitFor()
-  if (!(await p.getByRole('button', { name: '⚔️ Attack' }).isDisabled())) throw new Error('Attack is locked until First Blood')
+  await p.getByRole('button', { name: 'Attack' }).waitFor()
+  if (!(await p.getByRole('button', { name: 'Attack' }).isDisabled())) throw new Error('Attack is locked until First Blood')
   await p.getByText('Not yet, boss').waitFor()
-  await p.getByRole('button', { name: '💬 Chat' }).waitFor()
+  await p.getByRole('button', { name: 'Chat' }).waitFor()
   await p.goto(BASE)
   await p.locator('.marcus').waitFor()
   await p.getByText('Look at your six blocks').waitFor()   // the objective line, not the button's words
@@ -104,7 +104,7 @@ try {
   await p.locator('.toast', { hasText: 'Banked' }).waitFor()
   await p.goto(BASE)
   const dia = (await one('select diamonds from profiles where id = $1', [me])).diamonds
-  await claim('bank_it', '💎10')
+  await claim('bank_it', '10 diamonds')
   if ((await one('select diamonds from profiles where id = $1', [me])).diamonds !== dia + 10) throw new Error('ten diamonds')
   await p.locator('.quick a[href="/casino"]:not(.locked)').waitFor()
   await p.getByRole('link', { name: 'Fight, locked' }).waitFor()

@@ -14,6 +14,7 @@ import { BackBar } from '../components/BackBar'
 import { PlayerLink } from '../components/Linked'
 import { useLoad } from '../lib/useLoad'
 import { haptic } from '../lib/haptics'
+import { Glyph, Icon } from '../components/Icon'
 
 export default function Crew() {
   const { id } = useParams()
@@ -110,7 +111,7 @@ function CrewPage({ id }: { id: string }) {
   return (
     <div className="page">
       <BackBar fallback="/crew" />
-      <Card title={<><span style={{ fontSize: 20 }}>{c.emblem}</span> {c.name}</>} right={c.cartel && <Btn className="sm ghost" onClick={() => nav(`/cartel/${c.cartel!.id}`)}>🕴 {c.cartel.name}</Btn>}>
+      <Card title={<><span style={{ fontSize: 20 }}>{c.emblem}</span> {c.name}</>} right={c.cartel && <Btn className="sm ghost" onClick={() => nav(`/cartel/${c.cartel!.id}`)}><Icon name="users" size={14} /> {c.cartel.name}</Btn>}>
         <div className="bd stack">
           {c.description && <div>{c.description}</div>}
           <div className="grid3">
@@ -127,7 +128,7 @@ function CrewPage({ id }: { id: string }) {
                 if (!await ask(`Your whole crew's attack goes against ${c.name}'s defense. Win and you take 5% of their crew bank; lose and 5% of yours goes to them, and everyone on your side takes a beating.`, { title: `Hit ${c.name}?`, yes: 'Crew Fight', tone: 'red' })) return
                 const r = await run(() => api.crewFight(c.id), { silent: true }); if (r) { haptic(r.won ? 'success' : 'error'); setFight(r); load() }
               }}>
-                ⚔️ Crew Fight{cooldown ? ` · ${timeLeft(c.next_fight_at, now)}` : ''}
+                <Icon name="swords" size={15} /> Crew Fight{cooldown ? ` · ${timeLeft(c.next_fight_at, now)}` : ''}
               </Btn>
               {me.hospital && <div className="why">Not from a hospital bed — heal up first.</div>}
               <div className="small muted">Your whole crew's attack against their defense. Costs {catalog?.config.crew_fight_stamina ?? 5} stamina, winner takes 5% of the loser's crew bank, everyone on the losing side takes a beating. One hit per crew per hour.</div>
@@ -141,8 +142,8 @@ function CrewPage({ id }: { id: string }) {
           )}
           {mine && (
             <div className="hstack">
-              <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}>💬 Crew Chat</Btn>
-              <Btn className="sm" onClick={() => nav('/territory')}>🗺 Territory</Btn>
+              <Btn className="sm" onClick={() => nav(`/chat/crew:${c.id}`)}><Icon name="chat" size={15} /> Crew Chat</Btn>
+              <Btn className="sm" onClick={() => nav('/territory')}><Icon name="map" size={15} /> Territory</Btn>
               {boss && <Btn className="sm ghost" onClick={() => setEdit({ emblem: c.emblem, description: c.description })}>Edit</Btn>}
             </div>
           )}
@@ -165,7 +166,7 @@ function CrewPage({ id }: { id: string }) {
         <Card title="Cartel Invitations">
           {c.invites.map(i => (
             <div key={i.id} className="row">
-              <div className="grow t">🕴 {i.name}</div>
+              <div className="grow t"><Icon name="users" size={15} className="muted" /> {i.name}</div>
               <Btn className="sm gold" onClick={() => act(() => api.cartelAccept(i.id, true), () => `Joined ${i.name}`)}>Accept</Btn>
               <Btn className="sm ghost" onClick={() => act(() => api.cartelAccept(i.id, false))}>Decline</Btn>
             </div>
@@ -189,7 +190,7 @@ function CrewPage({ id }: { id: string }) {
         {c.members.map(m => (
           <div key={m.id} className="row">
             <div className="grow link" onClick={() => nav(`/player/${m.id}`)}>
-              <div className="t"><PlayerLink id={m.id}>{m.avatar} {m.is_capo ? '👑 ' : m.is_co_capo ? '🎖 ' : ''}{m.name}</PlayerLink></div>
+              <div className="t"><PlayerLink id={m.id}>{m.avatar} {m.is_capo ? <Icon name="crown" size={13} className="gold" label="capo" /> : m.is_co_capo ? <Icon name="award" size={13} className="gold" label="co-capo" /> : null} {m.name}</PlayerLink></div>
               <div className="s">{m.is_capo ? 'Capo · ' : m.is_co_capo ? 'Co-Capo · ' : ''}{num(m.fights_won)} wins · {num(m.actions)} actions · seen {ago(m.last_seen)}</div>
             </div>
             {c.is_capo && !m.is_capo && (m.is_co_capo
@@ -217,7 +218,7 @@ function CrewPage({ id }: { id: string }) {
             const weWon = f.we_attacked === f.won
             return (
               <RowLink key={f.id} to={`/crew/${f.we_attacked ? f.defender_id : f.attacker_id}`}>
-                <span>{weWon ? '🏆' : '💀'}</span>
+                <span className={`ico ${weWon ? 'gold' : 'red'}`}><Icon name={weWon ? 'trophy' : 'skull'} size={18} /></span>
                 <div className="grow"><div className="t">{f.we_attacked ? `${c.name} attacked ${f.defender}` : `${f.attacker} attacked ${c.name}`}{' · '}{weWon ? 'won' : 'lost'}</div><div className="s">{num(f.attack)} vs {num(f.defense)} · {ago(f.at)}</div></div>
                 {f.cash === 0 ? <span className="muted tabular">$0</span> : <b className={`tabular ${weWon ? 'gold' : 'red'}`}>{weWon ? '+' : '−'}{money(f.cash)}</b>}
               </RowLink>
@@ -232,7 +233,7 @@ function CrewPage({ id }: { id: string }) {
             const d = businessDef(catalog, p.code)
             return (
               <RowLink key={p.code} to={`/territory?hood=${p.best_hood_id}&block=${p.best_block}`}>
-                <span className="ico">{d?.icon}</span>
+                <span className="ico"><Glyph e={d?.icon} size={18} /></span>
                 <div className="grow">
                   <div className="t">{d?.name} <b className="gold tabular">{perkLabel(p.code, p.value)}</b>{d && p.value >= d.ceiling - 0.0001 && <span className="muted small"> · maxed</span>}</div>
                   <div className="s">{d?.perk} · {p.blocks} {p.blocks === 1 ? 'block' : 'blocks'} · best: {p.best_name}{p.best_full ? ' (full hood)' : ''}</div>
@@ -248,7 +249,7 @@ function CrewPage({ id }: { id: string }) {
       {c.blocks.length > 0 && (
         <Card title="Blocks held" right={<small>{mine ? 'next bonus first' : `${c.blocks.length} blocks`}</small>}>
           {(allBlocks ? c.blocks : c.blocks.slice(0, 8)).map(b => {
-            const inner = <div className="grow"><div className="t">{b.name}</div><div className="s">{b.business ? `${businessDef(catalog, b.business)?.icon ?? ''} ${businessDef(catalog, b.business)?.name ?? ''} · ` : ''}{b.island}{mine && b.bonus_at ? ` · bonus in ${timeLeft(b.bonus_at, now)}` : ''}</div></div>
+            const inner = <div className="grow"><div className="t">{b.name}</div><div className="s">{b.business ? <><Glyph e={businessDef(catalog, b.business)?.icon} size={12} /> {businessDef(catalog, b.business)?.name ?? ''} · </> : ''}{b.island}{mine && b.bonus_at ? ` · bonus in ${timeLeft(b.bonus_at, now)}` : ''}</div></div>
             return mine
               ? <RowLink key={b.id} to={`/territory?hood=${b.hood_id}`}>{inner}<span className="chev">›</span></RowLink>
               : <div key={b.id} className="row">{inner}</div>

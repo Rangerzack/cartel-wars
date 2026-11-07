@@ -7,6 +7,7 @@ import { useLoad } from '../lib/useLoad'
 import { useNow } from '../lib/useNow'
 import { haptic } from '../lib/haptics'
 import { Btn, Card, Loading } from './ui'
+import { Glyph, Icon } from './Icon'
 import { HireHoodlums } from './Hire'
 
 /** $50k, $2.5M: a garrison's worth in troops, short. */
@@ -76,7 +77,7 @@ export function HoodPanel({ focus }: { focus?: boolean }) {
           <div className="stat"><div className="k">Perks</div><div className="v sm">{Object.keys(hood.perks).length || '—'}</div></div>
         </div>
         {readyBlocks >= 2 && (
-          <div className="bd"><Btn className="doit block" onClick={() => collect()}>Collect All · {money(hood.ready_cash)}</Btn></div>
+          <div className="bd"><Btn className="gold block" onClick={() => collect()}>Collect All · {money(hood.ready_cash)}</Btn></div>
         )}
       </Card>
 
@@ -87,7 +88,7 @@ export function HoodPanel({ focus }: { focus?: boolean }) {
         <div className={`row boss ${sel === 7 ? 'sel' : ''}`}>
           <button type="button" className={`block boss-tile ${sel === 7 ? 'sel' : ''}`} onClick={() => setSel(7)}
             aria-label={`The boss, held by ${garrison(hood.boss.thugs, hood.boss.enforcers)}, resistance ${num(hood.boss.resistance)}`}>
-            <div className="em">🕴</div><div><b>The Boss</b></div>
+            <div className="em"><Icon name="user" size={24} /></div><div><b>The Boss</b></div>
             <div className="small muted">{garrison(hood.boss.thugs, hood.boss.enforcers)}</div>
             <div className="small red tabular">resistance {num(hood.boss.resistance)}</div>
           </button>
@@ -115,7 +116,7 @@ export function HoodPanel({ focus }: { focus?: boolean }) {
       {selected && (
         <Card title={`Block ${selected.slot} · ${selected.name}`} right={selected.cleared ? <small className="tabular">Level {selected.level}</small> : <small className="tabular">{short(selected.value)} of muscle</small>}>
           <div className="bd stack">
-            <div className="small"><span aria-hidden>{selected.icon}</span> {selected.perk}{selected.perk_value != null && <b className="gold"> · {Math.round(selected.perk_value * 100)}%</b>}</div>
+            <div className="small"><Glyph e={selected.icon} size={15} className="gold" /> {selected.perk}{selected.perk_value != null && <b className="gold"> · {Math.round(selected.perk_value * 100)}%</b>}</div>
             {selected.cleared ? (
               <>
                 <div className="grid2">
@@ -148,7 +149,7 @@ export function HoodPanel({ focus }: { focus?: boolean }) {
         <Card title="Your perks">
           {hood.blocks.filter(b => b.cleared).map(b => (
             <div key={b.slot} className="row">
-              <span aria-hidden>{b.icon}</span>
+              <span className="ico gold"><Glyph e={b.icon} size={18} /></span>
               <div className="grow"><div className="t">{b.name}</div><div className="s">{b.perk}</div></div>
               <b className="tabular gold">{Math.round((b.perk_value ?? 0) * 100)}%</b>
             </div>
@@ -180,13 +181,13 @@ function AttackForm({ next, boss, onFight }: { next: HoodNext; boss?: boolean; o
     <>
       <div className="small">Held by <b>{garrison(next.thugs, next.enforcers)}</b> — resistance <b className="tabular">{num(next.resistance)}</b>. You have {num(next.my_thugs)} thugs and {num(next.my_mercs)} mercs.</div>
       <div className="grid2">
-        <label className="f">🧢 Thugs · have {num(next.my_thugs)}<input className="input" inputMode="numeric" aria-label="Thugs to send" value={force.thugs} onChange={e => setForce({ ...force, thugs: Math.min(next.my_thugs, toInt(e.target.value)) })} /></label>
-        <label className="f">🔫 Mercs · have {num(next.my_mercs)}<input className="input" inputMode="numeric" aria-label="Mercenaries to send" value={force.mercs} onChange={e => setForce({ ...force, mercs: Math.min(next.my_mercs, toInt(e.target.value)) })} /></label>
+        <label className="f"><span><Icon name="cap" size={13} className="gold" /> Thugs · have {num(next.my_thugs)}</span><input className="input" inputMode="numeric" aria-label="Thugs to send" value={force.thugs} onChange={e => setForce({ ...force, thugs: Math.min(next.my_thugs, toInt(e.target.value)) })} /></label>
+        <label className="f"><span><Icon name="sword" size={13} className="red" /> Mercs · have {num(next.my_mercs)}</span><input className="input" inputMode="numeric" aria-label="Mercenaries to send" value={force.mercs} onChange={e => setForce({ ...force, mercs: Math.min(next.my_mercs, toInt(e.target.value)) })} /></label>
       </div>
       <div className="hstack">
         <button type="button" className="btn sm ghost" onClick={() => setForce(suggest(next))}>Just enough</button>
         <button type="button" className="btn sm ghost" onClick={() => setForce({ thugs: next.my_thugs, mercs: next.my_mercs })}>Everything</button>
-        <button type="button" className="btn sm ghost" onClick={() => setHiring(h => !h)} aria-expanded={hiring}>🧢 Hire more</button>
+        <button type="button" className="btn sm ghost" onClick={() => setHiring(h => !h)} aria-expanded={hiring}><Icon name="plus" size={14} /> Hire more</button>
       </div>
       {hiring && <HireHoodlums kinds={['thug', 'mercenary']} btnClass="gold" initial={{ code: 'thug', n: 10 }} />}
       <div className="small"><b className="tabular">{num(attack)}</b> attack ({num(Math.round(low))}–{num(Math.round(high))} on the roll) against {num(next.resistance)}. <span className={low > next.resistance ? 'gold' : tooSmall ? 'red' : 'muted'}>{verdict}</span></div>
@@ -204,7 +205,7 @@ function Tile({ b, next, sel, onClick }: { b: HoodBlock; next: boolean; sel: boo
   return (
     <button type="button" className={`block ${state} ${sel ? 'sel' : ''}`} onClick={onClick}
       aria-label={`Block ${b.slot}, ${b.name}, ${b.cleared ? `yours, level ${b.level}` : `held by ${garrison(b.thugs, b.enforcers)}, resistance ${num(b.resistance)}${next ? ', next' : ''}`}`}>
-      <div className="em">{b.cleared ? b.icon : '🔒'}</div>
+      <div className="em"><Glyph e={b.icon} size={24} /></div>
       <div className="biz-name"><b>{b.name}</b></div>
       {b.cleared ? (
         <>
@@ -214,7 +215,7 @@ function Tile({ b, next, sel, onClick }: { b: HoodBlock; next: boolean; sel: boo
         </>
       ) : (
         <>
-          <div className="small muted nowrap">{compact(b.thugs)} 🧢 · {compact(b.enforcers)} 🛡️</div>
+          <div className="small muted nowrap">{compact(b.thugs)} <Icon name="cap" size={12} /> · {compact(b.enforcers)} <Icon name="shield" size={12} /></div>
           <div className={`small tabular ${next ? 'red' : 'muted'}`}>{short(b.value)} of muscle</div>
         </>
       )}

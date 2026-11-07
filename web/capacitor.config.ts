@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appId: 'io.rangelab.cartelwars',
   appName: 'Cartel Wars',
   webDir: 'dist',
-  backgroundColor: '#09090b',
+  backgroundColor: '#0a1214',
   ios: {
     scheme: 'App',
     // Full-bleed web view: index.html sets viewport-fit=cover and index.css pads the top bar, tab bar, toasts and
@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
     contentInset: 'never',
   },
   plugins: {
-    SplashScreen: { launchAutoHide: true, backgroundColor: '#121216', showSpinner: false },
+    SplashScreen: { launchAutoHide: true, backgroundColor: '#0a1214', showSpinner: false },
     StatusBar: { style: 'DARK', overlaysWebView: true },
     Keyboard: { resize: 'native', resizeOnFullScreen: true },
   },

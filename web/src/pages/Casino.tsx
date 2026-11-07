@@ -16,7 +16,7 @@ import { BackBar } from '../components/BackBar'
 import { errorText } from '../lib/errors'
 
 const ALL_GAMES = [
-  { v: 'poker', l: '♠ Poker' }, { v: 'blackjack', l: '🃏 Blackjack' }, { v: 'craps', l: '🎲 Craps' }, { v: 'roulette', l: '🎡 Roulette' }, { v: 'slots', l: '🎰 Slots' },
+  { v: 'poker', l: 'Poker' }, { v: 'blackjack', l: 'Blackjack' }, { v: 'craps', l: 'Craps' }, { v: 'roulette', l: 'Roulette' }, { v: 'slots', l: 'Slots' },
 ] as const
 type Game = typeof ALL_GAMES[number]['v']
 const GAMES = ALL_GAMES.filter(g => (features.casinoGames as readonly string[]).includes(g.v))

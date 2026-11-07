@@ -100,7 +100,7 @@ try {
   await build.first().waitFor()
   await build.first().click()
   await p.locator('.toast', { hasText: /grow house is up and running/ }).waitFor()
-  await p.locator('.row', { hasText: 'grow house' }).getByText(/Need 💎 \d+ more diamonds/).first().waitFor()
+  await p.locator('.row', { hasText: 'grow house' }).getByText(/Need \d+ more diamonds/).first().waitFor()
   if (!(await build.first().isDisabled())) throw new Error('a second house without the diamonds: Build is off')
 
   // 8. the shop: Sell shows only for a unit that isn't equipped

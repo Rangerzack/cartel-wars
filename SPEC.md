@@ -755,6 +755,40 @@ the top bar only says what nothing else does: offline anywhere, the hospital off
 `scripts/ui-shots.mjs` captures 25 screens and states of the demo world at 390 × 844 and
 lists every control under 44 pt, for before/after comparisons.
 
+**Border Night** *(the redesign, Zack, 2026-11-07: "the design looks a little cheap and
+outdated")*: the same tokens, retuned, and the emoji gone. The ground is a deep teal-black
+(`#0a1214`) with a faint diagonal grain and one warm light at the top; cards are a short
+top-to-bottom gradient with a 1 px highlight on the top edge, a deep soft shadow and a 16 px
+radius, and wells (stat tiles, inputs, scorelines) sit one step darker inside them; hairlines
+are white at 6–12 %, never a grey. The brand colour is an amber (`#f2a33a`, light `#ffc46b`,
+dark `#b86e14`) that the old `--gold` names now hold, so every rule and class still says
+gold: cash is amber in the display face, a screen gets one filled amber button (`.btn.gold`:
+the metal gradient; Marcus's Go, Collect All, Sign In, and anything that spends), and a
+row's main action in a list (`.btn.doit`: Do It, Collect, Claim) is amber-tinted with an
+amber edge so a list of jobs isn't a wall of metal. Rust (`#e0552b`) is danger, attacks and
+losses; green stays for gains and "yours" on the city map; ice-teal (`#4fd1c5`) is
+information and diamonds. Stamina's bar and icon are amber, health's green, heat's the
+heat colour. Chosen over black & gold (the Mafia Wars default), bone & blood (mono + one
+red) and ink & neon (Vice) on a four-palette mockup of Home.
+
+The type is Oswald for titles, labels, tabs and every number (the display face was named
+but never loaded in the first weeks; it is bundled from `@fontsource/oswald` and now
+`@fontsource/inter` for the body), Inter for everything you read or press, so a body
+of text and a button look the same on the web, in the app and on Android.
+
+Icons are one hand-drawn line set, `web/src/lib/icons.ts` (24-unit paths, 1.8 stroke, round
+caps, ~85 of them: the tabs, Home's places, resources, hoodlums, product, the businesses,
+combo styles, the activity kinds, forum boards) drawn by `<Icon name>` in `currentColor`, so
+a tab, tile or row colours its icon the way it colours its text; a locked tab or tile keeps
+its icon dimmed with a lock badge on the corner. Where a value still comes from a data map
+that holds an emoji (`commodityIcon`, `hoodlumIcon`, `accoladeMeta`, `dropIcon`, `findIcon`,
+the catalog's business and combo-style icons), `<Glyph e>` draws the icon that emoji stands
+for and falls back to the emoji itself for what isn't ours: a player's avatar and a crew's
+emblem stay what the player chose, and the casino's cards, dice, chips and reels keep their
+own art. Toasts and confirms say "10 diamonds", not "💎 10". The round `.ico` badge on a row
+takes a tone (`gold` money and what's ready, `red` a fight or a loss, `green` yours, `blue`
+news) so a list reads at a glance. Marcus is an M in an amber ring until he has a face.
+
 **Polish** *(Phase 5, 2026-10-05)*: button labels are in title case (Sign Out, Show All 12,
 Deal Again · $100; what follows a "·" is a detail and stays lower case); text links inside
 sentences stay in sentence case. A returning player's Home shows the latest three lines of

@@ -5,13 +5,14 @@ import type { LedgerEntry } from '../lib/types'
 import { Card, Empty, Loading, Seg } from './ui'
 import { useLoad } from '../lib/useLoad'
 import { useNow } from '../lib/useNow'
+import { Icon, type IconName } from './Icon'
 
-const kindLabel: Record<LedgerEntry['kind'], { icon: string; label: string }> = {
-  deposit: { icon: '⬆️', label: 'Deposit' },
-  withdraw: { icon: '⬇️', label: 'Withdrawal' },
-  bonus: { icon: '🏴', label: 'Block bonus' },
-  fight_won: { icon: '⚔️', label: 'Crew fight won' },
-  fight_lost: { icon: '💀', label: 'Crew fight lost' },
+const kindLabel: Record<LedgerEntry['kind'], { icon: IconName; label: string }> = {
+  deposit: { icon: 'up', label: 'Deposit' },
+  withdraw: { icon: 'down', label: 'Withdrawal' },
+  bonus: { icon: 'flag', label: 'Block bonus' },
+  fight_won: { icon: 'trophy', label: 'Crew fight won' },
+  fight_lost: { icon: 'skull', label: 'Crew fight lost' },
 }
 
 type Filter = 'all' | 'moves' | 'bonus'
@@ -35,7 +36,7 @@ export function Ledger({ scope, version = 0 }: { scope: 'crew' | 'cartel'; versi
       {shown?.length === 0 && <Empty>Nothing yet.</Empty>}
       {shown?.slice(0, all ? undefined : FIRST).map(r => (
         <div key={r.id} className="row">
-          <span>{kindLabel[r.kind].icon}</span>
+          <span className={`ico ${r.amount >= 0 ? 'gold' : 'red'}`}><Icon name={kindLabel[r.kind].icon} size={18} /></span>
           <div className="grow">
             <div className="t">{kindLabel[r.kind].label}{r.player ? <span className="muted"> · {r.player}</span> : r.kind !== 'bonus' ? <span className="muted"> · Deleted player</span> : null}</div>
             <div className="s">{r.note ? `${r.note} · ` : ''}{ago(r.at, now)} · balance {money(r.balance)}</div>

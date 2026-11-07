@@ -68,9 +68,9 @@ try {
   await p.getByText("You're in the hospital — heal to full to fight again, or wait it out.").waitFor()
   await p.getByRole('button', { name: /^Heal to Full/ }).click()
   await p.locator('.toast', { hasText: /^Healed to full for \$/ }).waitFor()
-  await p.getByRole('button', { name: '⚔️ Attack' }).waitFor()
+  await p.getByRole('button', { name: 'Attack' }).waitFor()
   // the refresh after the heal turns Attack back on
-  await p.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '⚔️ Attack' && !b.disabled), null, { timeout: 5000 })
+  await p.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Attack' && !b.disabled), null, { timeout: 5000 })
     .catch(() => { throw new Error('Attack comes back once you are healed') })
 
   if (errors.length) throw new Error(errors.join('\n'))

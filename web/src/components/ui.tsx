@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useGame } from '../lib/game'
+import { Icon, type IconName } from './Icon'
 
 export function Card({ title, right, children, className = '', id }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
@@ -101,7 +102,7 @@ const STAT_STEPS = [16, 14, 12.5]
 /** A stat tile. A value too wide for its tile (seven-figure money or "1,640/10,936" in a third of a 375 px screen) steps
  *  down to the largest size that fits, measured, so a value that fits keeps the full size; past the last step it ends
  *  in an ellipsis. Re-measured when the text changes, the window resizes or the display face finishes loading. */
-export function Stat({ k, v, cls = '' }: { k: string; v: ReactNode; cls?: string }) {
+export function Stat({ k, v, cls = '', icon, iconCls = '' }: { k: string; v: ReactNode; cls?: string; icon?: IconName; iconCls?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const fitted = useRef<string | null>(null)
   const fit = useCallback(() => {
@@ -130,7 +131,7 @@ export function Stat({ k, v, cls = '' }: { k: string; v: ReactNode; cls?: string
     return () => window.removeEventListener('resize', fit)
   }, [fit])
   const title = typeof v === 'string' || typeof v === 'number' ? String(v) : undefined
-  return <div className="stat"><div className="k">{k}</div><div ref={ref} className={`v ${cls}`} title={title}>{v}</div></div>
+  return <div className="stat"><div className="k">{icon && <Icon name={icon} size={12} className={iconCls} />}{k}</div><div ref={ref} className={`v ${cls}`} title={title}>{v}</div></div>
 }
 
 export function Empty({ children }: { children: ReactNode }) { return <div className="empty">{children}</div> }

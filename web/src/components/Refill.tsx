@@ -5,6 +5,7 @@ import { commodityIcon, every, num } from '../lib/format'
 import { drugRefill } from '../lib/market'
 import { perk } from '../lib/perks'
 import { Btn, Modal } from './ui'
+import { Glyph, Icon } from './Icon'
 
 /** The sheet that opens when a job, a fight or a turf war needs more stamina than the player has: every way to refill,
  *  priced, with what each one restores, so the next tap is the refill rather than a trip to Services. The same rules as
@@ -30,7 +31,7 @@ export function RefillSheet() {
     <Modal title={me.stamina <= 0 ? 'Out of stamina' : 'Not enough stamina'} onClose={closeRefill}>
       <div className="stack">
         <div className="small">
-          You have <b className="tabular">⚡ {num(me.stamina)}/{num(me.stamina_max)}</b>{need > 0 && <> and this takes <b className="tabular">⚡ {need}</b></>}.
+          You have <b className="tabular"><Icon name="bolt" size={13} /> {num(me.stamina)}/{num(me.stamina_max)}</b>{need > 0 && <> and this takes <b className="tabular"><Icon name="bolt" size={13} /> {need}</b></>}.
           {' '}It comes back {cfg.stamina_regen_amount ?? 2} {every(cfg.stamina_regen_minutes ?? 10)}, or refill now.
         </div>
         {need > me.stamina_max ? <div className="small muted">This takes more than your bar holds. <Link to="/services?focus=upgrades" onClick={closeRefill}>Raise max stamina ›</Link></div>
@@ -40,9 +41,9 @@ export function RefillSheet() {
               <RefillRow icon="🎁" label="Free refill" sub={`${me.free_refills} left from the Daily Drop · fills you up`} gain={missing}
                 onClick={() => done(() => api.refill('stamina', 'free'), `${(me.free_refills ?? 1) - 1} free left`)} />
             )}
-            <RefillRow icon="💎" label={`${cfg.refill_diamonds} diamonds`} sub={`fills you up · you have 💎 ${num(me.diamonds)}`} gain={missing}
+            <RefillRow icon="💎" label={`${cfg.refill_diamonds} diamonds`} sub={`fills you up · you have ${num(me.diamonds)} diamonds`} gain={missing}
               disabled={me.diamonds < cfg.refill_diamonds}
-              onClick={async () => { if (missing < me.stamina_max / 2 && !await ask(`Only ${missing} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return done(() => api.refill('stamina', 'diamonds'), 'full') }} />
+              onClick={async () => { if (missing < me.stamina_max / 2 && !await ask(`Only ${missing} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · ${cfg.refill_diamonds} diamonds`, tone: 'gold' })) return; return done(() => api.refill('stamina', 'diamonds'), 'full') }} />
             {drugs.map(({ c, units, have, d }) => (
               <RefillRow key={c.code} icon={commodityIcon[c.code]} label={`${num(units)} ${c.name}`}
                 sub={`${d.left > 0 ? `fills you up · ${d.left} of ${d.full} left today` : 'half your stamina · full again at 00:00 UTC'} · you have ${num(have)}`}
@@ -67,9 +68,9 @@ export function RefillSheet() {
 function RefillRow({ icon, label, sub, gain, disabled, onClick }: { icon: string; label: string; sub: string; gain: number; disabled?: boolean; onClick: () => Promise<unknown> | void }) {
   return (
     <div className={`row ${disabled ? 'dim' : ''}`}>
-      <span className="ico">{icon}</span>
+      <span className="ico"><Glyph e={icon} size={18} /></span>
       <div className="grow"><div className="t">{label}</div><div className="s">{sub}</div></div>
-      <Btn className="sm gold" disabled={disabled} onClick={onClick}>+{num(gain)} ⚡</Btn>
+      <Btn className="sm gold" disabled={disabled} onClick={onClick}>+{num(gain)} <Icon name="bolt" size={13} /></Btn>
     </div>
   )
 }

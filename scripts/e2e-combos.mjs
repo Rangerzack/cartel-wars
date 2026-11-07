@@ -82,7 +82,7 @@ try {
   await snap(a, 'preview-unknown')
 
   // the fight shows both combos and the counter
-  await a.getByRole('button', { name: '⚔️ Attack' }).click()
+  await a.getByRole('button', { name: 'Attack' }).click()
   const modal = a.locator('.modal')
   await modal.locator('.combo-result .combo-pill', { hasText: 'Back Alley' }).waitFor()
   await modal.getByText(/you counter them: your combo rolls 0–10, theirs rolls nothing/).waitFor()
@@ -126,7 +126,7 @@ try {
   await db.query(`update profiles set jail_until = now() + interval '1 hour' where id = $1`, [aId])
   await a.goto(`${BASE}/player/${bId}`)
   await a.getByText("You're locked up — you can only fight other inmates.").waitFor()
-  if (!(await a.getByRole('button', { name: '⚔️ Attack' }).isDisabled())) throw new Error('attack disabled from jail')
+  if (!(await a.getByRole('button', { name: 'Attack' }).isDisabled())) throw new Error('attack disabled from jail')
   await b.goto(`${BASE}/player/${aId}`)
   await b.getByText("They're locked up — only other inmates can get at them.").waitFor()
   await snap(b, 'jail-wall')

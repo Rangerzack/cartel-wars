@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Me } from '../lib/types'
 import { Card, RowLink } from './ui'
+import { Icon } from './Icon'
 
 const KEY = 'cw.gettingStarted.dismissed'
 
@@ -29,12 +30,12 @@ export function GettingStarted({ me }: { me: Me }) {
       right={<span className="hstack"><small className="tabular">{done} of {steps.length} done</small><button className="btn sm ghost" onClick={hide}>Hide</button></span>}>
       {(all ? steps : [next]).map(s => s.done ? (
         <div key={s.t} className="row done">
-          <span className="check" aria-hidden>✅</span>
+          <span className="check" aria-hidden><Icon name="checksquare" size={18} className="gold" /></span>
           <div className="grow"><div className="t"><span className="sr-only">Done: </span>{s.t}</div><div className="s">{s.s}</div></div>
         </div>
       ) : (
         <RowLink key={s.t} to={s.to} className={s === next ? 'next' : ''}>
-          <span className="check" aria-hidden>☐</span>
+          <span className="check" aria-hidden><Icon name="square" size={18} /></span>
           <div className="grow"><div className="t">{s === next && <span className="sr-only">Next: </span>}{s.t}</div><div className="s">{s.s}</div></div>
           <span className="chev">›</span>
         </RowLink>

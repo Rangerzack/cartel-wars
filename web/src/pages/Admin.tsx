@@ -11,6 +11,7 @@ import type { BannedWord, ModAction, ModQueueItem, ModReport, ReportKind, Season
 import { useLoad } from '../lib/useLoad'
 import { useParam } from '../lib/useParam'
 import { useNow } from '../lib/useNow'
+import { Glyph } from '../components/Icon'
 
 type Tab = 'reports' | 'log' | 'words' | 'seasons'
 
@@ -72,7 +73,7 @@ export function ModButtons({ id, name, onDone, dismiss, mutedUntil }: { id: stri
     <div className="stack" style={{ gap: 6 }}>
       <div className="hstack mod-buttons">
         <Btn className="sm red" onClick={act('reset_name', `Reset ${name}'s name? They get a placeholder and pick a new one.`, `${name}'s name reset — they'll pick a new one`)}>Reset Name</Btn>
-        <Btn className="sm" onClick={act('reset_avatar', `Reset ${name}'s avatar to 🕶️?`, 'Avatar reset')}>Reset Avatar</Btn>
+        <Btn className="sm" onClick={act('reset_avatar', `Reset ${name}'s avatar to the default?`, 'Avatar reset')}>Reset Avatar</Btn>
         <Btn className="sm" onClick={act('clear_bio', `Clear ${name}'s bio?`, 'Bio cleared')}>Clear Bio</Btn>
         {dismiss && <Btn className="sm ghost" onClick={act('dismiss', `Dismiss the reports on ${name}? Nothing on their profile changes.`, 'Reports dismissed')}>Dismiss</Btn>}
       </div>
@@ -228,7 +229,7 @@ function SeasonLine({ s }: { s: SeasonRow }) {
   return (
     <>
       <div className="small muted">{day(s.starts_at)} – {day(s.ends_at)} · {num(s.players)} player{s.players === 1 ? '' : 's'} with a hood · {num(s.bosses)} took the boss</div>
-      <div className="hstack wrap">{s.businesses.map((b, i) => <span key={b.code} className="pill"><span aria-hidden>{b.icon}</span> {i + 1} · {b.name}</span>)}</div>
+      <div className="hstack wrap">{s.businesses.map((b, i) => <span key={b.code} className="pill"><Glyph e={b.icon} size={12} /> {i + 1} · {b.name}</span>)}</div>
       <div className="small muted tabular">Garrisons {s.defenders.slice(0, 6).map(short).join(' · ')} · boss {short(s.defenders[6])}</div>
     </>
   )

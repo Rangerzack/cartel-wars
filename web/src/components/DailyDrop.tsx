@@ -11,6 +11,7 @@ import type { DropPrize, RecentDrop } from '../lib/types'
 import { Btn, Card, RowLink } from './ui'
 import { useCrateOpener } from './CrateOpener'
 import { errorText } from '../lib/errors'
+import { Glyph, Icon } from './Icon'
 
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
@@ -59,7 +60,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
     return (
       <Card id="drop" className="drop-card">
         <RowLink to="/store#drop">
-          <span className="ico">🎁</span>
+          <span className="ico gold"><Icon name="gift" size={18} /></span>
           <div className="grow"><div className="t">Daily Drop</div><div className="s">{free ? 'Free · a crate every day' : 'A crate every day'}</div></div>
           <span className="chev">›</span>
         </RowLink>
@@ -92,7 +93,7 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   }
   return (
     <>
-      <Card id="drop" title="🎁 Daily Drop" className={`drop-card${d.crates > 0 ? ' has-crates' : ''}`}
+      <Card id="drop" title={<><Icon name="gift" size={18} />Daily Drop</>} className={`drop-card${d.crates > 0 ? ' has-crates' : ''}`}
         right={d.subscribed ? <small className="tabular">{d.crates}/{d.max} crates</small>
           : viaStore ? <small className="drop-price tabular">{price ? `${price}/mo` : ''}</small>
           : free ? <small className="drop-price"><b>FREE</b></small> : undefined}>
@@ -100,18 +101,18 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
           {d.crates > 0 ? (
             <>
               <div className="crate-stack" aria-label={`${d.crates} crate${d.crates > 1 ? 's' : ''} waiting`}>
-                {Array.from({ length: d.max }, (_, i) => <span key={i} className={i < d.crates ? 'on' : ''}>📦</span>)}
+                {Array.from({ length: d.max }, (_, i) => <span key={i} className={i < d.crates ? 'on' : ''}><Icon name="box" size={26} className={i < d.crates ? 'gold' : ''} /></span>)}
               </div>
               <Btn className="doit block" onClick={crate.open}>Open Crate{d.crates > 1 ? ` · ${d.crates} waiting` : ''}</Btn>
               {full && d.subscribed && <div className="small gold">Your stack is full — open one or tomorrow's crate is lost.</div>}
             </>
           ) : d.subscribed ? (
-            <div className="crate-empty"><span>📦</span><div><div className="t">Next crate in {timeLeft(nextRollover(now), now)}</div><div className="small muted">One lands every day at 00:00 UTC. Unopened crates stack up to {d.max}.</div></div></div>
+            <div className="crate-empty"><span><Icon name="box" size={30} /></span><div><div className="t">Next crate in {timeLeft(nextRollover(now), now)}</div><div className="small muted">One lands every day at 00:00 UTC. Unopened crates stack up to {d.max}.</div></div></div>
           ) : pitch && (
             <div className="crate-pitch">
-              <div className="crate-hero">📦</div>
+              <div className="crate-hero"><Icon name="box" size={46} stroke={1.3} className="gold" /></div>
               <div>A crate every day at 00:00 UTC — product, diamonds, cash, thugs, hustlers or free refills. Miss a day and it waits: unopened crates stack up to {d.max}. Subscribers also get {me.refills?.sub_full ?? 5} full stamina refills of each drug a day instead of {catalog?.config.refill_full ?? 3}.</div>
-              <div className="small">Jackpots: {jack.map((p, i) => <span key={p.code}>{i ? ' or ' : ''}<b className="gold">{dropIcon[p.kind]} {p.label}</b></span>)}</div>
+              <div className="small">Jackpots: {jack.map((p, i) => <span key={p.code}>{i ? ' or ' : ''}<b className="gold"><Glyph e={dropIcon[p.kind]} size={13} /> {p.label}</b></span>)}</div>
             </div>
           )}
         </div>}
@@ -135,11 +136,11 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
               </>
             : <div className="small muted center">The Daily Drop is a monthly subscription in the iPhone app.</div>
           )}
-          {d.last && <div className="small muted">Last crate: <b className={d.last.jackpot ? 'gold' : ''}>{dropIcon[d.last.kind]} {d.last.label}</b> · {ago(d.last.at, now)}</div>}
+          {d.last && <div className="small muted">Last crate: <b className={d.last.jackpot ? 'gold' : ''}><Glyph e={dropIcon[d.last.kind]} size={13} /> {d.last.label}</b> · {ago(d.last.at, now)}</div>}
           {credits && (
             <div className="hstack drop-credits">
-              {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}>⚡ {me.free_refills} Free Refill{me.free_refills === 1 ? '' : 's'} ›</button>}
-              {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}>🚶 {num(me.free_hustlers)} Free Hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
+              {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}><Icon name="bolt" size={14} className="gold" /> {me.free_refills} Free Refill{me.free_refills === 1 ? '' : 's'} ›</button>}
+              {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}><Icon name="walk" size={14} /> {num(me.free_hustlers)} Free Hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
             </div>
           )}
         </div>}
@@ -183,7 +184,7 @@ function Odds({ prizes, total, jackpots }: { prizes: DropPrize[]; total: number;
     <div className="drop-odds">
       {prizes.map(p => (
         <div key={p.code} className={`row${p.jackpot ? ' jackpot' : ''}`}>
-          <span className="ico">{dropIcon[p.kind]}</span>
+          <span className="ico"><Glyph e={dropIcon[p.kind]} size={18} /></span>
           <div className="grow t">{p.label}{p.jackpot && <span className="pill nowrap">jackpot</span>}</div>
           <b className="tabular">{pct(p.weight, total)}</b>
         </div>
@@ -192,7 +193,7 @@ function Odds({ prizes, total, jackpots }: { prizes: DropPrize[]; total: number;
       {jackpots && jackpots.length > 0 && (
         <div className="row"><div className="grow finds-ticker">
           <div className="small muted">Latest jackpots</div>
-          {jackpots.map((j, i) => <div key={i} className="small"><Link to={`/player/${j.player_id}`}>{j.player}</Link> hit <b className="gold">{dropIcon[j.kind]} {j.label}</b> <span className="muted">· {ago(j.at)}</span></div>)}
+          {jackpots.map((j, i) => <div key={i} className="small"><Link to={`/player/${j.player_id}`}>{j.player}</Link> hit <b className="gold"><Glyph e={dropIcon[j.kind]} size={13} /> {j.label}</b> <span className="muted">· {ago(j.at)}</span></div>)}
         </div></div>
       )}
     </div>

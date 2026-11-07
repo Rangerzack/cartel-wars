@@ -109,7 +109,7 @@ try {
   await a.reload()
   await card.getByRole('button', { name: /2 Free Refills/ }).click()
   await a.waitForURL(/focus=refills/)
-  await a.locator('#refills').getByRole('button', { name: '🎁 Free ×2' }).click()
+  await a.locator('#refills').getByRole('button', { name: 'Free ×2' }).click()
   await a.getByText(/stamina · 1 free left/).waitFor()
   const pr = await one('select stamina, stamina_max, free_refills, refills_used from profiles where id = $1', [aId])
   if (pr.stamina !== pr.stamina_max || pr.free_refills !== 1 || pr.refills_used !== 0) throw new Error('free refill: ' + JSON.stringify(pr))

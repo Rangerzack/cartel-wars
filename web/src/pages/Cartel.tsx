@@ -9,6 +9,7 @@ import type { CrewSummary } from '../lib/types'
 import { BackBar } from '../components/BackBar'
 import { CrewLink } from '../components/Linked'
 import { useLoad } from '../lib/useLoad'
+import { Icon } from '../components/Icon'
 
 export default function Cartel() {
   const { id } = useParams()
@@ -33,7 +34,7 @@ function CartelHub() {
         <Card title="Invitations for your crew">
           {invites.map(i => (
             <div key={i.id} className="row">
-              <div className="grow t">🕴 {i.name}</div>
+              <div className="grow t"><Icon name="users" size={15} className="muted" /> {i.name}</div>
               <Btn className="sm gold" onClick={async () => { const r = await run(() => api.cartelAccept(i.id, true), { ok: () => `Joined ${i.name}` }); if (r) nav(`/cartel/${i.id}`) }}>Accept</Btn>
               <Btn className="sm ghost" onClick={async () => { if (await run(() => api.cartelAccept(i.id, false), { ok: () => `Declined ${i.name}` })) setInvites(v => v.filter(x => x.id !== i.id)) }}>Decline</Btn>
             </div>
@@ -58,7 +59,7 @@ function CartelHub() {
         {list?.length === 0 && <Empty>No cartels yet. A crew's Capo can found one.</Empty>}
         {list?.map(c => (
           <RowLink key={c.id} to={`/cartel/${c.id}`}>
-            <span style={{ fontSize: 20 }}>🕴</span>
+            <span className="ico"><Icon name="users" size={18} /></span>
             <div className="grow"><div className="t">{c.name}</div><div className="s">Don {c.don} · {c.crews} crews · {c.blocks} blocks</div></div>
             <span className="chev">›</span>
           </RowLink>
@@ -89,7 +90,7 @@ function CartelPage({ id }: { id: string }) {
   return (
     <div className="page">
       <BackBar fallback="/cartel" />
-      <Card title={<>🕴 {c.name}</>} right={<small>Don {c.don}</small>}>
+      <Card title={<><Icon name="users" size={18} />{c.name}</>} right={<small>Don {c.don}</small>}>
         <div className="bd stack">
           <div className="grid3">
             <Stat k="Crews" v={c.crews.length} />
@@ -98,7 +99,7 @@ function CartelPage({ id }: { id: string }) {
           </div>
           {c.member && (
             <div className="hstack">
-              <Btn className="sm" onClick={() => nav(`/chat/cartel:${c.id}`)}>💬 Cartel Chat</Btn>
+              <Btn className="sm" onClick={() => nav(`/chat/cartel:${c.id}`)}><Icon name="chat" size={15} /> Cartel Chat</Btn>
               {me.crew?.is_capo && <Btn className="sm ghost red" onClick={async () => { if (await ask('Your crew stops sharing the cartel\'s bonuses, and its crews can fight yours again.', { title: 'Pull your crew out of the cartel?', yes: 'Leave cartel', tone: 'red' })) return run(api.cartelLeave, { ok: () => 'Your crew left the cartel' }).then(r => { if (r) nav('/cartel', { replace: true }) }) }}>Leave Cartel</Btn>}
             </div>
           )}
@@ -122,9 +123,9 @@ function CartelPage({ id }: { id: string }) {
         {c.crews.map(x => (
           <div key={x.id} className="row">
             <span className="ico">{x.emblem}</span>
-            <div className="grow link" onClick={() => nav(`/crew/${x.id}`)}><div className="t"><CrewLink id={x.id}>{x.name}</CrewLink>{x.capo_id === c.don_id ? ' 👑' : ''}</div><div className="s">Capo {x.capo} · {x.members} members · {x.blocks} blocks{x.votes > 0 ? ` · ${x.votes} vote${x.votes > 1 ? 's' : ''} for Don` : ''}</div></div>
+            <div className="grow link" onClick={() => nav(`/crew/${x.id}`)}><div className="t"><CrewLink id={x.id}>{x.name}</CrewLink>{x.capo_id === c.don_id ? <> <Icon name="crown" size={13} className="gold" label="Don" /></> : null}</div><div className="s">Capo {x.capo} · {x.members} members · {x.blocks} blocks{x.votes > 0 ? ` · ${x.votes} vote${x.votes > 1 ? 's' : ''} for Don` : ''}</div></div>
             {c.can_vote && x.capo_id !== c.don_id && (
-              <Btn className={`sm ${x.my_vote ? 'gold' : 'ghost'}`} onClick={() => act(() => api.cartelVoteDon(x.capo_id), r => (r.elected ? `${x.capo} is the new Don` : `Vote cast — ${r.votes}/${r.needed}`))}>{x.my_vote ? '✓ Voted' : 'Vote Don'}</Btn>
+              <Btn className={`sm ${x.my_vote ? 'gold' : 'ghost'}`} onClick={() => act(() => api.cartelVoteDon(x.capo_id), r => (r.elected ? `${x.capo} is the new Don` : `Vote cast — ${r.votes}/${r.needed}`))}>{x.my_vote ? 'Voted' : 'Vote Don'}</Btn>
             )}
           </div>
         ))}

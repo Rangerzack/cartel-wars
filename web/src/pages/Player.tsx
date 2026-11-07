@@ -16,6 +16,7 @@ import { ModButtons } from './Admin'
 import { useLoad } from '../lib/useLoad'
 import { haptic } from '../lib/haptics'
 import { isLocked, LOCK_LINE } from '../lib/gate'
+import { Icon, type IconName } from '../components/Icon'
 
 export default function Player() {
   const { id = '' } = useParams()
@@ -64,26 +65,26 @@ export default function Player() {
         <div className="bd stack">
           {p.bio && <div className="small" style={{ fontStyle: 'italic' }}>“{p.bio}”</div>}
           <div className="hstack">
-            {p.jailed && <span className="pill red">🔒 In jail</span>}
-            {p.hospital && <span className="pill red">🏥 Hospital</span>}
-            <span className={`pill ${p.heat_level === 'red' ? 'red' : ''}`}>🔥 heat {p.heat_level}</span>
-            {p.cartel && <span className="pill gold">🕴 {p.cartel.name}</span>}
+            {p.jailed && <span className="pill red"><Icon name="lock" size={12} />In jail</span>}
+            {p.hospital && <span className="pill red"><Icon name="cross" size={12} />Hospital</span>}
+            <span className={`pill ${p.heat_level === 'red' ? 'red' : ''}`}><Icon name="flame" size={12} />heat {p.heat_level}</span>
+            {p.cartel && <span className="pill gold"><Icon name="users" size={12} />{p.cartel.name}</span>}
           </div>
           <Ribbons list={p.ribbons} />
           <div className="grid2">
             <Stat k="Health" v={`${num(p.health)}/${num(p.health_max)}`} />
             <Stat k="Fights" v={`${p.fights_won}W · ${p.fights - p.fights_won}L`} cls="sm" />
             <Stat k="Actions" v={num(p.actions)} />
-            <Stat k="Reputation" v={`⭐ ${num(p.reputation)}`} cls="dia" />
+            <Stat k="Reputation" icon="star" iconCls="dia" v={num(p.reputation)} />
           </div>
           {/* the actions come before the odds so Attack is on the first screen at 375 × 667 (P2-3) */}
           {!isMe && (
             <div className="hstack">
-              <Btn className="doit red" disabled={cantFight} onClick={fight}>⚔️ Attack</Btn>
-              <Btn className="sm" onClick={async () => nav(`/chat/${await api.dmChannel(p.id)}`)}>💬 Chat</Btn>
+              <Btn className="red" disabled={cantFight} onClick={fight}><Icon name="swords" size={16} /> Attack</Btn>
+              <Btn className="sm" onClick={async () => nav(`/chat/${await api.dmChannel(p.id)}`)}><Icon name="chat" size={15} /> Chat</Btn>
               {p.crew && <Btn className="sm ghost" onClick={() => nav(`/crew/${p.crew!.id}`)}>{p.crew.emblem} Crew</Btn>}
-              {!p.is_bot && <Btn className="sm ghost" onClick={() => setReporting(true)}>🚩 Report</Btn>}
-              {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}>🚫 Block</Btn>)}
+              {!p.is_bot && <Btn className="sm ghost" onClick={() => setReporting(true)}><Icon name="flag" size={14} /> Report</Btn>}
+              {!p.is_bot && (p.blocked ? <Btn className="sm ghost" onClick={unblock}>Unblock</Btn> : <Btn className="sm ghost" onClick={block}><Icon name="x" size={14} /> Block</Btn>)}
             </div>
           )}
           {!isMe && fightLocked && <div className="why">{LOCK_LINE}</div>}
@@ -97,7 +98,7 @@ export default function Player() {
       </Card>
 
       {!isMe && !p.is_bot && me.is_admin && (
-        <Card title="🛡 Admin">
+        <Card title={<><Icon name="shield" size={18} />Admin</>}>
           <div className="bd stack">
             <div className="small muted">Every action is logged, and they get a note in their activity. A reset name makes them pick a new one; a muted player can't chat, post in the forum or change their bio.</div>
             <ModButtons id={p.id} name={p.name} onDone={load} mutedUntil={p.muted_until} />
@@ -116,9 +117,9 @@ export default function Player() {
             {amount > me.cash && <div className="why">You have {money(me.cash)} on hand.</div>}
             <div className="hstack" style={{ flexWrap: 'nowrap' }}>
               <input className="input" style={{ flex: 1 }} inputMode="numeric" placeholder="Diamonds" aria-label="Diamonds to send" value={dia || ''} onChange={e => setDia(toInt(e.target.value))} />
-              <Btn className="gold" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent 💎 ${r.sent} to ${p.name}` })}>Send 💎</Btn>
+              <Btn className="gold" disabled={dia <= 0 || dia > me.diamonds} onClick={() => run(() => api.sendDiamonds(p.id, dia), { ok: r => `Sent ${r.sent} diamond${r.sent === 1 ? '' : 's'} to ${p.name}` })}>Send <Icon name="gem" size={13} /></Btn>
             </div>
-            {dia > me.diamonds && <div className="why">You have 💎 {num(me.diamonds)}.</div>}
+            {dia > me.diamonds && <div className="why">You have {num(me.diamonds)} diamonds.</div>}
             <div className="small muted">Only diamonds you earned in the game can be sent. Bought ones stay with you.</div>
           </div>
         </Card>
@@ -157,7 +158,7 @@ export default function Player() {
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
             {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
-            <Btn className="doit red block" disabled={cantFight} onClick={fight}>⚔️ Attack Again · ⚡2 · {num(me.stamina)} left</Btn>
+            <Btn className="doit red block" disabled={cantFight} onClick={fight}><Icon name="swords" size={16} /> Attack Again · <Icon name="bolt" size={13} />2 · {num(me.stamina)} left</Btn>
             {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
               : me.hospital ? "You're in the hospital — heal to full above, or wait it out."
@@ -201,7 +202,7 @@ function Odds({ pv, name }: { pv: FightPreview; name: string }) {
           </div>
         </div>
       )}
-      <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs ⚡{pv.stamina_cost} · 🔥+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
+      <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs <Icon name="bolt" size={11} />{pv.stamina_cost} · <Icon name="flame" size={11} />+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
       {pv.dry && <div className="warn">You've hit them {pv.hits_this_hour}× this hour — you can still fight, but no cash changes hands.</div>}
       {pv.hospital_risk && <div className="warn">At {pv.my_health} health, a bad fight could put you in the hospital.</div>}
       {pv.bust_pct > 0 && <div className="warn">Your heat is in the red — about {pv.bust_pct}% chance a patrol picks you up after.</div>}
@@ -209,10 +210,10 @@ function Odds({ pv, name }: { pv: FightPreview; name: string }) {
   )
 }
 
-const EDGE: Record<FightEdge['k'], { icon: string; label: string }> = {
-  defender: { icon: '🛡️', label: 'Defending' },
-  cash: { icon: '💵', label: 'More cash on hand' },
-  heat: { icon: '🔥', label: 'More heat' },
+const EDGE: Record<FightEdge['k'], { icon: IconName; label: string }> = {
+  defender: { icon: 'shield', label: 'Defending' },
+  cash: { icon: 'cash', label: 'More cash on hand' },
+  heat: { icon: 'flame', label: 'More heat' },
 }
 
 /** The +1 edges each side holds: the defender always gets one; more cash on hand and more heat get one each. */
@@ -223,7 +224,7 @@ export function Edges({ edges }: { edges: FightEdge[] }) {
     return (
       <div className="edge-col">
         <div className="k">{title} <b className="tabular">+{list.length}</b></div>
-        {list.length ? list.map(e => <span key={e.k} className={`pill ${who === 'you' ? 'green' : 'red'}`}>{EDGE[e.k].icon} {EDGE[e.k].label}</span>)
+        {list.length ? list.map(e => <span key={e.k} className={`pill ${who === 'you' ? 'green' : 'red'}`}><Icon name={EDGE[e.k].icon} size={12} />{EDGE[e.k].label}</span>)
           : <span className="small muted">no edges</span>}
       </div>
     )

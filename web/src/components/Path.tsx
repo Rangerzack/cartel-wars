@@ -6,13 +6,14 @@ import { money, num } from '../lib/format'
 import { Btn, Card } from './ui'
 import type { Catalog, Me, Path } from '../lib/types'
 import { isLocked } from '../lib/gate'
+import { Icon, type IconName } from './Icon'
 
-function pathInfo(catalog: Catalog): Record<Path, { icon: string; name: string; does: string; gives_up: string }> {
+function pathInfo(catalog: Catalog): Record<Path, { icon: IconName; name: string; does: string; gives_up: string }> {
   const lvl = catalog.config.path_grow_level ?? 5
   const cut = catalog.config.trader_cut_pct ?? 10, markup = catalog.config.trader_markup_pct ?? 10
   return {
-    producer: { icon: '🏭', name: 'Producer', does: `Build, run and upgrade grow houses past level ${lvl}`, gives_up: "Can't send hustlers — sell on the Marketplace and into buy orders" },
-    trader: { icon: '🚚', name: 'Trader', does: `Send hustlers with no hire fee (they keep ${cut}%) and sell ${markup}% over street`, gives_up: "Can't run grow houses — buy product on the Marketplace" },
+    producer: { icon: 'factory', name: 'Producer', does: `Build, run and upgrade grow houses past level ${lvl}`, gives_up: "Can't send hustlers — sell on the Marketplace and into buy orders" },
+    trader: { icon: 'truck', name: 'Trader', does: `Send hustlers with no hire fee (they keep ${cut}%) and sell ${markup}% over street`, gives_up: "Can't run grow houses — buy product on the Marketplace" },
   }
 }
 
@@ -44,9 +45,9 @@ export function PathCard() {
     const other: Path = me.path === 'producer' ? 'trader' : 'producer'
     return (
       <div className="notice gold spread">
-        <span>{info[me.path].icon} You're a <b>{info[me.path].name}</b> · {info[me.path].does.charAt(0).toLowerCase() + info[me.path].does.slice(1)}.</span>
-        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={async () => { if (await ask(`Switch to ${info[other].name} for ${fee} diamonds? ${other === 'trader' ? 'Your grow houses stop producing (what they hold stays collectable).' : 'Your grow houses stay stopped until you start each one again.'}`, { title: 'Switch paths?', yes: `Switch · 💎 ${fee}`, tone: 'gold' })) return run(() => api.choosePath(other), { ok: () => `You're a ${info[other].name} now` }) }}>Switch · 💎 {fee}</Btn>
-        {me.diamonds < fee && <div className="why">Switching costs 💎 {fee} — you have 💎 {num(me.diamonds)}.</div>}
+        <span><Icon name={info[me.path].icon} size={15} className="gold" /> You're a <b>{info[me.path].name}</b> · {info[me.path].does.charAt(0).toLowerCase() + info[me.path].does.slice(1)}.</span>
+        <Btn className="sm ghost" disabled={me.diamonds < fee} onClick={async () => { if (await ask(`Switch to ${info[other].name} for ${fee} diamonds? ${other === 'trader' ? 'Your grow houses stop producing (what they hold stays collectable).' : 'Your grow houses stay stopped until you start each one again.'}`, { title: 'Switch paths?', yes: `Switch · ${fee} diamonds`, tone: 'gold' })) return run(() => api.choosePath(other), { ok: () => `You're a ${info[other].name} now` }) }}>Switch · <Icon name="gem" size={13} /> {fee}</Btn>
+        {me.diamonds < fee && <div className="why">Switching costs {fee} diamonds — you have {num(me.diamonds)}.</div>}
       </div>
     )
   }
@@ -56,16 +57,16 @@ export function PathCard() {
         <div className="small">
           {me.path_due === 'grow' ? <>Your grow houses are past level {lvl} — time to pick how you run product.</>
             : me.path_required ? <>You've made a name for yourself. Pick how you run product.</>
-            : <>Pick how you run product.</>} The first pick is free; switching later costs 💎 {fee}.
+            : <>Pick how you run product.</>} The first pick is free; switching later costs {fee} diamonds.
         </div>
         <div className="grid2">
           {(['producer', 'trader'] as const).map(p => (
             <div key={p} className="stat stack" style={{ gap: 6 }}>
-              <div style={{ fontSize: 26 }}>{info[p].icon}</div>
+              <div className="path-ico"><Icon name={info[p].icon} size={30} stroke={1.5} /></div>
               <b>{info[p].name}</b>
               <div className="small">{info[p].does}</div>
               <div className="small muted">{info[p].gives_up}</div>
-              <Btn className="doit" onClick={async () => { if (await ask(`Become a ${info[p].name}? Switching later costs 💎 ${fee}.${p === 'trader' && me.grow_houses.some(g => g.running) ? ' Your grow houses stop producing; what they hold stays collectable.' : ''}`, { title: `Be a ${info[p].name}?`, yes: `Be a ${info[p].name}` })) return run(() => api.choosePath(p), { ok: () => `You're a ${info[p].name}` }) }}>Be a {info[p].name}</Btn>
+              <Btn className="doit" onClick={async () => { if (await ask(`Become a ${info[p].name}? Switching later costs ${fee} diamonds.${p === 'trader' && me.grow_houses.some(g => g.running) ? ' Your grow houses stop producing; what they hold stays collectable.' : ''}`, { title: `Be a ${info[p].name}?`, yes: `Be a ${info[p].name}` })) return run(() => api.choosePath(p), { ok: () => `You're a ${info[p].name}` }) }}>Be a {info[p].name}</Btn>
             </div>
           ))}
         </div>
@@ -89,7 +90,7 @@ export function HomePath() {
   return (
     <Link to="/actions" className="card path-teaser link">
       <div className="bd stack" style={{ gap: 6 }}>
-        <div className="spread"><b>🔓 Pick a path at {num(need)} reputation</b><span className="small tabular">{num(me.rep_earned)}/{num(need)}</span></div>
+        <div className="spread"><b><Icon name="unlock" size={15} className="gold" /> Pick a path at {num(need)} reputation</b><span className="small tabular">{num(me.rep_earned)}/{num(need)}</span></div>
         <div className="bar"><div className="track"><div className="fill" style={{ width: pct + '%' }} /></div></div>
         <div className="small muted">Producer runs grow houses; Trader sends hustlers on better terms. You can pick early on the Economy page.</div>
       </div>
