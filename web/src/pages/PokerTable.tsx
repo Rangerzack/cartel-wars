@@ -10,6 +10,7 @@ import { BackBar } from '../components/BackBar'
 import { BetPicker, Cards } from '../components/casino/shared'
 import { Channel } from './Chat'
 import { errorText } from '../lib/errors'
+import { Icon } from '../components/Icon'
 
 // seat slots around the felt, index 0 = bottom centre (always "me" when seated); the side seats sit at 16 / 84 % so
 // their 84 px boxes stay inside the rail at 375 and 390 px
@@ -104,7 +105,7 @@ export default function PokerTable() {
       {/* Back keeps your seat (the clock checks or folds for you while you're away); Leave cashes you out */}
       <BackBar fallback="/casino/poker" right={
         <div className="hstack">
-          <button type="button" className="btn sm ghost" aria-label={showChat ? 'Hide table talk' : 'Table talk'} aria-pressed={showChat} onClick={() => setShowChat(v => !v)}>💬</button>
+          <button type="button" className="btn sm ghost" aria-label={showChat ? 'Hide table talk' : 'Table talk'} aria-pressed={showChat} onClick={() => setShowChat(v => !v)}><Icon name="chat" size={16} /></button>
           {mine && <Btn className="sm ghost red" onClick={leave}>Leave</Btn>}
         </div>
       } />

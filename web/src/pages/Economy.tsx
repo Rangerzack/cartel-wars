@@ -13,6 +13,7 @@ import { PerkTag } from '../components/Perk'
 import { perk } from '../lib/perks'
 import { afterFee, hustleQuote, priceCap, streetMood } from '../lib/market'
 import { useParam } from '../lib/useParam'
+import { Glyph, Icon } from '../components/Icon'
 
 const labFor: Record<Commodity, 'grow_house' | 'dust_lab' | 'pill_factory'> = { herb: 'grow_house', dust: 'dust_lab', pills: 'pill_factory' }
 
@@ -71,7 +72,7 @@ function Grow() {
         {perk(me, 'warehouse') > 0 && <div className="row"><PerkTag code="warehouse" /></div>}
         {catalog.commodities.map(c => (
           <div key={c.code} className="row">
-            <span className="ico">{commodityIcon[c.code]}</span>
+            <span className="ico green"><Glyph e={commodityIcon[c.code]} size={18} /></span>
             <div className="grow"><div className="t">{c.name}</div><div className="s"><StreetTag s={me.street?.[c.code]} price={me.prices[c.code]} /></div></div>
             <b className="tabular">{num(me.storage[c.code] ?? 0)}</b>
           </div>
@@ -98,7 +99,7 @@ function Grow() {
         const full = produced >= g.cap
         const capped = lvlCap != null && g.level >= lvlCap
         return (
-          <Card key={g.id} title={<>{commodityIcon[g.commodity]} {c.name} · Lv {g.level}</>} right={<small>{g.running ? (full ? 'FULL' : 'running') : 'stopped'}</small>}>
+          <Card key={g.id} title={<><Glyph e={commodityIcon[g.commodity]} size={18} />{c.name} · Lv {g.level}</>} right={<small>{g.running ? (full ? 'FULL' : 'running') : 'stopped'}</small>}>
             <div className="bd stack">
               <div className="spread">
                 <div><b className="tabular" style={{ fontSize: 20 }}>{num(produced)}</b> <span className="muted">/ {num(g.cap)} ready</span></div>
@@ -124,12 +125,12 @@ function Grow() {
       <Card title="Build">
         {!blocked && catalog.commodities.filter(c => !have.has(c.code)).map(c => (
           <div key={c.code} className="row">
-            <span className="ico">{commodityIcon[c.code]}</span>
+            <span className="ico green"><Glyph e={commodityIcon[c.code]} size={18} /></span>
             <div className="grow">
               <div className="t">{c.name} grow house</div>
-              <div className="s">{num(c.grow_rate * (1 + perk(me, labFor[c.code]) + perk(me, 'utility')))} units/hr · holds {num(Math.floor(c.grow_cap * (1 + perk(me, labFor[c.code]) + perk(me, 'utility'))))} · {money(c.grow_price)}{me.grow_houses.length > 0 ? ` + 💎 ${extraDia}` : ''}</div>
+              <div className="s">{num(c.grow_rate * (1 + perk(me, labFor[c.code]) + perk(me, 'utility')))} units/hr · holds {num(Math.floor(c.grow_cap * (1 + perk(me, labFor[c.code]) + perk(me, 'utility'))))} · {money(c.grow_price)}{me.grow_houses.length > 0 ? <> + <Icon name="gem" size={13} /> {extraDia}</> : ''}</div>
               {!blocked && me.cash < c.grow_price && <div className="why">Need {money(c.grow_price - me.cash)} more cash</div>}
-              {!blocked && me.cash >= c.grow_price && me.grow_houses.length > 0 && me.diamonds < extraDia && <div className="why">Need 💎 {extraDia - me.diamonds} more diamonds · <Link to="/store">Diamonds ›</Link></div>}
+              {!blocked && me.cash >= c.grow_price && me.grow_houses.length > 0 && me.diamonds < extraDia && <div className="why">Need {extraDia - me.diamonds} more diamonds · <Link to="/store">Diamonds ›</Link></div>}
             </div>
             <Btn className="sm gold" disabled={!!blocked || me.cash < c.grow_price || (me.grow_houses.length > 0 && me.diamonds < extraDia)} onClick={() => run(() => api.growBuild(c.code), { ok: () => `${c.name} grow house is up and running` })}>Build · {money(c.grow_price)}</Btn>
           </div>
@@ -165,11 +166,11 @@ function Hustlers() {
       {!blocked && <Card title="Hire Hustlers" right={<small>{q.trader ? `no fee · they keep ${cutPct}%` : `${money(catalog.config.hustler_price)} each`} · {hoursMins(tripH)} trips</small>}>
         <div className="bd stack">
           {q.trader
-            ? <div className="notice gold small">🚚 Trader terms: no hire fee — your hustlers keep {cutPct}% of the take — and you sell {markupPct}% over street.</div>
+            ? <div className="notice gold small"><Icon name="truck" size={13} /> Trader terms: no hire fee — your hustlers keep {cutPct}% of the take — and you sell {markupPct}% over street.</div>
             : !me.path && <div className="small muted">Traders hire with no fee (the hustlers keep {cutPct}%) and sell {markupPct}% over street.</div>}
-          {(me.free_hustlers ?? 0) > 0 && <div className="notice gold">🎁 {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} from the Daily Drop — {q.trader ? 'they don\'t take a cut' : 'no hire fee for them'}.</div>}
+          {(me.free_hustlers ?? 0) > 0 && <div className="notice gold"><Icon name="gift" size={13} /> {num(me.free_hustlers)} free hustler{me.free_hustlers === 1 ? '' : 's'} from the Daily Drop — {q.trader ? 'they don\'t take a cut' : 'no hire fee for them'}.</div>}
           {(strip > 0 || night > 0 || disp > 0) && <div className="hstack"><PerkTag code="strip_club" /><PerkTag code="night_club" /><PerkTag code="dispensary" /></div>}
-          <Seg value={com} onChange={setCom} options={catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))} />
+          <Seg value={com} onChange={setCom} options={catalog.commodities.map(x => ({ v: x.code, l: x.name }))} />
           <div className="small"><StreetTag s={me.street?.[com]} price={me.prices[com]} /></div>
           <div className="spread">
             <Qty value={n} onChange={setN} min={1} max={100} />
@@ -191,7 +192,7 @@ function Hustlers() {
         {me.hustlers.length === 0 && <Empty>No hustlers out. Product doesn't move itself.</Empty>}
         {me.hustlers.map(h => (
           <div key={h.id} className="row">
-            <span style={{ fontSize: 20 }}>{commodityIcon[h.commodity]}</span>
+            <span className="ico green"><Glyph e={commodityIcon[h.commodity]} size={18} /></span>
             <div className="grow"><div className="t">{h.count} hustler{h.count > 1 ? 's' : ''} · {num(h.units)} units</div><div className="s">{h.back ? 'Back — cash in hand' : `Back in ${timeLeft(h.returns_at, now)}`}</div></div>
             <b className="gold tabular">{money(h.cash_due)}</b>
           </div>
@@ -265,7 +266,7 @@ function MarketTab() {
   const listings = market?.listings ?? []
   const orders = market?.orders ?? []
   const mineCount = me.listings.length + myOrders.length
-  const comSeg = catalog.commodities.map(x => ({ v: x.code, l: `${commodityIcon[x.code]} ${x.name}` }))
+  const comSeg = catalog.commodities.map(x => ({ v: x.code, l: x.name }))
   return (
     <>
       <Seg value={mtab} onChange={setMtab}
@@ -283,7 +284,7 @@ function MarketTab() {
             const st = market?.stats?.[c.code]
             return (
               <div key={c.code} className="row">
-                <span className="ico">{commodityIcon[c.code]}</span>
+                <span className="ico green"><Glyph e={commodityIcon[c.code]} size={18} /></span>
                 <div className="grow">
                   <div className="t">{c.name}</div>
                   <div className="s"><StreetTag s={me.street?.[c.code] ?? market?.street?.[c.code]} price={me.prices[c.code] ?? market?.prices?.[c.code] ?? 0} /></div>
@@ -307,7 +308,7 @@ function MarketTab() {
             const why = mine < q ? `you have ${num(mine)}` : me.transport_capacity < q ? `your vehicle carries ${num(me.transport_capacity)}` : null
             return (
               <div key={o.id} className="row order-row">
-                <span style={{ fontSize: 20 }}>{commodityIcon[o.commodity]}</span>
+                <span className="ico"><Glyph e={commodityIcon[o.commodity]} size={18} /></span>
                 <div className="grow">
                   <div className="t">{num(o.qty)} {nameOf(o.commodity)} wanted @ {money(o.unit_price)}</div>
                   <div className="s">{o.mine ? 'your order' : `by ${o.buyer}`} · {timeLeft(o.expires_at, now)} left{!o.mine && why ? <span className="red"> · {why}</span> : null}</div>
@@ -333,7 +334,7 @@ function MarketTab() {
               : room < q ? `only ${num(room)} units of storage room` : null
             return (
               <div key={l.id} className="row">
-                <span style={{ fontSize: 20 }}>{commodityIcon[l.commodity]}</span>
+                <span className="ico green"><Glyph e={commodityIcon[l.commodity]} size={18} /></span>
                 <div className="grow">
                   <div className="t">{num(l.qty)} {nameOf(l.commodity)} @ {money(l.unit_price)}</div>
                   <div className="s">{l.mine ? 'your listing' : `by ${l.seller}`} · {timeLeft(l.expires_at, now)} left{!l.mine && why ? <span className="red"> · {why}</span> : null}</div>
@@ -388,14 +389,14 @@ function MarketTab() {
           {mineCount === 0 && <Empty>Nothing listed and no buy orders open. List product under Sell, or post a Buy order.</Empty>}
           {me.listings.map(l => (
             <div key={l.id} className="row">
-              <span>{commodityIcon[l.commodity]}</span>
+              <span className="ico green"><Glyph e={commodityIcon[l.commodity]} size={18} /></span>
               <div className="grow"><div className="t">Selling {num(l.qty)} {nameOf(l.commodity)} @ {money(l.unit_price)}</div><div className="s">{l.held ? 'came back off the market — waiting for storage room' : `expires in ${timeLeft(l.expires_at, now)}`}</div></div>
               <Btn className={`sm ${l.held ? 'gold' : 'ghost'}`} onClick={async () => { await run(() => api.cancelListing(l.id), { ok: r => r.held ? `${num(r.returned)} back in storage, ${num(r.held)} still waiting for room` : `${num(r.returned)} units back in storage` }); load() }}>{l.held ? 'Reclaim' : 'Cancel'}</Btn>
             </div>
           ))}
           {myOrders.map(o => (
             <div key={o.id} className="row my-order">
-              <span>{commodityIcon[o.commodity]}</span>
+              <span className="ico"><Glyph e={commodityIcon[o.commodity]} size={18} /></span>
               <div className="grow">
                 <div className="t">Wanted {num(o.qty)} {nameOf(o.commodity)} @ {money(o.unit_price)}</div>
                 <div className="s">{o.filled > 0 ? `${num(o.filled)} in so far · ` : ''}{money(o.qty * o.unit_price)} held · expires in {timeLeft(o.expires_at, now)}</div>

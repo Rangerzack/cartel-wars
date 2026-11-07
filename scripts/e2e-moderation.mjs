@@ -52,7 +52,7 @@ try {
   // Someone reports Carl's bio
   const b = await newPlayer(N('Betty'))
   await b.goto(`${BASE}/player/${cId}`)
-  await b.getByRole('button', { name: '🚩 Report' }).click()
+  await b.getByRole('button', { name: 'Report' }).click()
   const modal = b.locator('.modal')
   await modal.getByRole('button', { name: 'Bio' }).click()
   await modal.getByPlaceholder(/Anything the admin should know/).fill('selling in his bio')
@@ -62,8 +62,8 @@ try {
   // thugs have no Report button
   const thug = (await one('select id from profiles where is_bot order by bot_level limit 1')).id
   await b.goto(`${BASE}/player/${thug}`)
-  await b.getByRole('button', { name: '⚔️ Attack' }).waitFor()
-  if (await b.getByRole('button', { name: '🚩 Report' }).count()) throw new Error('no reporting thugs')
+  await b.getByRole('button', { name: 'Attack' }).waitFor()
+  if (await b.getByRole('button', { name: 'Report' }).count()) throw new Error('no reporting thugs')
 
   // The admin: Home points at the queue; clear the bio from there
   const a = await newPlayer(N('Warden'))

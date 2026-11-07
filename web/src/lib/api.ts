@@ -5,7 +5,7 @@ import type {
   BannedWord, BlockedPlayer, ContentReason, ModAction, ModLogEntry, ModQueueItem, ReportReason, WordMatch,
   ForumCategories, ForumCategory, ForumList, ForumThread,
   BlackjackState, CasinoHistory, CrapsBetKind, CrapsRoll, CrapsState, PokerState, PokerTableInfo, RouletteBet, RouletteResult, SlotsResult,
-  HomeHood, HoodFight, MissionsState, MissionClaim,
+  HomeHood, HoodFight, MissionsState, MissionClaim, SeasonRow, SeasonBoard,
 } from './types'
 
 export class GameError extends Error {}
@@ -166,12 +166,18 @@ export const api = {
 
   // Season 1: the Personal Hood and the campaign
   homeState: () => rpc<HomeHood>('home_state'),
-  homeAttack: (slot: number) => rpc<HoodFight>('home_attack', { slot }),
-  homeBoss: () => rpc<HoodFight>('home_boss'),
+  homeAttack: (slot: number, thugs: number, mercs: number) => rpc<HoodFight>('home_attack', { slot, thugs, mercs }),
+  homeBoss: (thugs: number, mercs: number) => rpc<HoodFight>('home_boss', { thugs, mercs }),
   homeCollect: (slot?: number) => rpc<{ collected: number; blocks: number; hood: HomeHood }>('home_collect', { slot: slot ?? null }),
   homeUpgrade: (slot: number) => rpc<{ level: number; cost: number; hood: HomeHood }>('home_upgrade', { slot }),
   missionsState: () => rpc<MissionsState>('missions_state'),
   missionClaim: (key: string) => rpc<MissionClaim>('mission_claim', { key }),
+  seasonBoard: (limit_n = 10) => rpc<SeasonBoard>('season_board', { limit_n }),
+  // seasons (admins)
+  seasonList: () => rpc<SeasonRow[]>('season_list'),
+  seasonStart: (nm: string, from_at: string, months: number, defenders: number[]) => rpc<SeasonRow>('season_start', { nm, from_at, months, defenders }),
+  seasonEnd: (sid: number) => rpc<SeasonRow>('season_end', { sid }),
+  seasonCancel: (sid: number) => rpc<{ cancelled: number; season: SeasonRow }>('season_cancel', { sid }),
 
   // forum
   forumCategories: () => rpc<ForumCategories>('forum_categories'),

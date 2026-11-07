@@ -11,15 +11,16 @@ import { ReportModal } from '../components/Report'
 import { useNow } from '../lib/useNow'
 import { useLoad } from '../lib/useLoad'
 import { intParam } from '../lib/useParam'
+import { Icon, type IconName } from '../components/Icon'
 
-export const BOARDS: { key: ForumCategory; icon: string; name: string; blurb: string }[] = [
-  { key: 'updates', icon: '📣', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
-  { key: 'new_player', icon: '🌱', name: 'New Player', blurb: 'Questions, guides and help getting started.' },
-  { key: 'market', icon: '💰', name: 'Market', blurb: 'Buying, selling, prices, trade offers.' },
-  { key: 'general', icon: '💬', name: 'General', blurb: 'Anything about the game.' },
-  { key: 'war', icon: '⚔️', name: 'War', blurb: 'Crews, cartels, turf, callouts and grudges.' },
-  { key: 'off_topic', icon: '🎲', name: 'Off Topic', blurb: 'Anything else.' },
-  { key: 'suggestions', icon: '💡', name: 'Suggestions', blurb: 'Ideas and requests for the game.' },
+export const BOARDS: { key: ForumCategory; icon: IconName; name: string; blurb: string }[] = [
+  { key: 'updates', icon: 'horn', name: 'Game Updates', blurb: 'Patch notes and announcements from the game team. Reply with feedback.' },
+  { key: 'new_player', icon: 'sprout', name: 'New Player', blurb: 'Questions, guides and help getting started.' },
+  { key: 'market', icon: 'cash', name: 'Market', blurb: 'Buying, selling, prices, trade offers.' },
+  { key: 'general', icon: 'chat', name: 'General', blurb: 'Anything about the game.' },
+  { key: 'war', icon: 'swords', name: 'War', blurb: 'Crews, cartels, turf, callouts and grudges.' },
+  { key: 'off_topic', icon: 'dice', name: 'Off Topic', blurb: 'Anything else.' },
+  { key: 'suggestions', icon: 'bulb', name: 'Suggestions', blurb: 'Ideas and requests for the game.' },
 ]
 const board = (k: string) => BOARDS.find(b => b.key === k)
 // what shows in place of a blocked player's thread or reply (the server sends it without its text)
@@ -54,13 +55,13 @@ function Boards() {
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Card title="🗣 Forum" right={<small>{data?.is_admin ? 'you are an admin' : 'players talk here'}</small>}>
+      <Card title={<><Icon name="horn" size={18} />Forum</>} right={<small>{data?.is_admin ? 'you are an admin' : 'players talk here'}</small>}>
         {!data && <Loading error={error} onRetry={reload} />}
         {data?.categories.map(c => {
           const b = board(c.key)!
           return (
             <div key={c.key} className="row link" onClick={() => nav(`/forum/${c.key}`)}>
-              <span className="ico">{b.icon}</span>
+              <span className="ico"><Icon name={b.icon} size={18} /></span>
               <div className="grow">
                 <div className="t"><TitleLink to={`/forum/${c.key}`}>{b.name}</TitleLink></div>
                 <div className="s">{c.last ? <><LinkedText text={c.last.title} /> · {c.last.last_poster ? <LinkedText text={c.last.last_poster} /> : '—'}, {ago(c.last_post_at!)}</> : b.blurb}</div>
@@ -95,14 +96,14 @@ function BoardView({ cat }: { cat: ForumCategory }) {
     <div className="page">
       <BackBar fallback="/forum" right={data?.can_post && !muted && <button type="button" className="btn sm doit" onClick={() => setCompose(true)}>New Thread</button>} />
       {data?.can_post && muted && <Muted until={muted} />}
-      <Card title={<>{b.icon} {b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
+      <Card title={<><Icon name={b.icon} size={18} />{b.name}</>} right={<small>{data ? `${data.total} thread${data.total === 1 ? '' : 's'}` : ''}</small>}>
         {!data && <Loading error={error} onRetry={load} />}
         {data?.threads.length === 0 && <Empty>{cat === 'updates' && !data.can_post ? 'No updates posted yet.' : 'Nothing here yet — start the first thread.'}</Empty>}
         {data?.threads.map(t => (
           <div key={t.id} className="row link" onClick={() => nav(`/forum/t/${t.id}`)}>
             <div className="grow">
               {/* the title is the row's link (names in it link inside the thread); pinned and locked say so in words */}
-              <div className="t">{t.pinned && <span className="pill gold xs">📌 Pinned</span>}{t.locked && <span className="pill xs">🔒 Locked</span>}<TitleLink to={`/forum/t/${t.id}`}>{t.title}</TitleLink></div>
+              <div className="t">{t.pinned && <span className="pill gold xs"><Icon name="pin" size={11} />Pinned</span>}{t.locked && <span className="pill xs"><Icon name="lock" size={11} />Locked</span>}<TitleLink to={`/forum/t/${t.id}`}>{t.title}</TitleLink></div>
               <div className="s">{t.author ? <PlayerLink id={t.author.id}>{t.author.avatar} {t.author.name}</PlayerLink> : DELETED}{t.author?.is_admin && <span className="pill blue" style={{ marginLeft: 4 }}>admin</span>} · {t.hidden ? <i>{HIDDEN}</i> : <LinkedText text={t.snippet} />}</div>
               <div className="s">{t.reply_count} {t.reply_count === 1 ? 'reply' : 'replies'} · last {t.last_poster ? <LinkedText text={t.last_poster} /> : t.author ? <PlayerLink id={t.author.id}>{t.author.name}</PlayerLink> : DELETED}, {ago(t.last_post_at)}</div>
             </div>
@@ -173,17 +174,17 @@ function ThreadView({ id }: { id: number }) {
         </div>
       )} />
       {/* Back follows history, so the board this thread lives in gets its own link */}
-      <div className="small muted">in <Link to={`/forum/${t.category}`}>{b.icon} {b.name}</Link></div>
+      <div className="small muted">in <Link to={`/forum/${t.category}`}><Icon name={b.icon} size={12} /> {b.name}</Link></div>
       <Card>
         <div className="bd stack post">
-          <h3 style={{ margin: 0 }} aria-level={2}>{t.pinned && '📌 '}{t.locked && '🔒 '}<LinkedText text={t.title} /></h3>
+          <h3 style={{ margin: 0 }} aria-level={2}>{t.pinned && <Icon name="pin" size={16} className="gold" label="pinned" />}{t.locked && <Icon name="lock" size={16} label="locked" />}<LinkedText text={t.title} /></h3>
           <PostMeta a={t.author} at={t.created_at} edited={t.edited_at} />
           {t.hidden ? <div className="small muted">{HIDDEN}</div> : <div className="body"><LinkedText text={t.body} /></div>}
           {(t.mine || data.is_admin || !t.hidden) && (
             <div className="hstack">
               {(t.mine || data.is_admin) && !t.hidden && <button className="btn sm ghost" onClick={() => setEditing({ kind: 'thread', id: t.id, body: t.body, title: t.title })}>Edit</button>}
               {(t.mine || data.is_admin) && <button className="btn sm ghost" onClick={() => del('thread', t.id)}>Delete</button>}
-              {!t.mine && !t.hidden && t.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_thread', id: t.id, author: t.author, body: `${t.title}: ${t.body}` })}>🚩 Report</button>}
+              {!t.mine && !t.hidden && t.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_thread', id: t.id, author: t.author, body: `${t.title}: ${t.body}` })}><Icon name="flag" size={13} /> Report</button>}
             </div>
           )}
         </div>
@@ -195,7 +196,7 @@ function ThreadView({ id }: { id: number }) {
               <div className="hstack">
                 {(p.mine || data.is_admin) && !p.hidden && <button className="btn sm ghost" onClick={() => setEditing({ kind: 'post', id: p.id, body: p.body ?? '' })}>Edit</button>}
                 {(p.mine || data.is_admin) && <button className="btn sm ghost" onClick={() => del('post', p.id)}>Delete</button>}
-                {!p.mine && !p.hidden && p.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_post', id: p.id, author: p.author, body: p.body ?? '' })}>🚩 Report</button>}
+                {!p.mine && !p.hidden && p.author && <button className="btn sm ghost" onClick={() => setReporting({ kind: 'forum_post', id: p.id, author: p.author, body: p.body ?? '' })}><Icon name="flag" size={13} /> Report</button>}
               </div>
             )}
           </div>
@@ -215,7 +216,7 @@ function ThreadView({ id }: { id: number }) {
             <Btn className="doit" disabled={!reply.trim()} onClick={send}>Post Reply</Btn>
           </div>
         </Card>
-      ) : <div className="notice gold">🔒 This thread is locked.</div>}
+      ) : <div className="notice gold"><Icon name="lock" size={13} /> This thread is locked.</div>}
       {editing && (
         <Modal title={editing.kind === 'thread' ? 'Edit thread' : 'Edit reply'} onClose={() => setEditing(null)}>
           <div className="stack">

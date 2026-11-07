@@ -6,6 +6,7 @@ import type { DropResult } from '../lib/types'
 import { Modal } from './ui'
 import { Prize } from './Prize'
 import { haptic } from '../lib/haptics'
+import { Icon } from './Icon'
 
 /** Opening a crate, wherever the button is (the Daily Drop card, Home's Next up): shake the crate while the server
  *  rolls, for at least a beat, then show what came out, with Open Another while more wait. `sheet` renders the reveal;
@@ -29,7 +30,7 @@ export function useCrateOpener(onResult?: (r: DropResult) => void) {
   const sheet = reveal && (
     <Modal title={reveal.r?.jackpot ? 'Jackpot' : 'Daily Drop'} onClose={close}>
       {!reveal.r ? (
-        <div className="crate-open" role="status"><div className="crate-shake" aria-hidden>📦</div><div className="small muted">Cracking it open…</div></div>
+        <div className="crate-open" role="status"><div className="crate-shake" aria-hidden><Icon name="box" size={64} stroke={1.2} className="gold" /></div><div className="small muted">Cracking it open…</div></div>
       ) : (
         <Prize r={reveal.r} onOpen={open} onGo={to => { close(); nav(to) }} />
       )}

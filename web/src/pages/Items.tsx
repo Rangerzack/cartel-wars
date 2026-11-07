@@ -10,6 +10,7 @@ import { discounted, perk } from '../lib/perks'
 import { itemCombos } from '../lib/combos'
 import { SetupCombo } from '../components/Combo'
 import { useParam } from '../lib/useParam'
+import { Icon } from '../components/Icon'
 
 const cats: ItemCategory[] = ['weapon', 'protection', 'transport', 'jail_weapon']
 
@@ -42,7 +43,7 @@ export default function Items() {
   /** Buy n and equip them straight away wherever there are free slots — new players shouldn't need a second screen.
    *  A reputation item can't be sold back, so that one asks first. */
   async function buy(itemId: number, category: ItemCategory, name: string, n: number, rep = 0) {
-    if (rep > 0 && !await ask(`Reputation items can't be sold back.`, { title: `Buy ${n > 1 ? `${n} × ` : ''}${name} for ⭐ ${num(rep * n)}?`, yes: `Buy · ⭐ ${num(rep * n)}`, tone: 'gold' })) return
+    if (rep > 0 && !await ask(`Reputation items can't be sold back.`, { title: `Buy ${n > 1 ? `${n} × ` : ''}${name} for ${num(rep * n)} reputation?`, yes: `Buy · ${num(rep * n)} rep`, tone: 'gold' })) return
     const r = await run(() => api.buyItem(itemId, n), { silent: true, refresh: false })
     if (!r) return
     // the setups as they stand now, not as this screen last drew them: a second quick ×5 would otherwise equip over
@@ -74,10 +75,10 @@ export default function Items() {
         <>
           <Seg value={setup} onChange={setSetup} options={[{ v: 'offense', l: 'Offensive' }, { v: 'defense', l: 'Defensive' }, { v: 'jail', l: 'Jail' }]} />
           <Card title={<>Attack {power.att} · Defense {power.def}</>} right={<small>{used}/{me.inventory_slots} slots</small>}>
-            {boosted && <div className="row small"><span className="gold">⚡ Includes your +{me.boost!.amount} {me.boost!.side} boost</span><span className="grow" /><button className="btn sm ghost" onClick={() => nav('/services?focus=boost')}>Boost ›</button></div>}
+            {boosted && <div className="row small"><span className="gold"><Icon name="bolt" size={13} /> Includes your +{me.boost!.amount} {me.boost!.side} boost</span><span className="grow" /><button className="btn sm ghost" onClick={() => nav('/services?focus=boost')}>Boost ›</button></div>}
             <div className="bd stack">
               <div className="slots">{Array.from({ length: me.inventory_slots }, (_, i) => <span key={i} className={`slot ${i < used ? 'on' : ''}`} />)}</div>
-              {used >= me.inventory_slots && me.slot_cost && me.inventory_slots < (catalog.config.max_slots ?? 130) && <div className="small muted">Setup full. The next slot costs 💎 {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <Link to="/services?focus=upgrades">Services ›</Link></div>}
+              {used >= me.inventory_slots && me.slot_cost && me.inventory_slots < (catalog.config.max_slots ?? 130) && <div className="small muted">Setup full. The next slot costs <Icon name="gem" size={13} /> {me.slot_cost.diamonds} + {money(me.slot_cost.cash)} — <Link to="/services?focus=upgrades">Services ›</Link></div>}
               <div className="small muted">
                 {setup === 'offense' && 'Used when you attack. '}
                 {setup === 'defense' && 'Used when someone attacks you. '}
@@ -100,7 +101,7 @@ export default function Items() {
               return (
                 <div key={i.item_id} className="row">
                   <div className="grow">
-                    <div className="t">{catalog.items.find(d => d.id === i.item_id)?.drop_only && <span className="find-tag">🎁 </span>}{i.name} <span className="muted small">×{i.qty}</span></div>
+                    <div className="t">{catalog.items.find(d => d.id === i.item_id)?.drop_only && <span className="find-tag"><Icon name="gift" size={12} /> </span>}{i.name} <span className="muted small">×{i.qty}</span></div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `carries ${num(i.capacity)} ` : ''}<ComboTags id={i.item_id} /></div>
                   </div>
                   <div className="hstack" style={{ flexWrap: 'nowrap' }}>
@@ -123,7 +124,7 @@ export default function Items() {
             <div className="seg" role="group" aria-label="How many at a time">
               {(['1', '5', '10'] as const).map(v => <button key={v} type="button" className={many === v ? 'on' : ''} aria-pressed={many === v} onClick={() => setMany(v)}>×{v}</button>)}
             </div>
-            <span className="small muted tabular">{catalog.items.some(i => i.category === cat && i.rep_price > 0) ? <>⭐ {num(me.reputation)} · </> : null}{money(me.cash)} on hand</span>
+            <span className="small muted tabular">{catalog.items.some(i => i.category === cat && i.rep_price > 0) ? <><Icon name="star" size={12} /> {num(me.reputation)} · </> : null}{money(me.cash)} on hand</span>
           </div>
           {(perk(me, shopPerk) > 0 || perk(me, 'repo') > 0) && <div className="hstack"><PerkTag code={shopPerk} /><PerkTag code="repo" /></div>}
           <Card>
@@ -139,7 +140,7 @@ export default function Items() {
               return (
                 <div key={i.id} className={`row ${drop ? 'drop-only' : ''}`}>
                   <div className="grow">
-                    <div className="t">{drop && <span className="find-tag">🎁 </span>}{i.rep_price > 0 && <span className="dia">★ </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
+                    <div className="t">{drop && <span className="find-tag"><Icon name="gift" size={12} /> </span>}{i.rep_price > 0 && <span className="dia"><Icon name="star" size={12} /> </span>}{i.name} {have > 0 && <span className="muted small">×{have}</span>}</div>
                     <div className="s">{i.att ? `att ${i.att} ` : ''}{i.def ? `def ${i.def} ` : ''}{i.capacity ? `carries ${num(i.capacity)} ` : ''}<ComboTags id={i.id} /></div>
                   </div>
                   {loose > 0 && i.rep_price === 0 && !drop && (() => {
@@ -153,13 +154,13 @@ export default function Items() {
                   {drop
                     ? <Btn className="sm ghost" onClick={() => nav('/actions')}>Found on Jobs</Btn>
                     : i.rep_price > 0
-                    ? <Btn className="sm gold" disabled={me.reputation < i.rep_price * n} onClick={() => buy(i.id, i.category, i.name, n, i.rep_price)}>{n > 1 ? `${n} · ` : ''}⭐ {num(i.rep_price * n)}</Btn>
+                    ? <Btn className="sm gold" disabled={me.reputation < i.rep_price * n} onClick={() => buy(i.id, i.category, i.name, n, i.rep_price)}>{n > 1 ? `${n} · ` : ''}<Icon name="star" size={13} /> {num(i.rep_price * n)}</Btn>
                     : <Btn className="sm gold" disabled={me.cash < cost * n} onClick={() => buy(i.id, i.category, i.name, n)}>{n > 1 ? `${n} · ` : ''}{cost < i.price && <s className="was">{money(i.price * n)}</s>}{money(cost * n)}</Btn>}
                 </div>
               )
             })}
           </Card>
-          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price (more with a Repo Co) and only works for unequipped units. ★ Rare items are bought with Reputation (you have ⭐ {num(me.reputation)}) from reputation actions, and can't be sold. 🎁 Rare finds are the best of each kind; they only turn up on jobs and can't be bought or sold.</div>
+          <div className="small muted">You can own as many as you like; only equipped items count, and only within a setup's slots. Selling returns half the price (more with a Repo Co) and only works for unequipped units. <Icon name="star" size={12} className="dia" /> Rare items are bought with Reputation (you have <Icon name="star" size={12} /> {num(me.reputation)}) from reputation actions, and can't be sold. <Icon name="gift" size={12} /> Rare finds are the best of each kind; they only turn up on jobs and can't be bought or sold.</div>
         </>
       )}
     </div>
@@ -171,6 +172,5 @@ function ComboTags({ id }: { id: number }) {
   const { catalog } = useGame()
   const list = itemCombos(catalog, id)
   if (!list.length) return null
-  const icon = (st: string) => catalog?.combo_styles?.find(x => x.code === st)?.icon ?? ''
-  return <span className="combo-tags">· {list.map(c => `${icon(c.style)} ${c.name}`).join(', ')}</span>
+  return <span className="combo-tags">· {list.map(c => c.name).join(', ')}</span>
 }

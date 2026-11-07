@@ -5,10 +5,15 @@ import { milestoneCount } from '../lib/milestones'
 import { ago, commodityIcon, money, num } from '../lib/format'
 import { CrewLink, PlayerLink } from './Linked'
 import { ComboPill } from './Combo'
+import { Glyph, Icon, type IconName } from './Icon'
 
-const icon: Record<ActivityItem['kind'], string> = {
-  attacked: '⚔️', crew_fight: '🏴', siege: '🧱', block_lost: '🚩', block_taken: '🏁', sold: '💵', filled: '📦', applied: '📨', joined: '🤝', kicked: '🚪',
-  daily_cash: '💰', moderated: '🛡', purchase: '💎', purchase_refunded: '↩️', milestone: '🏅',
+const icon: Record<ActivityItem['kind'], IconName> = {
+  attacked: 'swords', crew_fight: 'flag', siege: 'bricks', block_lost: 'flag', block_taken: 'flag', sold: 'cash', filled: 'box', applied: 'mail', joined: 'users', kicked: 'door',
+  daily_cash: 'cash', moderated: 'shield', purchase: 'gem', purchase_refunded: 'back', milestone: 'award',
+}
+/* the badge's tint says what kind of thing happened: rust for a fight or a loss, amber for money, teal for news */
+const tone: Partial<Record<ActivityItem['kind'], string>> = {
+  attacked: 'red', crew_fight: 'red', siege: 'red', block_lost: 'red', block_taken: 'green', sold: 'gold', filled: 'gold', daily_cash: 'gold', purchase: 'blue', milestone: 'gold',
 }
 
 /** Where tapping an activity line takes you. */
@@ -55,8 +60,8 @@ function Sentence({ a }: { a: ActivityItem }) {
       : <>{crew} laid siege to your block {block}</>; break
     case 'block_lost': body = <>{crew} took your block {block}{a.actor ? <> ({who})</> : null}</>; break
     case 'block_taken': body = <>{who} took {block} for your crew{a.crew ? <> from {crew}</> : null}</>; break
-    case 'sold': body = <>{who} bought {num(d.units ?? 0)} {d.commodity ? `${commodityIcon[d.commodity]} ${d.commodity}` : 'units'} from your listing</>; break
-    case 'filled': body = <>{who} filled your buy order: {num(d.units ?? 0)} {d.commodity ? `${commodityIcon[d.commodity]} ${d.commodity}` : 'units'} for {money(d.cash ?? 0)}</>; break
+    case 'sold': body = <>{who} bought {num(d.units ?? 0)} {d.commodity ? <><Glyph e={commodityIcon[d.commodity]} size={14} /> {d.commodity}</> : 'units'} from your listing</>; break
+    case 'filled': body = <>{who} filled your buy order: {num(d.units ?? 0)} {d.commodity ? <><Glyph e={commodityIcon[d.commodity]} size={14} /> {d.commodity}</> : 'units'} for {money(d.cash ?? 0)}</>; break
     case 'applied': body = <>{who} applied to join your crew</>; break
     case 'joined': body = <>{who} let you into {crew}</>; break
     case 'kicked': body = <>{who} removed you from {crew}</>; break
@@ -73,7 +78,7 @@ function Sentence({ a }: { a: ActivityItem }) {
       : d.action?.startsWith('mute_') ? <>An admin muted you until {d.until ? new Date(d.until).toLocaleString() : 'further notice'}</>
       : <>An admin took action on your account</>; break
     case 'purchase': body = <>You bought {num(d.diamonds ?? 0)} diamonds</>; break
-    case 'milestone': body = <>Milestone: {milestoneCount(d.what, d.n ?? 0)} — <b className="dia">💎 {num(d.diamonds ?? 0)}</b></>; break
+    case 'milestone': body = <>Milestone: {milestoneCount(d.what, d.n ?? 0)} — <b className="dia"><Icon name="gem" size={13} /> {num(d.diamonds ?? 0)}</b></>; break
     case 'purchase_refunded': body = <>Apple refunded a {num(d.bought ?? d.diamonds ?? 0)}-diamond purchase{d.diamonds
       ? <>, so {num(d.diamonds)} diamond{d.diamonds === 1 ? ' was' : 's were'} taken back</> : <>. You'd already spent them</>}</>; break
     default: body = null
@@ -89,7 +94,7 @@ export function ActivityRow({ a, fresh }: { a: ActivityItem; fresh?: boolean }) 
   const amt = amount(a)
   return (
     <div className={`row activity ${to ? 'link' : ''} ${fresh ? 'fresh' : ''}`} onClick={() => to && nav(to)}>
-      <span className="ico">{icon[a.kind]}</span>
+      <span className={`ico ${tone[a.kind] ?? ''}`}><Icon name={icon[a.kind]} size={18} /></span>
       <div className="grow">
         <div className="t2"><Sentence a={a} /></div>
         <div className="s">{to ? <Link to={to} className="when" onClick={e => e.stopPropagation()}>{ago(a.at)}</Link> : ago(a.at)}</div>

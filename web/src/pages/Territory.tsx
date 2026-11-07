@@ -5,7 +5,9 @@ import { api } from '../lib/api'
 import { ago, hoodlumIcon, hoodlumName, money, num, timeLeft, toInt } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Btn, Card, Empty, Loading, Modal, Qty, RowLink } from '../components/ui'
+import { Glyph, Icon } from '../components/Icon'
 import { HireHoodlums } from '../components/Hire'
+import { HoodPanel } from '../components/HoodPanel'
 import type { AttackBlockResult, Block, BlockDetail, BusinessCode, Hood, Territory as TerritoryData, TerritoryLog } from '../lib/types'
 import { businessDef, perkLabel } from '../lib/perks'
 import { BackBar } from '../components/BackBar'
@@ -55,28 +57,23 @@ export default function Territory() {
         ? <BackBar fallback={biz ? `/territory?biz=${biz}` : '/territory'} right={<span className="muted small">{hood.district} · {coord(hood)}</span>} />
         : <BackBar fallback="/" />}
       {!me.crew && <div className="notice blue">Territory is held by crews. <Link to="/crew">Join or found a crew</Link> to fight for blocks.</div>}
-      {/* Season 1: the six blocks that are yours alone sit off the map */}
-      {me.season && me.home && !hood && (
-        <RowLink to="/hood" className="card hood-link">
-          <span className="ico" aria-hidden>🏘</span>
-          <div className="grow"><div className="t">Your Hood</div><div className="s">{me.home.cleared}/6 blocks{me.home.income_day ? ` · ${money(me.home.income_day)}/day` : ''}{me.home.ready_cash ? ` · ${money(me.home.ready_cash)} waiting` : ''}</div></div>
-          <span className="chev">›</span>
-        </RowLink>
-      )}
       {/* the tiles are the hire buttons: hoodlums are bought where they're used, not two pages away */}
       <div className="grid3">
         {(['thug', 'mercenary', 'spy'] as const).map(k => (
           <button key={k} type="button" className={`stat stat-btn ${hire === k ? 'on' : ''}`} aria-expanded={hire === k} onClick={() => setHire(hire === k ? null : k)}>
-            <div className="k">{hoodlumIcon[k]} {k === 'mercenary' ? 'Mercs' : k === 'spy' ? 'Spies' : 'Thugs'}</div><div className="v">{num(me.hoodlums[k] ?? 0)}</div>
+            <div className="k"><Glyph e={hoodlumIcon[k]} size={12} className={k === 'thug' ? 'gold' : k === 'mercenary' ? 'red' : 'dia'} />{k === 'mercenary' ? 'Mercs' : k === 'spy' ? 'Spies' : 'Thugs'}</div><div className="v">{num(me.hoodlums[k] ?? 0)}</div>
             <span className="stat-add">+ Hire</span>
           </button>
         ))}
       </div>
       {hire ? (
-        <Card title="🧢 Hire hoodlums" right={<button type="button" className="btn sm ghost" onClick={() => setHire(null)}>Done</button>}>
+        <Card title={<><Icon name="cap" size={18} />Hire hoodlums</>} right={<button type="button" className="btn sm ghost" onClick={() => setHire(null)}>Done</button>}>
           <div className="bd"><HireHoodlums key={hire} initial={{ code: hire, n: hire === 'thug' ? Math.max(10, (data?.rules.min_thugs ?? 51) - thugs) : 5 }} /></div>
         </Card>
       ) : <div className="small muted">Thugs and mercs attack blocks; spies size up a garrison. Tap one to hire more.</div>}
+
+      {/* Season 1: the six blocks that are yours alone, above the city (?focus=hood lands on them) */}
+      {me.season && me.home && !hood && <HoodPanel focus={sp.get('focus') === 'hood'} />}
 
       {hood ? (
         <HoodView hood={hood} onBlock={setBlockId} biz={biz} allies={allies} siegeWins={data.rules.siege_wins} />
@@ -139,7 +136,7 @@ function Row({ y, hoods, onOpen, biz }: { y: number; hoods: Hood[]; onOpen: (id:
             <span className="mini">
               {h.blocks.map(b => <i key={b.id} className={`${b.mine ? 'mine' : b.owner ? 'enemy' : ''} ${b.my_wins > 0 ? 'siege' : ''} ${biz && b.business === biz ? 'biz' : ''}`} />)}
             </span>
-            <span className="lbl">{h.owner ? h.owner.emblem : sieging ? '⚔️' : coord(h)}</span>
+            <span className="lbl">{h.owner ? h.owner.emblem : sieging ? <Icon name="swords" size={11} /> : coord(h)}</span>
           </button>
         )
       })}
@@ -155,7 +152,7 @@ function HoodView({ hood, onBlock, biz, allies, siegeWins }: { hood: Hood; onBlo
         <div className="blocks6">
           {hood.blocks.map(b => <BlockTile key={b.id} b={b} hood={hood} now={now} onClick={() => onBlock(b.id)} hl={!!biz && b.business === biz} ally={!!b.owner && !b.mine && allies.has(b.owner.id)} siegeWins={siegeWins} />)}
         </div>
-        {hood.full_hood && <div className="row small"><span className="pill gold nowrap">★ Full hood</span><span className="muted"> {(hood.owner ?? hood.blocks[0]?.owner)?.name} holds all six — every business here counts ×1.5 for them (×1.75 in a cartel).</span></div>}
+        {hood.full_hood && <div className="row small"><span className="pill gold nowrap"><Icon name="star" size={12} />Full hood</span><span className="muted"> {(hood.owner ?? hood.blocks[0]?.owner)?.name} holds all six — every business here counts ×1.5 for them (×1.75 in a cartel).</span></div>}
         <div className="row small muted">
           Base resistance {num(hood.base_resistance)} · empty blocks cost {money(hood.claim_price)} to claim · hold 4 of 6 to own the hood, all 6 for the full-hood bonus.
         </div>
@@ -172,12 +169,12 @@ function BlockTile({ b, hood, now, onClick, hl, ally, siegeWins }: { b: Block; h
     <button type="button" className={`block ${b.mine ? 'mine' : ally ? 'ally' : b.owner ? 'enemy' : ''} ${hl ? 'biz-hl' : ''}`} onClick={onClick}
       aria-label={`${slotName(b)}${b.owner ? `, held by ${b.owner.name}${b.mine ? ' (your crew)' : ally ? ' (your cartel)' : ''}` : ', unclaimed'}`}>
       <div className="em">{b.owner ? b.owner.emblem : ' '}{ally && <span className="small muted"> ally</span>}</div>
-      {d ? <div className="biz-name"><span>{d.icon}</span> <b>{d.name}</b></div> : <div><b>{slotName(b)}</b></div>}
+      {d ? <div className="biz-name"><span className="em"><Glyph e={d.icon} size={20} /></span> <b>{d.name}</b></div> : <div><b>{slotName(b)}</b></div>}
       {/* the perk on the tile itself, not in a tooltip a touch screen never shows */}
       {d && <div className="small muted biz-perk">{d.perk}</div>}
       {b.owner ? (
         <>
-          <div className="small tabular">⏱ {timeLeft(b.bonus_at, now)}</div>
+          <div className="small tabular"><Icon name="clock" size={12} /> {timeLeft(b.bonus_at, now)}</div>
           <div className="small muted">{b.garrison_size !== null ? `${num(b.garrison_size)} guards` : b.garrisoned ? 'guarded' : 'unguarded'}</div>
           {b.top_wins > 0 && <div className="siegebar"><div style={{ width: `${Math.min(100, (b.top_wins / siegeWins) * 100)}%` }} className={b.my_wins > 0 && b.my_wins === b.top_wins ? 'mine' : ''} /></div>}
           {b.my_wins > 0 && <div className="small gold">your siege {b.my_wins}/{siegeWins}</div>}
@@ -190,7 +187,7 @@ function BlockTile({ b, hood, now, onClick, hl, ally, siegeWins }: { b: Block; h
 function LogRow({ l, showBlock, onOpen, siegeWins }: { l: TerritoryLog; showBlock?: boolean; onOpen?: () => void; siegeWins: number }) {
   const what = l.captured ? (l.defender_crew ? `took it from ${l.defender_crew}` : 'claimed it') : l.success ? `landed a hit${l.siege_wins ? ` (${l.siege_wins}/${siegeWins})` : ''}` : 'was pushed back'
   const inner = <>
-    <span>{l.captured ? '🏴' : l.success ? '🎯' : '💥'}</span>
+    <span className={`ico ${l.captured ? 'gold' : l.success ? 'green' : 'red'}`}><Icon name={l.captured ? 'flag' : l.success ? 'target' : 'burst'} size={18} /></span>
     <div className="grow">
       <div className="t">{l.crew_emblem} {l.attacker ?? <span className="muted">Deleted player</span>} {what}{showBlock ? <span className="muted"> · {l.block}</span> : null}</div>
       <div className="s">{num(l.attack)} vs {num(l.resistance)} · {num(l.thugs)} thugs{l.mercs ? `, ${num(l.mercs)} mercs` : ''} · lost {num(l.lost_thugs + l.lost_mercs)}{l.garrison_lost ? ` · killed ${num(l.garrison_lost)} guards` : ''} · {ago(l.at)}</div>
@@ -243,12 +240,12 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
           {b.business && <BusinessPanel b={b} />}
           {b.owner && (
             <div className="grid2">
-              <div className="stat"><div className="k">Next bonus</div><div className="v">⏱ {timeLeft(b.bonus_at, now)}</div></div>
+              <div className="stat"><div className="k">Next bonus</div><div className="v"><Icon name="clock" size={16} className="muted" /> {timeLeft(b.bonus_at, now)}</div></div>
               <div className="stat"><div className="k">Bonus</div><div className="v gold">{money(b.block_bonus)}</div></div>
             </div>
           )}
           {b.garrison && Object.keys(b.garrison).length > 0 && (
-            <div className="hstack">{Object.entries(b.garrison).map(([k, v]) => <span key={k} className="pill">{hoodlumIcon[k]} {num(v)} {hoodlumName(k, v)}</span>)}</div>
+            <div className="hstack">{Object.entries(b.garrison).map(([k, v]) => <span key={k} className="pill"><Glyph e={hoodlumIcon[k]} size={12} /> {num(v)} {hoodlumName(k, v)}</span>)}</div>
           )}
           {b.siege.length > 0 && (
             <>
@@ -291,8 +288,8 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
             <>
               <h2>Attack with</h2>
               <div className="grid2">
-                <label className="f">🧢 Thugs (min {rules.min_thugs}) · have {num(thugs)}<input className="input" inputMode="numeric" value={force.thugs} onChange={e => setForce({ ...force, thugs: Math.min(thugs, toInt(e.target.value)) })} /></label>
-                <label className="f">🔫 Mercenaries · have {num(mercs)}<input className="input" inputMode="numeric" value={force.mercs} onChange={e => setForce({ ...force, mercs: Math.min(mercs, toInt(e.target.value)) })} /></label>
+                <label className="f"><span><Icon name="cap" size={13} className="gold" /> Thugs (min {rules.min_thugs}) · have {num(thugs)}</span><input className="input" inputMode="numeric" value={force.thugs} onChange={e => setForce({ ...force, thugs: Math.min(thugs, toInt(e.target.value)) })} /></label>
+                <label className="f"><span><Icon name="sword" size={13} className="red" /> Mercenaries · have {num(mercs)}</span><input className="input" inputMode="numeric" value={force.mercs} onChange={e => setForce({ ...force, mercs: Math.min(mercs, toInt(e.target.value)) })} /></label>
               </div>
               <div className="small muted">
                 Attack ≈ <b>{num(attackPower)}</b> (±10%) · {rules.stamina} stamina. {b.owner ? `Every win counts toward your crew's ${rules.siege_wins} and restarts their bonus clock.` : 'One win claims it.'}
@@ -306,7 +303,7 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
                     onHired={(code, n) => setForce(f => code === 'thug' ? { ...f, thugs: Math.max(f.thugs, Math.min(thugs + n, rules.min_thugs)) } : { ...f, mercs: f.mercs + n })} />
                 </div>
               ) : !moreOpen ? (
-                <button type="button" className="linkbtn small" onClick={() => setMoreOpen(true)}>🧢 Hire more thugs or mercs</button>
+                <button type="button" className="linkbtn small" onClick={() => setMoreOpen(true)}><Icon name="plus" size={13} /> Hire more thugs or mercs</button>
               ) : (
                 <div className="hire-inline">
                   <HireHoodlums kinds={['thug', 'mercenary']} btnClass="gold"
@@ -316,8 +313,8 @@ function BlockModal({ id, rules, thugs, mercs, spies, allies, onClose, onChanged
               <div className="hstack">
                 <Btn className="doit red" disabled={force.thugs < rules.min_thugs || me.jailed || me.hospital || (!b.owner && me.cash < b.claim_price)} onClick={() => me.stamina < rules.stamina ? askRefill(rules.stamina) : attack()}>{result ? 'Attack Again' : 'Attack'}</Btn>
                 {spies > 0
-                  ? <Btn className="sm" onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}>🕶 Spy ({num(spies)})</Btn>
-                  : <button type="button" className="btn sm ghost" aria-expanded={spyOpen} onClick={() => setSpyOpen(v => !v)}>🕶 No Spies · Hire</button>}
+                  ? <Btn className="sm" onClick={async () => { const r = await run(() => api.spyBlock(b.id), { silent: true }); if (r) setIntel(r) }}><Icon name="eye" size={15} /> Spy ({num(spies)})</Btn>
+                  : <button type="button" className="btn sm ghost" aria-expanded={spyOpen} onClick={() => setSpyOpen(v => !v)}><Icon name="eye" size={15} /> No Spies · Hire</button>}
               </div>
               {intel && (
                 <div className="notice blue" role="status">Your spy reports resistance <b>{num(intel.resistance)}</b>: {Object.entries(intel.garrison).length === 0 ? 'no garrison' : Object.entries(intel.garrison).map(([k, v]) => `${num(v)} ${hoodlumName(k, v)}`).join(', ')}.</div>
@@ -348,7 +345,7 @@ function BusinessPanel({ b }: { b: BlockDetail }) {
   const code = biz.code
   return (
     <div className="biz-panel">
-      <div className="spread"><b>{biz.icon} {biz.name}</b><span className="small muted">{biz.perk}</span></div>
+      <div className="spread"><b><Glyph e={biz.icon} size={15} className="gold" /> {biz.name}</b><span className="small muted">{biz.perk}</span></div>
       <div className="grid3 biz-values">
         <div className="stat"><div className="k">This block</div><div className="v sm">{perkLabel(code, biz.value)}</div></div>
         <div className="stat"><div className="k">Full hood</div><div className="v sm">{perkLabel(code, biz.value_full)}</div></div>

@@ -73,7 +73,7 @@ try {
   await a.goto(`${BASE}/territory?hood=${center}`)
   await a.locator('.blocks6 .biz-name').nth(5).waitFor()
   if (await a.locator('.blocks6 .biz-name').count() !== 6) throw new Error('six business tiles')
-  await a.getByText('★ Full hood').waitFor()
+  await a.getByText('Full hood').waitFor()
   await snap(a, 'center-hood')
   // open the Muscle block (slot D): the business panel shows its values and our crew's take
   await a.locator('.blocks6 .block').nth(3).click()

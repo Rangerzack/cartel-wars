@@ -13,6 +13,7 @@ import { bailCost, perk } from '../lib/perks'
 import { drugRefill } from '../lib/market'
 import type { MilestoneKind } from '../lib/types'
 import { milestoneLabel, milestoneTotal, nextRepeat } from '../lib/milestones'
+import { Glyph, Icon } from '../components/Icon'
 
 export default function Services() {
   const me = useMe()
@@ -60,7 +61,7 @@ export default function Services() {
 
   const cards: Record<string, ReactNode> = {
     hospital: (
-      <Card id="hospital" title="🏥 Hospital" right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
+      <Card id="hospital" title={<><Icon name="cross" size={18} />Hospital</>} right={<small>{num(me.health)}/{num(me.health_max)} health</small>}>
         <div className="bd stack">
           <PerkTag code="clinic" />
           {me.hospital
@@ -77,7 +78,7 @@ export default function Services() {
       </Card>
     ),
     jail: me.jailed && (
-      <Card id="jail" title="🔒 County Jail" right={<small>until you post bail</small>}>
+      <Card id="jail" title={<><Icon name="lock" size={18} />County Jail</>} right={<small>until you post bail</small>}>
         <div className="bd stack">
           <div className="small muted">There's no sentence to wait out — you're inside until you post bail: {money(cfg.bail_base)}{law > 0 ? `, less ${Math.round(law * 100)}% from your Law Office` : ''}, from cash on hand. Until then it's jail jobs, and fights with other inmates only. Your heat maxed out when you went in; bail walks you out with zero heat.</div>
           <PerkTag code="law_office" />
@@ -87,7 +88,7 @@ export default function Services() {
       </Card>
     ),
     police: (
-      <Card id="police" title="🚔 Police Station" right={<small>{money(cfg.bribe_per_heat * (1 - bent))} per heat point</small>}>
+      <Card id="police" title={<><Icon name="siren" size={18} />Police Station</>} right={<small>{money(cfg.bribe_per_heat * (1 - bent))} per heat point</small>}>
         <div className="bd stack">
           <div className="spread">
             <div>Heat: <b className={me.heat_level}>{me.heat}</b> / {me.heat_max} <span className="muted small">({me.heat_level})</span></div>
@@ -96,21 +97,21 @@ export default function Services() {
           <PerkTag code="bent_cop" />
           <Btn className="doit block" disabled={bribeN <= 0 || me.cash < bribeCost(bribeN)} onClick={() => run(() => api.bribePolice(bribeN), { ok: r => `Heat down to ${r.heat}` })}>Bribe · {money(bribeCost(bribeN))}</Btn>
           {me.jailed && <div className="small muted">You're inside: posting bail clears your heat to 0, so there's no need to bribe it down first.</div>}
-          <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (💎 {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
+          <div className="small muted">Heat cuts both ways: in a fight, whoever has more heat gets +1. Red ({heatRed}+) risks a bust on every job and attack, so you only need to bribe it back under {heatRed}.{me.heat_max > (cfg.heat_base ?? 100) ? <> Your heat upgrades moved it up from {cfg.heat_red}.</> : <> Heat upgrades (<Icon name="gem" size={13} /> {cfg.heat_upgrade_diamonds ?? 30} each, below) move it up.</>}</div>
           {!me.jailed && (
             <div className="spread turn-in">
               <div className="small">Want in? Turn yourself in to run jail jobs and fight other inmates — no stamina or cash needed. You stay until you post bail ({money(bail)}). Going in maxes your heat; bail clears it to 0.</div>
               <Btn className="sm" disabled={me.hospital || me.diamonds < (cfg.jail_diamonds ?? 50)}
-                onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup. Your heat goes to max (${me.heat_max}) while you're in, and back to 0 when you bail.`, { title: `Go to jail for 💎 ${cfg.jail_diamonds ?? 50}?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · 💎 {cfg.jail_diamonds ?? 50}</Btn>
+                onClick={async () => { if (await ask(`You stay until you post bail (${money(bail)}), and only fight other inmates with your jail setup. Your heat goes to max (${me.heat_max}) while you're in, and back to 0 when you bail.`, { title: `Go to jail for ${cfg.jail_diamonds ?? 50} diamonds?`, yes: 'Go to jail', tone: 'gold' })) return run(api.goToJail, { ok: () => "You're in County Jail — jail setup is active" }) }}>Go to Jail · <Icon name="gem" size={13} /> {cfg.jail_diamonds ?? 50}</Btn>
             </div>
           )}
           {!me.jailed && (me.hospital ? <div className="why">Not from a hospital bed — heal up first.</div>
-            : me.diamonds < (cfg.jail_diamonds ?? 50) ? <div className="why">Going in costs 💎 {cfg.jail_diamonds ?? 50} — you have 💎 {num(me.diamonds)}.</div> : null)}
+            : me.diamonds < (cfg.jail_diamonds ?? 50) ? <div className="why">Going in costs {cfg.jail_diamonds ?? 50} diamonds — you have {num(me.diamonds)}.</div> : null)}
         </div>
       </Card>
     ),
     bank: (
-      <Card id="bank" title="🏦 Bank" right={<small>banked {money(me.bank)}</small>}>
+      <Card id="bank" title={<><Icon name="bank" size={18} />Bank</>} right={<small>banked {money(me.bank)}</small>}>
         <div className="bd stack">
           <div className="small muted">Cash on hand can be taken in fights. Banked cash can't. Carrying more cash than the other side is worth +1 in a fight, though. {cfg.daily_cash ? <>Everyone gets {money(cfg.daily_cash)} on hand at 00:00 UTC — next in {timeLeft(nextRollover(now), now)}.</> : null}</div>
           <input className="input" inputMode="numeric" placeholder="Amount" aria-label="Amount to deposit or withdraw" value={bank || ''} onChange={e => setBank(toInt(e.target.value))} />
@@ -130,33 +131,33 @@ export default function Services() {
       </Card>
     ),
     refills: (
-      <Card id="refills" title="⚡ Refills" right={<small>{fullN} full per drug a day</small>}>
+      <Card id="refills" title={<><Icon name="bolt" size={18} />Refills</>} right={<small>{fullN} full per drug a day</small>}>
         {pharmacy > 0 && <div className="row"><PerkTag code="pharmacy" /></div>}
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <div className="grow t">Stamina <span className="muted small">{num(me.stamina)}/{num(me.stamina_max)}</span></div>
           {/* nothing to refill: one disabled "Full" instead of live price buttons */}
           {me.stamina >= me.stamina_max ? <button className="btn sm" disabled>Full</button> : <>
-            {(me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}>🎁 Free ×{me.free_refills}</Btn>}
-            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.stamina_max - me.stamina; if (gap < me.stamina_max / 2 && !await ask(`Only ${gap} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('stamina', 'diamonds'), { ok: r => `+${r.gain} stamina` }) }}>💎 {cfg.refill_diamonds}</Btn>
+            {(me.free_refills ?? 0) > 0 && <Btn className="sm gold" onClick={() => run(() => api.refill('stamina', 'free'), { ok: r => `+${r.gain} stamina · ${(me.free_refills ?? 1) - 1} free left` })}><Icon name="gift" size={13} /> Free ×{me.free_refills}</Btn>}
+            <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.stamina_max - me.stamina; if (gap < me.stamina_max / 2 && !await ask(`Only ${gap} stamina is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · ${cfg.refill_diamonds} diamonds`, tone: 'gold' })) return; return run(() => api.refill('stamina', 'diamonds'), { ok: r => `+${r.gain} stamina` }) }}><Icon name="gem" size={13} /> {cfg.refill_diamonds}</Btn>
             {catalog.commodities.map(c => {
               const units = refillUnits(c.refill_stamina)
-              return <Btn key={c.code} className="sm" disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill('stamina', c.code), { ok: r => `+${r.gain} stamina${r.full_left == null ? '' : r.full_left > 0 ? ` · ${r.full_left} full ${c.name} refill${r.full_left > 1 ? 's' : ''} left today` : ` · ${c.name} restores half your stamina until 00:00 UTC`}` })}>{commodityIcon[c.code]} {num(units)}</Btn>
+              return <Btn key={c.code} className="sm" label={`${num(units)} ${c.name}`} disabled={(me.storage[c.code] ?? 0) < units} onClick={() => run(() => api.refill('stamina', c.code), { ok: r => `+${r.gain} stamina${r.full_left == null ? '' : r.full_left > 0 ? ` · ${r.full_left} full ${c.name} refill${r.full_left > 1 ? 's' : ''} left today` : ` · ${c.name} restores half your stamina until 00:00 UTC`}` })}><Glyph e={commodityIcon[c.code]} size={13} /> {num(units)}</Btn>
             })}
           </>}
         </div>
         {me.stamina < me.stamina_max && (me.diamonds < cfg.refill_diamonds || catalog.commodities.some(c => (me.storage[c.code] ?? 0) < refillUnits(c.refill_stamina))) && (
-          <div className="row small muted refill-have">You have 💎 {num(me.diamonds)}, and {catalog.commodities.map((c, i) => <span key={c.code}>{i ? ' · ' : ''}{commodityIcon[c.code]} {num(me.storage[c.code] ?? 0)}</span>)} in storage</div>
+          <div className="row small muted refill-have">You have {num(me.diamonds)} diamonds, and {catalog.commodities.map((c, i) => <span key={c.code}>{i ? ' · ' : ''}<Glyph e={commodityIcon[c.code]} size={12} /> {num(me.storage[c.code] ?? 0)}</span>)} in storage</div>
         )}
         <div className="row small refill-left">
           <span className="muted">Full refills left today</span>
-          {catalog.commodities.map(c => { const d = drugRefill(me, catalog, c.code); return <span key={c.code} className={`pill ${d.left ? '' : 'red'}`}>{commodityIcon[c.code]} {d.left}/{d.full}</span> })}
+          {catalog.commodities.map(c => { const d = drugRefill(me, catalog, c.code); return <span key={c.code} className={`pill ${d.left ? '' : 'red'}`}><Glyph e={commodityIcon[c.code]} size={12} /><span className="sr-only">{c.name} </span>{d.left}/{d.full}</span> })}
         </div>
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <div className="grow t">Health <span className="muted small">{num(me.health)}/{num(me.health_max)}</span></div>
           {me.health >= me.health_max ? <button className="btn sm" disabled>Full</button>
-            : <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.health_max - me.health; if (gap < me.health_max / 2 && !await ask(`Only ${gap} health is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · 💎 ${cfg.refill_diamonds}`, tone: 'gold' })) return; return run(() => api.refill('health', 'diamonds'), { ok: r => `+${r.gain} health` }) }}>💎 {cfg.refill_diamonds}</Btn>}
+            : <Btn className="sm" disabled={me.diamonds < cfg.refill_diamonds} onClick={async () => { const gap = me.health_max - me.health; if (gap < me.health_max / 2 && !await ask(`Only ${gap} health is missing. A diamond refill always fills you up.`, { title: `Spend ${cfg.refill_diamonds} diamonds?`, yes: `Refill · ${cfg.refill_diamonds} diamonds`, tone: 'gold' })) return; return run(() => api.refill('health', 'diamonds'), { ok: r => `+${r.gain} health` }) }}><Icon name="gem" size={13} /> {cfg.refill_diamonds}</Btn>}
         </div>
-        {(me.free_refills ?? 0) > 0 && <div className="row small muted">🎁 Free refills come from the Daily Drop: a full stamina refill each, on top of the drug ones.</div>}
+        {(me.free_refills ?? 0) > 0 && <div className="row small muted"><Icon name="gift" size={13} className="gold" /> Free refills come from the Daily Drop: a full stamina refill each, on top of the drug ones.</div>}
         <div className="row small muted refill-next"><div>
           Each drug fills your stamina {fullN} times a day{subscribed ? ' (5 with your Daily Drop)' : <> — {subFull} with the <Link to="/store#drop">Daily Drop</Link></>}. After that, a refill of that drug restores half your stamina bar ({num(lateGain)}).
           {' '}They come back at 00:00 UTC{usedAny ? <> — in {timeLeft(nextRollover(now), now)}</> : null}. Drugs don't heal: health comes from the Hospital or diamonds. Diamond and free refills always fill you up.
@@ -164,7 +165,7 @@ export default function Services() {
       </Card>
     ),
     upgrades: (
-      <Card id="upgrades" title="💎 Upgrades" right={<Link className="small" to="/store">💎 {num(me.diamonds)} ›</Link>}>
+      <Card id="upgrades" title={<><Icon name="gem" size={18} />Upgrades</>} right={<Link className="small dia" to="/store"><Icon name="gem" size={12} /> {num(me.diamonds)} ›</Link>}>
         {[
           { k: 'stamina' as const, t: 'Max stamina +5', s: `${me.stamina_max}/150`, c: 10, cash: 0, dis: me.stamina_max >= 150 },
           { k: 'health' as const, t: 'Max health +25', s: `${me.health_max}/500`, c: 10, cash: 0, dis: me.health_max >= 500 },
@@ -174,19 +175,19 @@ export default function Services() {
           <div key={u.k} className="row">
             <div className="grow"><div className="t">{u.t}</div><div className="s">{u.s}</div></div>
             {u.dis ? <span className="pill gold nowrap">Maxed</span> : <Btn className="sm" disabled={me.diamonds < u.c || me.cash < u.cash}
-              onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for 💎 ${r.cost} + ${money(r.cash)}` : u.k === 'heat' ? `+${cfg.heat_upgrade_amount ?? 50} max heat — red now starts at ${heatRed + (cfg.heat_upgrade_amount ?? 50)}` : 'Upgraded' })}>
-              💎 {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
+              onClick={() => run(() => api.upgradeStat(u.k), { ok: r => r.cash ? `Upgraded for ${r.cost} diamond${r.cost === 1 ? '' : 's'} + ${money(r.cash)}` : u.k === 'heat' ? `+${cfg.heat_upgrade_amount ?? 50} max heat — red now starts at ${heatRed + (cfg.heat_upgrade_amount ?? 50)}` : 'Upgraded' })}>
+              <Icon name="gem" size={13} /> {u.c}{u.cash > 0 && <> + {money(u.cash)}</>}
             </Btn>}
           </div>
         ))}
         {!slotsMaxed && (me.slot_cost?.cash ?? 0) > me.cash && <div className="row small muted">Slots take cash on hand — you have {money(me.cash)}.</div>}
-        <div className="row small muted"><div>You have 💎 {num(me.diamonds)}. Diamonds come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
+        <div className="row small muted"><div>You have {num(me.diamonds)} diamonds. They come from <Link to="/services?focus=milestones">milestones</Link>, the Daily Drop and the Store.</div></div>
       </Card>
     ),
     milestones: <Milestones />,
     boost: me.boost && <BoostCard />,
     hoodlums: (
-      <Card id="hoodlums" title="🧢 Hoodlums" right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
+      <Card id="hoodlums" title={<><Icon name="cap" size={18} />Hoodlums</>} right={<Btn className="sm ghost" onClick={() => nav('/territory')}>Territory ›</Btn>}>
         <div className="bd"><HireHoodlums /></div>
       </Card>
     ),
@@ -222,7 +223,7 @@ function BoostCard() {
   const buy = (side: 'attack' | 'defense') =>
     run(() => api.buyBoost(side), { ok: () => b.active ? `Boost extended another ${hours}h` : `${label(side)} for ${hours}h` })
   return (
-    <Card id="boost" title="⚡ Boost" right={b.active && b.until ? <small className="gold">{timeLeft(b.until, now)} left</small> : <small>💎 {cost} · {hours}h</small>}>
+    <Card id="boost" title={<><Icon name="bolt" size={18} />Boost</>} right={b.active && b.until ? <small className="gold">{timeLeft(b.until, now)} left</small> : <small><Icon name="gem" size={12} /> {cost} · {hours}h</small>}>
       <div className="bd stack">
         {b.active && b.side ? (
           <>
@@ -231,19 +232,19 @@ function BoostCard() {
                 <div className="t">{label(b.side)} <span className="muted small">in {where(b.side)}</span></div>
                 <div className="small muted">Running — {timeLeft(b.until, now)} left. Buying again adds another {hours} hours.</div>
               </div>
-              <Btn className="sm" disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>Extend · 💎 {cost}</Btn>
+              <Btn className="sm" disabled={me.diamonds < cost} onClick={() => buy(b.side!)}>Extend · <Icon name="gem" size={13} /> {cost}</Btn>
             </div>
             <div className="small muted">One side at a time: you can switch to {other(b.side)} once this one runs out.</div>
-            {me.diamonds < cost && <div className="why">Extending costs 💎 {cost} — you have 💎 {num(me.diamonds)}.</div>}
+            {me.diamonds < cost && <div className="why">Extending costs {cost} diamonds — you have {num(me.diamonds)}.</div>}
           </>
         ) : (
           <>
             <div className="small">{cost} diamonds buys {label('attack')} in your Offense setup <b>or</b> {label('defense')} in your Defense setup for {hours} hours. One side at a time — while a boost runs you can extend it, and when it runs out you can pick either side again.</div>
             <div className="grid2">
-              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · 💎 {cost}</Btn>
-              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · 💎 {cost}</Btn>
+              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('attack')}>{label('attack')} · <Icon name="gem" size={13} /> {cost}</Btn>
+              <Btn className="gold" disabled={me.diamonds < cost} onClick={() => buy('defense')}>{label('defense')} · <Icon name="gem" size={13} /> {cost}</Btn>
             </div>
-            {me.diamonds < cost && <div className="why">A boost costs 💎 {cost} — you have 💎 {num(me.diamonds)}.</div>}
+            {me.diamonds < cost && <div className="why">A boost costs {cost} diamonds — you have {num(me.diamonds)}.</div>}
             {b.side && <div className="small muted">Your last boost was {b.side}.</div>}
           </>
         )}
@@ -265,7 +266,7 @@ function Milestones() {
   const ladder = (k: MilestoneKind) => defs.filter(m => !m.repeat && m.kind === k).sort((a, b) => a.n - b.n)
   const amount = (k: MilestoneKind, n: number) => (k === 'wagered' ? money(n) : num(n))
   return (
-    <Card id="milestones" title="🏅 Milestones" right={<small>💎 {num(me.diamonds)}</small>}>
+    <Card id="milestones" title={<><Icon name="award" size={18} />Milestones</>} right={<small className="dia"><Icon name="gem" size={12} /> {num(me.diamonds)}</small>}>
       {repeats.map(m => {
         const total = milestoneTotal(me, m.kind), { at, from } = nextRepeat(m, total)
         return (
@@ -275,7 +276,7 @@ function Milestones() {
               <div className="s tabular">{amount(m.kind, total)} so far · next at {amount(m.kind, at)}</div>
               <div className="track"><div className="fill" style={{ width: `${Math.min(100, ((total - from) / m.n) * 100)}%` }} /></div>
             </div>
-            <b className="dia nowrap">💎 {m.reward}</b>
+            <b className="dia nowrap"><Icon name="gem" size={13} /> {m.reward}</b>
           </div>
         )
       })}
@@ -288,7 +289,7 @@ function Milestones() {
                 <b>{k === 'actions' ? 'Actions' : k === 'wins' ? 'Fight wins' : k === 'fights' ? 'All fights' : 'Casino wagered'}</b>
                 {ladder(k).map(m => {
                   const done = milestoneTotal(me, k) >= m.n
-                  return <span key={m.key} className={done ? 'done' : ''}>{done ? '✓' : '·'} {k === 'wagered' ? money(m.n) : num(m.n)} → 💎 {m.reward}</span>
+                  return <span key={m.key} className={done ? 'done' : ''}>{done ? <Icon name="check" size={11} className="green" /> : '·'} {k === 'wagered' ? money(m.n) : num(m.n)} → <Icon name="gem" size={12} /> {m.reward}</span>
                 })}
               </div>
             ))}

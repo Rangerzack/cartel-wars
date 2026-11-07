@@ -155,7 +155,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // call gets one more try after a beat (`first`) before its error shows; the poll a minute later would mend it
   // anyway, but a minute on "Entering the city…" is a long first impression.
   const seq = useRef(0)
-  const refresh = useCallback(async (first = false) => {
+  const refresh = useCallback(async function go(first = false) {
     const n = ++seq.current
     const land = (m: Me) => { if (n < seq.current) return; gotAt.current = Date.now(); setClock(m.server_time, gotAt.current); setMeAt(gotAt.current); setMe(m) }
     try {
@@ -166,7 +166,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // profile missing (trigger not installed?) — create it
         try { land(await api.ensureProfile()) } catch (e2) { failed(e2, 'me') }
       } else if (first && !isNetworkError(e) && !loaded.current.me) {
-        setTimeout(() => refresh(), 800)
+        setTimeout(() => go(), 800)
       } else {
         failed(e, 'me')
       }

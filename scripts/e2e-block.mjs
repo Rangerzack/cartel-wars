@@ -52,14 +52,14 @@ try {
 
   // Bo opens a DM with Ana and says hello
   await b.goto(`${BASE}/player/${aId}`)
-  await b.getByRole('button', { name: '💬 Chat' }).click()
+  await b.getByRole('button', { name: 'Chat' }).click()
   await b.getByPlaceholder('Say something…').fill('before the block')
   await b.getByRole('button', { name: 'Send' }).click()
   await b.locator('.msg', { hasText: 'before the block' }).waitFor()
 
   // Ana blocks him from his profile (the harness accepts the confirm)
   await a.goto(`${BASE}/player/${bId}`)
-  await a.getByRole('button', { name: '🚫 Block' }).click()
+  await a.getByRole('button', { name: 'Block' }).click()
   await a.getByText(`${N('Bo')} blocked`, { exact: true }).waitFor()
   if (!dialogs.some(d => d === `Block ${N('Bo')}? They can't message you and their posts are hidden. You can undo this from your Profile.`))
     throw new Error('confirm text: ' + JSON.stringify(dialogs))
@@ -111,11 +111,11 @@ try {
   // Thugs and you yourself have no Block button
   const thug = (await one('select id from profiles where is_bot order by bot_level limit 1')).id
   await a.goto(`${BASE}/player/${thug}`)
-  await a.getByRole('button', { name: '⚔️ Attack' }).waitFor()
-  if (await a.getByRole('button', { name: '🚫 Block' }).count()) throw new Error('no blocking thugs')
+  await a.getByRole('button', { name: 'Attack' }).waitFor()
+  if (await a.getByRole('button', { name: 'Block' }).count()) throw new Error('no blocking thugs')
   await a.goto(`${BASE}/player/${aId}`)
   await a.getByText(N('Ana')).first().waitFor()
-  if (await a.getByRole('button', { name: '🚫 Block' }).count()) throw new Error('no blocking yourself')
+  if (await a.getByRole('button', { name: 'Block' }).count()) throw new Error('no blocking yourself')
 
   console.log('E2E BLOCK PASSED')
 } catch (e) {

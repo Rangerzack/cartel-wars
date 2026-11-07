@@ -90,17 +90,17 @@ try {
   // Actions: stamina-full dot, sort by $ per stamina (remembered)
   await tabBadge(a, 'Actions').waitFor()
   await a.goto(BASE + '/actions')
-  await a.getByRole('button', { name: 'Best $ per ⚡' }).click()
+  await a.getByRole('button', { name: 'Best $ per stamina' }).click()
   // runnable jobs first (Do It enabled — full stamina), each group sorted by $ per stamina
   const rows = await a.locator('.row.action').evaluateAll(rs => rs.map(r => ({
-    rate: Number((r.textContent.match(/~\$([\d,]+)\/⚡/) || [])[1]?.replace(/,/g, '') ?? -1),
+    rate: Number((r.textContent.match(/~\$([\d,]+)\//) || [])[1]?.replace(/,/g, '') ?? -1),
     open: !r.querySelector('button.doit').disabled })))
   const sortedGroup = g => g.every((r, i) => r.rate >= 0 && (!i || r.rate <= g[i - 1].rate))
   const firstLocked = rows.findIndex(r => !r.open)
   if (!rows[0].open || (firstLocked >= 0 && rows.slice(firstLocked).some(r => r.open)) || !sortedGroup(rows.filter(r => r.open)) || !sortedGroup(rows.filter(r => !r.open)))
     throw new Error('not sorted runnable-first by $ per stamina: ' + JSON.stringify(rows))
   await a.reload()
-  await a.locator('.seg.sm button.on', { hasText: 'Best $ per ⚡' }).waitFor()
+  await a.locator('.seg.sm button.on', { hasText: 'Best $ per stamina' }).waitFor()
   await snap(a, 'actions-sorted')
   await a.getByRole('button', { name: 'Reputation' }).click()
   await a.locator('.row.action', { hasText: /reputation/ }).first().waitFor()

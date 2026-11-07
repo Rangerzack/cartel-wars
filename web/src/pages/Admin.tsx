@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { ago } from '../lib/format'
+import { ago, num } from '../lib/format'
 import { Btn, Card, Empty, Loading, Seg } from '../components/ui'
 import { PlayerLink } from '../components/Linked'
 import { BackBar } from '../components/BackBar'
 import { BOARDS } from './Forum'
-import type { BannedWord, ModAction, ModQueueItem, ModReport, ReportKind, WordMatch } from '../lib/types'
+import type { BannedWord, ModAction, ModQueueItem, ModReport, ReportKind, SeasonRow, WordMatch } from '../lib/types'
 import { useLoad } from '../lib/useLoad'
 import { useParam } from '../lib/useParam'
+import { useNow } from '../lib/useNow'
+import { Glyph } from '../components/Icon'
 
-type Tab = 'reports' | 'log' | 'words'
+type Tab = 'reports' | 'log' | 'words' | 'seasons'
 
 const kindLabel: Record<ReportKind, string> = { profile: 'Profile', message: 'Message', forum_thread: 'Thread', forum_post: 'Reply' }
 const reasonLabel: Record<string, string> = {
@@ -42,15 +44,16 @@ const when = (at: string) => new Date(at).toLocaleString()
 /** Admin tools: reported profiles, the moderation log and the word filter. */
 export default function Admin() {
   const me = useMe()
-  const [tab, setTab] = useParam<Tab>('tab', ['reports', 'log', 'words'], 'reports')
+  const [tab, setTab] = useParam<Tab>('tab', ['reports', 'log', 'words', 'seasons'], 'reports')
   if (!me.is_admin) return <div className="page"><BackBar fallback="/" /><Empty>Admins only.</Empty></div>
   return (
     <div className="page">
       <BackBar fallback="/" />
-      <Seg value={tab} onChange={setTab} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }]} />
+      <Seg value={tab} onChange={setTab} options={[{ v: 'reports', l: `Reports${me.reports_open ? ` (${me.reports_open})` : ''}` }, { v: 'log', l: 'Log' }, { v: 'words', l: 'Word Filter' }, { v: 'seasons', l: 'Seasons' }]} />
       {tab === 'reports' && <Reports />}
       {tab === 'log' && <Log />}
       {tab === 'words' && <Words />}
+      {tab === 'seasons' && <Seasons />}
     </div>
   )
 }
@@ -70,7 +73,7 @@ export function ModButtons({ id, name, onDone, dismiss, mutedUntil }: { id: stri
     <div className="stack" style={{ gap: 6 }}>
       <div className="hstack mod-buttons">
         <Btn className="sm red" onClick={act('reset_name', `Reset ${name}'s name? They get a placeholder and pick a new one.`, `${name}'s name reset — they'll pick a new one`)}>Reset Name</Btn>
-        <Btn className="sm" onClick={act('reset_avatar', `Reset ${name}'s avatar to 🕶️?`, 'Avatar reset')}>Reset Avatar</Btn>
+        <Btn className="sm" onClick={act('reset_avatar', `Reset ${name}'s avatar to the default?`, 'Avatar reset')}>Reset Avatar</Btn>
         <Btn className="sm" onClick={act('clear_bio', `Clear ${name}'s bio?`, 'Bio cleared')}>Clear Bio</Btn>
         {dismiss && <Btn className="sm ghost" onClick={act('dismiss', `Dismiss the reports on ${name}? Nothing on their profile changes.`, 'Reports dismissed')}>Dismiss</Btn>}
       </div>
@@ -207,6 +210,108 @@ function Words() {
           </div>
         </Card>
       ))}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Seasons: the one running, the next one scheduled, the ones over (docs/seasons.md is the runbook)
+// ---------------------------------------------------------------------------------------------------------------------
+const DEFENDERS = '50000, 150000, 500000, 1000000, 2500000, 5000000, 10000000'
+/** $50k, $2.5M: a garrison's worth in troops, short. */
+const short = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 1 })}M` : `$${Math.round(v / 1000)}k`
+const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+/** A datetime-local value (local time, to the minute) for an instant. */
+const local = (d: Date) => { const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}` }
+const parseDefenders = (s: string) => s.split(/[\s,·]+/).filter(Boolean).map(Number)
+
+function SeasonLine({ s }: { s: SeasonRow }) {
+  return (
+    <>
+      <div className="small muted">{day(s.starts_at)} – {day(s.ends_at)} · {num(s.players)} player{s.players === 1 ? '' : 's'} with a hood · {num(s.bosses)} took the boss</div>
+      <div className="hstack wrap">{s.businesses.map((b, i) => <span key={b.code} className="pill"><Glyph e={b.icon} size={12} /> {i + 1} · {b.name}</span>)}</div>
+      <div className="small muted tabular">Garrisons {s.defenders.slice(0, 6).map(short).join(' · ')} · boss {short(s.defenders[6])}</div>
+    </>
+  )
+}
+
+function Seasons() {
+  const { run, ask } = useGame()
+  const now = useNow(30_000)
+  const { data: list, error, reload, set } = useLoad(() => api.seasonList())
+  const running = list?.find(s => s.status === 'running')
+  const scheduled = list?.find(s => s.status === 'scheduled')
+  const [name, setName] = useState('')
+  const [from, setFrom] = useState('')
+  const [months, setMonths] = useState(3)
+  const [defs, setDefs] = useState(DEFENDERS)
+  if (!list) return <Loading error={error} onRetry={reload} />
+  const nextName = name || `Season ${list.filter(s => s.status !== 'cancelled').length + 1}`
+  // the next season starts the moment this one ends (to the second, so the two never overlap), unless the form says otherwise
+  const fromAt = from ? new Date(from) : running ? new Date(running.ends_at) : new Date(now)
+  const fromValue = from || local(fromAt)
+  const startsNow = fromAt.getTime() <= now + 60_000
+  const defenders = parseDefenders(defs)
+  const defsOk = defenders.length === 7 && defenders.every(n => Number.isInteger(n) && n > 0)
+  const start = async () => {
+    const when = startsNow ? 'now' : `on ${day(fromAt.toISOString())}`
+    if (!await ask(`${startsNow ? 'Start' : 'Schedule'} ${nextName} ${when}? Six businesses are drawn at random; every player gets a fresh hood and Marcus starts over. Nobody's cash, gear or crew changes.`, { title: `${startsNow ? 'Start' : 'Schedule'} ${nextName}?`, yes: startsNow ? 'Start It' : 'Schedule It', tone: 'gold' })) return
+    const r = await run(() => api.seasonStart(nextName, (startsNow ? new Date() : fromAt).toISOString(), months, defenders), { ok: () => `${nextName} ${startsNow ? 'is on' : 'scheduled'}` })
+    if (r) { setName(''); setFrom(''); reload() }
+  }
+  const end = async (s: SeasonRow) => {
+    if (!await ask(`End ${s.name} now? Hoods and campaign progress stop counting from this moment; profiles, cash and gear are untouched. ${scheduled ? `${scheduled.name} will take over when its date comes.` : 'With nothing scheduled the city plays with no season (every tab open) until the next one starts.'}`, { title: `End ${s.name}?`, yes: 'End It', tone: 'red' })) return
+    const r = await run(() => api.seasonEnd(s.id), { ok: () => `${s.name} is over` })
+    if (r) reload()
+  }
+  const cancel = async (s: SeasonRow) => {
+    if (!await ask(`Cancel ${s.name}? It hasn't started; nothing else changes.`, { title: `Cancel ${s.name}?`, yes: 'Cancel It', tone: 'red' })) return
+    const r = await run(() => api.seasonCancel(s.id), { ok: () => `${s.name} cancelled` })
+    if (r) set(list.map(x => (x.id === s.id ? { ...x, status: 'cancelled' as const, cancelled_at: r.season.cancelled_at } : x)))
+  }
+  return (
+    <>
+      {running ? (
+        <Card title={running.name} right={<small>running · ends {day(running.ends_at)}</small>} className="season-row" id="season-running">
+          <div className="bd stack">
+            <SeasonLine s={running} />
+            <Btn className="sm ghost red" onClick={() => end(running)}>End Season Now</Btn>
+          </div>
+        </Card>
+      ) : (
+        <div className="notice blue"><span className="small">No season is running: every tab is open and Home shows Getting Started. Start one below.</span></div>
+      )}
+      {scheduled ? (
+        <Card title={scheduled.name} right={<small>starts {day(scheduled.starts_at)}</small>} className="season-row" id="season-scheduled">
+          <div className="bd stack">
+            <SeasonLine s={scheduled} />
+            <Btn className="sm ghost" onClick={() => cancel(scheduled)}>Cancel</Btn>
+          </div>
+        </Card>
+      ) : (
+        <Card title="Next season" id="season-next">
+          <div className="bd stack">
+            <div className="small muted">Starts {running ? `the moment ${running.name} ends unless you pick a time` : 'now unless you pick a time'}. The six businesses are drawn when it starts.</div>
+            <label className="small stack" style={{ gap: 4 }}>Name<input className="input" placeholder={nextName} maxLength={40} value={name} onChange={e => setName(e.target.value)} /></label>
+            <label className="small stack" style={{ gap: 4 }}>Starts<input className="input" type="datetime-local" value={fromValue} onChange={e => setFrom(e.target.value)} /></label>
+            <label className="small stack" style={{ gap: 4 }}>Months<input className="input" type="number" min={1} max={12} value={months} onChange={e => setMonths(Math.max(1, Math.min(12, Math.floor(Number(e.target.value) || 1))))} /></label>
+            <label className="small stack" style={{ gap: 4 }}>Troop value per garrison in dollars, blocks 1–6 and the boss<input className="input" value={defs} onChange={e => setDefs(e.target.value)} aria-invalid={!defsOk} /></label>
+            <div className="small muted">A block is held by that much muscle, half thugs and half enforcers; the player's thugs and mercs take it the way they'd take a city block.</div>
+            {!defsOk && <div className="why">Seven whole numbers above zero.</div>}
+            <Btn className="doit block" disabled={!defsOk || !Number.isFinite(fromAt.getTime())} onClick={start}>{startsNow ? `Start ${nextName} Now` : `Schedule ${nextName}`}</Btn>
+          </div>
+        </Card>
+      )}
+      <Card title="Past seasons" right={<small>{list.filter(s => s.status === 'over').length}</small>}>
+        {list.filter(s => s.status === 'over' || s.status === 'cancelled').length === 0 && <Empty>None yet.</Empty>}
+        {list.filter(s => s.status === 'over' || s.status === 'cancelled').map(s => (
+          <div key={s.id} className="row">
+            <div className="grow"><div className="t">{s.name}{s.status === 'cancelled' && <span className="muted"> · cancelled</span>}</div>
+              <div className="s">{s.status === 'cancelled' ? `was to start ${day(s.starts_at)}` : `${day(s.starts_at)} – ${day(s.ends_at)} · ${num(s.players)} players · ${num(s.bosses)} took the boss`}</div></div>
+          </div>
+        ))}
+      </Card>
+      <div className="small muted">A rollover resets each player's hood, missions and hood perks. It never touches cash, bank, diamonds, gear, slots, crews, reputation, grow houses or territory. The old season's rows stay as history.</div>
     </>
   )
 }

@@ -6,6 +6,7 @@ import { perk } from '../lib/perks'
 import type { BusinessCode } from '../lib/types'
 import { Btn, Qty } from './ui'
 import { PerkTag } from './Perk'
+import { Glyph } from './Icon'
 
 /** Hiring hoodlums wherever they're needed: the Services card, the top of Territory, and a block's attack sheet when
  *  you're short of thugs. The price mirrors buy_hoodlums: base × count, climbing with how many you already hold
@@ -32,7 +33,7 @@ export function HireHoodlums({ initial, kinds, btnClass = 'doit', onHired }: {
     <div className="stack hire">
       {list.length > 1 && (
         <div className="seg">
-          {list.map(h => <button key={h.code} className={hdef.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}>{hoodlumIcon[h.code]} {h.name}</button>)}
+          {list.map(h => <button key={h.code} className={hdef.code === h.code ? 'on' : ''} onClick={() => setHood({ ...hood, code: h.code })}><Glyph e={hoodlumIcon[h.code]} size={13} /> {h.name}</button>)}
         </div>
       )}
       <div className="small muted">

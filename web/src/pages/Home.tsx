@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Glyph, Icon } from '../components/Icon'
 import { api } from '../lib/api'
 import type { ActivityItem, FightLog } from '../lib/types'
 import { useGame, useMe } from '../lib/game'
@@ -15,7 +16,8 @@ import { NextUp } from '../components/NextUp'
 import { Marcus } from '../components/Marcus'
 import { gateOf, isLocked, LOCK_LINE } from '../lib/gate'
 
-type Tile = { to: string; ic: string; l: string; badge?: { n: number; tone: 'red' | 'gold'; label: string } }
+type Tile = { to: string; ic: ReactNode; l: string; cls?: string; badge?: { n: number; tone: 'red' | 'gold'; label: string } }
+const T = 26   // a quick tile's icon size
 
 export default function Home() {
   const me = useMe()
@@ -39,18 +41,18 @@ export default function Home() {
   const hoodReady = me.home?.ready_cash ?? 0
   const tiles: Tile[] = [
     // Season 1: your hood first, with what's waiting in it
-    ...(me.season && me.home ? [{ to: '/hood', ic: '🏘', l: 'Your Hood',
+    ...(me.season && me.home ? [{ to: '/territory?focus=hood', ic: <Icon name="hood" size={T} />, l: 'Your Hood', cls: 'gold',
       badge: hoodReady ? { n: Math.min(99, Math.round(hoodReady / 1000)) || 1, tone: 'gold' as const, label: `${money(hoodReady)} waiting` } : undefined } as Tile] : []),
-    { to: '/items', ic: '🎒', l: 'Items' },
-    { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew?.emblem ?? '🏴', l: me.crew?.name ?? 'Crew',
+    { to: '/items', ic: <Icon name="pack" size={T} />, l: 'Items' },
+    { to: me.crew ? `/crew/${me.crew.id}` : '/crew', ic: me.crew ? <Glyph e={me.crew.emblem} size={T} /> : <Icon name="flag" size={T} />, l: me.crew?.name ?? 'Crew',
       badge: crewWaiting ? { n: crewWaiting, tone: 'red', label: `${crewWaiting} waiting on you` } : undefined },
-    { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: '🕴', l: 'Cartel' },
-    { to: '/territory', ic: '🗺', l: 'Territory' },
-    { to: '/casino', ic: '🎰', l: 'Casino' },
-    features.forum ? { to: '/forum', ic: '🗣', l: 'Forum' } : { to: '/fight?tab=top', ic: '🏆', l: 'Top Users' },
-    { to: '/activity', ic: '📰', l: 'Activity', badge: unread ? { n: unread, tone: 'red', label: `${unread} new` } : undefined },
-    { to: '/accolades', ic: '🎖', l: 'Accolades', badge: stripes ? { n: stripes, tone: 'gold', label: `${stripes} stripe${stripes > 1 ? 's' : ''} this week` } : undefined },
-    { to: '/store', ic: '💎', l: 'Store' },
+    { to: me.cartel ? `/cartel/${me.cartel.id}` : '/cartel', ic: <Icon name="users" size={T} />, l: 'Cartel' },
+    { to: '/territory', ic: <Icon name="map" size={T} />, l: 'Territory' },
+    { to: '/casino', ic: <Icon name="dice" size={T} />, l: 'Casino' },
+    features.forum ? { to: '/forum', ic: <Icon name="horn" size={T} />, l: 'Forum' } : { to: '/fight?tab=top', ic: <Icon name="trophy" size={T} />, l: 'Top Users' },
+    { to: '/activity', ic: <Icon name="news" size={T} />, l: 'Activity', badge: unread ? { n: unread, tone: 'red', label: `${unread} new` } : undefined },
+    { to: '/accolades', ic: <Icon name="award" size={T} />, l: 'Accolades', badge: stripes ? { n: stripes, tone: 'gold', label: `${stripes} stripe${stripes > 1 ? 's' : ''} this week` } : undefined },
+    { to: '/store', ic: <Icon name="store" size={T} />, l: 'Store' },
   ]
 
   return (
@@ -72,9 +74,9 @@ export default function Home() {
 
       {/* Cash and diamonds are already in the top bar (P3-19); Storage replaces the old Storage card and opens Economy, where Expand is */}
       <div className="grid3">
-        <Stat k="Heat" v={`🔥 ${num(me.heat)}/${num(me.heat_max)}`} cls={me.heat >= heatRed ? 'red' : ''} />
-        <Stat k="Bank" v={money(me.bank)} />
-        <Stat k="Reputation" v={`⭐ ${num(me.reputation)}`} cls="dia" />
+        <Stat k="Heat" icon="flame" iconCls="red" v={`${num(me.heat)}/${num(me.heat_max)}`} cls={me.heat >= heatRed ? 'red' : ''} />
+        <Stat k="Bank" icon="bank" iconCls="gold" v={money(me.bank)} />
+        <Stat k="Reputation" icon="star" iconCls="dia" v={num(me.reputation)} />
         <Stat k="Attack" v={off.att} />
         <Stat k="Defense" v={def.def} />
         <Link to="/economy" className="stat-link"><Stat k="Storage" v={`${num(me.storage_used)}/${num(me.storage_cap)}`} /></Link>
@@ -83,11 +85,11 @@ export default function Home() {
       <nav className="quick" aria-label="More places">
         {tiles.map(t => isLocked(me, gateOf(t.to)) ? (
           <a key={t.l} href={t.to} className="locked" aria-label={`${t.l}, locked`} onClick={e => { e.preventDefault(); toast(LOCK_LINE, 'bad') }}>
-            <span className="ico"><span className="ic">{t.ic}</span><span className="tbadge lock" aria-hidden>🔒</span></span>
+            <span className="ico"><span className="ic">{t.ic}</span><span className="tbadge lock" aria-hidden><Icon name="lock" size={9} stroke={2.4} /></span></span>
             <span className="lbl">{t.l}</span>
           </a>
         ) : (
-          <Link key={t.l} to={t.to} aria-label={t.badge ? `${t.l}, ${t.badge.label}` : undefined}>
+          <Link key={t.l} to={t.to} className={t.cls} aria-label={t.badge ? `${t.l}, ${t.badge.label}` : undefined}>
             <span className="ico">{t.ic}{t.badge && <span className={`tbadge ${t.badge.tone}`}>{t.badge.n > 99 ? '99+' : t.badge.n}</span>}</span>
             <span className="lbl">{t.l}</span>
           </Link>
@@ -108,7 +110,7 @@ export default function Home() {
             // a player who deleted their account has no profile to open
             const other = otherId ? (f.i_attacked ? f.defender : f.attacker) : <span className="muted">Deleted player</span>
             const body = <>
-              <span>{f.won ? '🏆' : '💀'}</span>
+              <span className={`ico ${f.won ? 'gold' : 'red'}`}><Icon name={f.won ? 'trophy' : 'skull'} size={18} /></span>
               <div className="grow"><div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div><div className="s">{f.won ? 'won' : 'lost'} · {ago(f.at)}</div></div>
               {f.cash === 0 ? <span className="tabular muted">$0</span> : <b className={`tabular ${f.won ? 'gold' : 'red'}`}>{f.won ? '+' : '−'}{money(f.cash)}</b>}
             </>

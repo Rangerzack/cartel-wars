@@ -8,6 +8,7 @@ import { BailButton } from '../components/Bail'
 import { HealButton } from '../components/Heal'
 import type { ActionDef, RareFind, RecentFind } from '../lib/types'
 import { haptic } from '../lib/haptics'
+import { Glyph, Icon } from '../components/Icon'
 
 type Sort = 'default' | 'cash' | 'rep'
 type Result = { a: ActionDef; pay: number; rep: number; busted: boolean; heat: number; stamina: number }
@@ -86,13 +87,13 @@ export default function Actions() {
 
       <div className="spread">
         {session.jobs > 0
-          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'}{session.cash !== 0 && <> · <b className={session.cash > 0 ? 'gold' : 'red'}>{session.cash > 0 ? '+' : '−'}{money(Math.abs(session.cash))}</b></>}{session.rep > 0 && <> · <b className="dia">⭐ +{num(session.rep)}</b></>}{session.finds > 0 && <> · <b className="find-tag">🎁 {session.finds}</b></>}</div>
+          ? <div className="session-tally tabular">This session: <b>{num(session.jobs)}</b> {session.jobs === 1 ? 'job' : 'jobs'}{session.cash !== 0 && <> · <b className={session.cash > 0 ? 'gold' : 'red'}>{session.cash > 0 ? '+' : '−'}{money(Math.abs(session.cash))}</b></>}{session.rep > 0 && <> · <b className="dia"><Icon name="star" size={12} /> +{num(session.rep)}</b></>}{session.finds > 0 && <> · <b className="find-tag"><Icon name="gift" size={12} /> {session.finds}</b></>}</div>
           : <div className="small muted">Tap Do It — results show right on the job.</div>}
         <label className="toggle small"><input type="checkbox" checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Can do now</label>
       </div>
       {!me.jailed && (
         <div className="seg sm">
-          {([['default', 'All jobs'], ['cash', 'Best $ per ⚡'], ['rep', 'Reputation']] as const).map(([v, l]) =>
+          {([['default', 'All jobs'], ['cash', 'Best $ per stamina'], ['rep', 'Reputation']] as const).map(([v, l]) =>
             <button key={v} className={sort === v ? 'on' : ''} onClick={() => setSort(v)}>{l}</button>)}
         </div>
       )}
@@ -110,33 +111,33 @@ export default function Actions() {
                 <div className="t">{a.name}</div>
                 <div className="s">{a.description}</div>
                 <div className="s tabular">
-                  <span className="stam">⚡ {a.stamina_cost}</span>
+                  <span className="stam"><Icon name="bolt" size={12} /> {a.stamina_cost}</span>
                   {' · '}
-                  {a.effect === 'go_to_jail' ? <span>🔒 jail until you post bail</span> : a.pay_rep > 0 ? <span className="dia">⭐ +{a.pay_rep} reputation</span> : <span className="gold">{money(a.pay_min)}–{money(a.pay_max)}</span>}
-                  {a.heat_gain > 0 && <> · <span className="red">🔥 +{a.heat_gain}</span></>}
+                  {a.effect === 'go_to_jail' ? <span><Icon name="lock" size={12} /> jail until you post bail</span> : a.pay_rep > 0 ? <span className="dia"><Icon name="star" size={12} /> +{a.pay_rep} reputation</span> : <span className="gold">{money(a.pay_min)}–{money(a.pay_max)}</span>}
+                  {a.heat_gain > 0 && <> · <span className="red"><Icon name="flame" size={12} /> +{a.heat_gain}</span></>}
                   {a.cash_cost > 0 && <> · <span className={block === 'cash' ? 'red' : ''}>costs {money(a.cash_cost)}</span></>}
                   {a.requires_item && <> · <span className={block === 'item' ? 'red' : 'green'}>needs {itemName(a.requires_item)}</span></>}
                   {a.min_crew > 0 && <> · <span className={block === 'crew' ? 'red' : 'green'}>crew of {a.min_crew}</span></>}
-                  {perStamina(a) > 0 && a.pay_rep === 0 && <span className="muted"> · ~{money(perStamina(a))}/⚡</span>}
-                  {tired && !me.hospital && <> · <span className="red">need ⚡{a.stamina_cost} · tap to refill</span></>}
+                  {perStamina(a) > 0 && a.pay_rep === 0 && <span className="muted"> · ~{money(perStamina(a))}/<Icon name="bolt" size={11} /></span>}
+                  {tired && !me.hospital && <> · <span className="red">need <Icon name="bolt" size={11} />{a.stamina_cost} · tap to refill</span></>}
                 </div>
-                {a.drop_item && <div className="find-tag">🎁 Rare find: <b>{itemName(a.drop_item)}</b> · {dropOdds(a.stamina_cost, catalog.config.drop_stamina)}</div>}
+                {a.drop_item && <div className="find-tag"><Icon name="gift" size={12} /> Rare find: <b>{itemName(a.drop_item)}</b> · {dropOdds(a.stamina_cost, catalog.config.drop_stamina)}</div>}
                 {f && (
                   <div key={f.key} className="action-result tabular">
-                    {f.rep > 0 ? <b className="dia">⭐ +{f.rep} rep</b> : <b className="gold">+{money(f.pay)}</b>}
-                    <span className="muted"> · ⚡ {num(f.stamina)} left · 🔥 {num(f.heat)}</span>
+                    {f.rep > 0 ? <b className="dia"><Icon name="star" size={12} /> +{f.rep} rep</b> : <b className="gold">+{money(f.pay)}</b>}
+                    <span className="muted"> · <Icon name="bolt" size={11} /> {num(f.stamina)} left · <Icon name="flame" size={11} /> {num(f.heat)}</span>
                   </div>
                 )}
               </div>
               <div className="doit-wrap">
                 <Btn className="doit" label={`Do It: ${a.name}`} disabled={!!cant} onClick={() => tired ? askRefill(a.stamina_cost) : go(a)}>Do It</Btn>
-                {f && <span key={f.key} className="floater">{f.rep > 0 ? `⭐+${f.rep}` : `+${money(f.pay)}`}</span>}
+                {f && <span key={f.key} className="floater">{f.rep > 0 ? `+${f.rep} rep` : `+${money(f.pay)}`}</span>}
               </div>
             </div>
           )
         })}
       </Card>
-      <Card title="🎁 Rare finds" right={<small>bigger jobs, better odds</small>}>
+      <Card title={<><Icon name="gift" size={18} />Rare finds</>} right={<small>bigger jobs, better odds</small>}>
         <div className="bd stack">
           <div className="small muted">Every job can turn up one of four items you can't buy — each the best of its kind: {catalog.items.filter(i => i.drop_only).map(i => `${i.name} (${[i.att ? `att ${i.att}` : '', i.def ? `def ${i.def}` : ''].filter(Boolean).join(' / ')})`).join(', ')}. Bigger jobs have better odds: a 12-stamina job is 1 in 500.</div>
           {finds && finds.length === 0 && <div className="small muted">Nobody's found one yet.</div>}
@@ -150,7 +151,7 @@ export default function Actions() {
       {found && (
         <Modal title="Rare find" onClose={() => { const b = found.res; setFound(null); if (b.busted) setBust(b) }}>
           <div className="find-modal">
-            <div className="big">{findIcon[found.item.category]}</div>
+            <div className="big"><Glyph e={findIcon[found.item.category]} size={54} /></div>
             <div className="name">{found.item.name}</div>
             <div className="small muted tabular">{found.item.att ? `att ${found.item.att}` : ''}{found.item.att && found.item.def ? ' · ' : ''}{found.item.def ? `def ${found.item.def}` : ''} · you own {num(found.item.owned)}</div>
             <div className="small">Turned up on {found.res.a.name}. The best {found.item.category === 'jail_weapon' ? 'jail weapon' : found.item.category === 'transport' ? 'vehicle' : found.item.category} in the game — it can't be bought or sold.</div>

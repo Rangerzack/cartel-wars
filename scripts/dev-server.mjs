@@ -41,20 +41,33 @@ async function fnArgs(fn) {
   if (argCache.has(fn)) return argCache.get(fn)
   const { rows } = await pool.query(
     `select p.proargnames as names, array(select format_type(t, null) from unnest(p.proargtypes) t) as types
-       from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = $1 limit 1`, [fn])
-  const v = rows[0] ? { names: rows[0].names || [], types: rows[0].types } : null
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = $1`, [fn])
+  const v = rows.length ? rows.map(r => ({ names: r.names || [], types: r.types })) : null
   argCache.set(fn, v)
   return v
 }
 
+/** The overload the call fits, as PostgREST picks it: every named argument must be a parameter of it; among those,
+ *  the one with the most of its parameters supplied (home_attack(slot) vs home_attack(slot, thugs, mercs)). */
+function pickOverload(sigs, args) {
+  const keys = Object.keys(args)
+  const fits = sigs.filter(s => keys.every(k => s.names.includes(k)))
+  return fits.sort((a, b) => keys.filter(k => b.names.includes(k)).length - keys.filter(k => a.names.includes(k)).length || b.names.length - a.names.length)[0] ?? sigs[0]
+}
+
 async function rpc(fn, args, claims) {
-  const sig = await fnArgs(fn)
-  if (!sig) throw Object.assign(new Error(`function ${fn} not found`), { status: 404 })
+  const sigs = await fnArgs(fn)
+  if (!sigs) throw Object.assign(new Error(`function ${fn} not found`), { status: 404 })
+  const sig = pickOverload(sigs, args)
   const parts = [], vals = []
   sig.names.forEach((name, i) => {
     if (!(name in args)) return
     const v = args[name]
-    vals.push(v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v))
+    // a JSON array for an array parameter becomes a Postgres array literal, as PostgREST does (season_start's defenders)
+    const lit = Array.isArray(v) && sig.types[i].endsWith('[]')
+      ? '{' + v.map(x => x === null ? 'NULL' : typeof x === 'number' ? String(x) : '"' + String(x).replace(/(["\\])/g, '\\$1') + '"').join(',') + '}'
+      : v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v)
+    vals.push(lit)
     parts.push(`${name} := $${vals.length}::${sig.types[i]}`)
   })
   const client = await pool.connect()

@@ -10,6 +10,7 @@ import { ComboPill, StyleLine } from '../components/Combo'
 import { comboDef, comboFits, partLabel, tierName } from '../lib/combos'
 import { useLoad } from '../lib/useLoad'
 import { useParam } from '../lib/useParam'
+import { Glyph, Icon } from '../components/Icon'
 
 type Tab = 'players' | 'thugs' | 'log' | 'combos' | 'top'
 
@@ -30,8 +31,8 @@ export default function Fight() {
 }
 
 const FILTERS: { v: FighterStatus; l: string }[] = [
-  { v: 'all', l: 'All' }, { v: 'fight', l: '⚔️ Can fight' }, { v: 'online', l: '🟢 Online' },
-  { v: 'hospital', l: '🏥 Hospital' }, { v: 'jail', l: '🔒 Jail' },
+  { v: 'all', l: 'All' }, { v: 'fight', l: 'Can fight' }, { v: 'online', l: 'Online' },
+  { v: 'hospital', l: 'Hospital' }, { v: 'jail', l: 'Jail' },
 ]
 const SORTS: { v: FighterSort; l: string }[] = [
   { v: 'seen', l: 'Last seen' }, { v: 'wins', l: 'Most wins' }, { v: 'rep', l: 'Most rep' }, { v: 'name', l: 'Name' },
@@ -103,8 +104,8 @@ function Players() {
               <div className="t">{p.online && <span className="online-dot" title="Online now" />}{p.name} {p.crew && <span className="muted small">{p.crew.emblem} {p.crew.name}</span>}</div>
               <div className="s">{p.fights_won}W · {p.fights - p.fights_won}L · {p.online ? <span className="green">online now</span> : <>seen {ago(p.last_seen, now)}</>}</div>
             </div>
-            {p.hospital && <span className="pill red nowrap">🏥 Hospital</span>}
-            {p.jailed && <span className="pill red nowrap">🔒 Jail</span>}
+            {p.hospital && <span className="pill red nowrap"><Icon name="cross" size={12} />Hospital</span>}
+            {p.jailed && <span className="pill red nowrap"><Icon name="lock" size={12} />Jail</span>}
             <span className="chev">›</span>
           </RowLink>
         ))}
@@ -148,7 +149,7 @@ function Thugs() {
                 <div className="t">{t.name}{t.combo ? <> <ComboPill code={t.combo} /></> : null}</div>
                 <div className="s"><span className={cls}>{l} · {t.win_pct >= 100 ? '>99' : t.win_pct <= 0 ? '<1' : t.win_pct}%</span> · stash {money(t.stash)}{t.dry ? ' · dry for you this hour' : t.hits ? ` · hit ${t.hits}× this hour` : ''}</div>
               </div>
-              {t.hospital ? <span className="pill red">🏥</span> : <b className="tabular gold pay">~{money(worth(t))}</b>}
+              {t.hospital ? <span className="pill red"><Icon name="cross" size={12} label="in the hospital" /></span> : <b className="tabular gold pay">~{money(worth(t))}</b>}
               <span className="chev">›</span>
             </RowLink>
           )
@@ -170,7 +171,7 @@ function Log() {
         // a player who deleted their account has no profile to open
         const other = otherId ? (f.i_attacked ? f.defender : f.attacker) : <span className="muted">Deleted player</span>
         const body = <>
-          <span style={{ fontSize: 18 }}>{f.won ? '🏆' : '💀'}</span>
+          <span className={`ico ${f.won ? 'gold' : 'red'}`}><Icon name={f.won ? 'trophy' : 'skull'} size={18} /></span>
           <div className="grow">
             <div className="t">{f.i_attacked ? <>You attacked {other}</> : <>{other} attacked you</>}</div>
             <div className="s">{f.won ? 'Won' : 'Lost'} · dealt {f.i_attacked ? f.attacker_dmg : f.defender_dmg}, took {f.i_attacked ? f.defender_dmg : f.attacker_dmg} · {ago(f.at, now)}</div>
@@ -253,7 +254,7 @@ function Combos() {
           const n = att.reduce((a, [, v]) => a + v.n, 0), won = att.reduce((a, [, v]) => a + v.won, 0)
           return (
             <div key={st.code} className="row meta-row">
-              <span className="ico">{st.icon}</span>
+              <span className="ico"><Glyph e={st.icon} size={18} /></span>
               <div className="grow">
                 <div className="t">{st.name}</div>
                 <div className="meta-bars">
@@ -269,7 +270,7 @@ function Combos() {
       </Card>
 
       {styles.map(st => (
-        <Card key={st.code} title={<>{st.icon} {st.name} combos</>}>
+        <Card key={st.code} title={<><Glyph e={st.icon} size={18} />{st.name} combos</>}>
           {catalog.combos!.filter(c => c.style === st.code).map(c => {
             const mine = runs(c.code)
             return (
@@ -277,7 +278,7 @@ function Combos() {
                 <div className="grow">
                   <div className="t">{c.name} <span className="muted small">{tierName[c.tier]}{!comboFits(catalog, c, 'offense') ? ' · jail only' : comboFits(catalog, c, 'jail') ? ' · works in jail too' : ''}</span>{mine.map(s => <span key={s} className="pill gold nowrap">{setupName[s]}</span>)}</div>
                   <div className="s combo-parts">
-                    {c.parts.map((part, i) => <span key={i} className={owns(part) ? 'have' : ''}>{i > 0 && ' + '}{owns(part) ? '✓ ' : ''}{partLabel(catalog, part)}</span>)}
+                    {c.parts.map((part, i) => <span key={i} className={owns(part) ? 'have' : ''}>{i > 0 && ' + '}{owns(part) ? <Icon name="check" size={11} className="green" /> : null}{partLabel(catalog, part)}</span>)}
                   </div>
                 </div>
               </div>

@@ -113,8 +113,8 @@ export interface Me {
 // Season 1: the Personal Hood and the campaign
 // ---------------------------------------------------------------------------------------------------------------------
 export interface SeasonInfo { id: number; name: string; starts_at: string; ends_at: string; businesses?: string[] }
-/** The next fight in the hood: the defenders' number (their attack and defense) and the exact odds against my offense. */
-export interface HoodNext { defender: number; win_pct: number; my_att: number; my_def: number; stamina: number }
+/** The next fight in the hood: the garrison on the block (or around the boss), what it takes to get a fight, and the muscle I have. */
+export interface HoodNext { slot: number; thugs: number; enforcers: number; resistance: number; min_force: number; my_thugs: number; my_mercs: number; my_attack: number; stamina: number }
 export interface HoodBrief {
   cleared: number; boss: boolean; boss_ready: boolean; ready_cash: number; income_day: number; next: HoodNext | null; opened: boolean
 }
@@ -122,19 +122,21 @@ export interface HoodBlock {
   slot: number; business: string; name: string; icon: string; perk: string; category: string
   cleared: boolean; cleared_at: string | null; level: number
   income_day: number | null; ready: number; cap_at: string | null; upgrade_cost: number | null
-  defender: number; perk_value: number | null
+  /** the garrison: what the block was worth in troops this season, and who's left on it */
+  value: number; thugs: number; enforcers: number; resistance: number
+  perk_value: number | null
 }
 export interface HomeHood {
   season: SeasonInfo; opened: boolean
-  boss: { cleared: boolean; cleared_at: string | null; defender: number; ready: boolean }
+  boss: { cleared: boolean; cleared_at: string | null; value: number; thugs: number; enforcers: number; resistance: number; ready: boolean }
   cleared: number; next_slot: number | null; next: HoodNext | null
   ready_cash: number; income_day: number; collects: number
-  blocks: HoodBlock[]; perks: Record<string, number>; cfg: { cap_hours: number; boss_bonus: number }
+  blocks: HoodBlock[]; perks: Record<string, number>; cfg: { cap_hours: number; boss_bonus: number; stamina: number; min_force: number }
 }
+/** One fight for a block: the force sent, the roll, what each side lost, and the hood after. */
 export interface HoodFight {
-  won: boolean; slot: number; boss: boolean; defender: number; my_att: number; my_def: number
-  my_score: number; their_score: number; my_roll: number; their_roll: number; my_combo: string | null; my_combo_bonus: number
-  damage_taken: number; my_health: number; stamina: number; hood: HomeHood
+  won: boolean; slot: number; boss: boolean; attack: number; resistance: number; thugs: number; mercs: number
+  lost_thugs: number; lost_mercs: number; garrison_lost: number; garrison_left: number; stamina: number; hood: HomeHood
 }
 export interface MissionPart { label: string; done: boolean }
 export interface Mission {
@@ -147,6 +149,14 @@ export interface Mission {
 export type MissionCard = (Mission & { total: number }) | { finished: true; total: number }
 export interface MissionsState { season: SeasonInfo | null; missions: Mission[]; current: MissionCard | null; unlocked: string[] }
 export interface MissionClaim { claimed: string; reward_cash: number; reward_diamonds: number; unlocks: string[]; next: MissionCard | null; unlocked: string[] }
+/** The season board: who's furthest through the season (boss first, then blocks, then claims, then who got there first). */
+export interface SeasonBoardRow { rank: number; id: string; name: string; avatar: string; emblem: string | null; boss: boolean; cleared: number; claimed: number; at: string | null; me: boolean }
+export interface SeasonBoard { season: { id: number; name: string; ends_at: string } | null; rows: SeasonBoardRow[]; me: { rank: number; boss: boolean; cleared: number; claimed: number } | null; players: number }
+/** A season as the admin's list shows it: its draw by name, how many players had a hood and how many took the boss. */
+export interface SeasonRow {
+  id: number; name: string; starts_at: string; ends_at: string; cancelled_at?: string | null; status: 'scheduled' | 'running' | 'over' | 'cancelled'
+  businesses: { code: string; name: string; icon: string }[]; defenders: number[]; players: number; bosses: number
+}
 
 export type StyleCode = 'armored' | 'antitank' | 'infantry' | 'blitz' | 'blackout'
 /** A fighting style on the counter wheel: it beats two styles and loses to the other two. */

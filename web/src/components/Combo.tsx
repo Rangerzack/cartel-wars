@@ -4,15 +4,16 @@ import { useGame, useMe } from '../lib/game'
 import { comboDef, comboFits, comboStyle, missingParts, partLabel, styleOf, tierName } from '../lib/combos'
 import type { SetupKind } from '../lib/types'
 import { Btn, Card } from './ui'
+import { Glyph, Icon } from './Icon'
 
 /** "💣 Grenadier", colored by its style. Unknown shows as a question mark. */
 export function ComboPill({ code, unknown }: { code?: string | null; unknown?: boolean }) {
   const { catalog } = useGame()
   const c = comboDef(catalog, code)
   const s = styleOf(catalog, code)
-  if (unknown) return <span className="combo-pill unknown">❔ Unknown combo</span>
+  if (unknown) return <span className="combo-pill unknown"><Icon name="question" size={12} /> Unknown combo</span>
   if (!c || !s) return <span className="combo-pill none">No combo</span>
-  return <span className={`combo-pill st-${s.code}`}>{s.icon} {c.name}</span>
+  return <span className={`combo-pill st-${s.code}`}><Glyph e={s.icon} size={12} /> {c.name}</span>
 }
 
 /** Style line: "Blitz beats Infantry and Blackout · loses to Armored and Anti-Tank". */
@@ -22,7 +23,7 @@ export function StyleLine({ style }: { style?: string }) {
   if (!s) return null
   const name = (c: string) => catalog?.combo_styles?.find(x => x.code === c)?.name ?? c
   const losesTo = (catalog?.combo_styles ?? []).filter(x => x.beats.includes(s.code)).map(x => x.name)
-  return <span>{s.icon} <b>{s.name}</b> beats {s.beats.map(name).join(' and ')} · loses to {losesTo.join(' and ')}</span>
+  return <span><Glyph e={s.icon} size={13} /> <b>{s.name}</b> beats {s.beats.map(name).join(' and ')} · loses to {losesTo.join(' and ')}</span>
 }
 
 /** The combo panel on a setup: what it runs, a picker when it completes several, and the ones it's one item from. */
@@ -60,7 +61,7 @@ export function SetupCombo({ setup }: { setup: SetupKind }) {
                 return (
                   <Btn key={code} className={`sm ${on ? 'gold' : 'ghost'}`} disabled={on}
                     onClick={() => run(() => api.setCombo(setup, code), { ok: () => `${comboDef(catalog, code)?.name} it is` })}>
-                    {comboStyle(catalog, comboDef(catalog, code)?.style)?.icon} {comboDef(catalog, code)?.name}
+                    <Glyph e={comboStyle(catalog, comboDef(catalog, code)?.style)?.icon} size={13} /> {comboDef(catalog, code)?.name}
                   </Btn>
                 )
               })}

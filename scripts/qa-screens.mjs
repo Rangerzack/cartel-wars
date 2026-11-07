@@ -114,13 +114,13 @@ try {
   if (!SEASON) await sweep('', screens, broken, sizes)
   else {
     // the start of the campaign: the hood untouched, every gated tab locked, a profile with its Attack locked
-    await sweep('locked', ['/', '/hood', '/missions', '/items', '/actions', '/fight', `/player/${ids.rook}`, '/economy', '/services', '/casino', '/crew', '/territory', '/profile'], [], sizes)
+    await sweep('locked', ['/', '/territory?focus=hood', '/missions', '/items', '/actions', '/fight', `/player/${ids.rook}`, '/economy', '/services', '/casino', '/crew', '/profile'], [], sizes)
     // the campaign done: every mission claimed, the hood taken and the boss down
     await db.query(`insert into missions (player_id, season_id, key, completed_at, claimed_at) select $1, $2, key, now(), now() from mission_defs
                     on conflict (player_id, season_id, key) do update set completed_at = excluded.completed_at, claimed_at = excluded.claimed_at`, [me, season])
     await db.query(`update home_blocks set cleared_at = now(), collected_at = now() - interval '5 hours', level = 2 where player_id = $1 and season_id = $2`, [me, season])
     await db.query(`update home_hoods set opened_at = coalesce(opened_at, now()), boss_cleared_at = now() where player_id = $1 and season_id = $2`, [me, season])
-    await sweep('done', [...screens, '/hood', '/missions'], broken, sizes)
+    await sweep('done', [...screens, '/territory?focus=hood', '/missions'], broken, sizes)
   }
 } finally {
   await browser.close()
