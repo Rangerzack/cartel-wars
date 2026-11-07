@@ -20,3 +20,14 @@ export function Glyph({ e, size = 20, className = '', label }: { e: string | nul
 }
 
 export type { IconName }
+
+/** A reveal: the icon of what just happened (a crate's prize, a rare find) on a lit amber disc. `tone` gold for the
+ *  jackpot, purple for a rare find; `shake` while the server rolls. */
+export function Reveal({ e, name, tone = '', shake = false, size = 96 }: { e?: string | null; name?: IconName; tone?: '' | 'gold' | 'purple'; shake?: boolean; size?: number }) {
+  const inner = Math.round(size * 0.46)
+  return (
+    <span className={`reveal ${tone} ${shake ? 'shake' : ''}`.trim()} style={{ width: size, height: size }} aria-hidden="true">
+      {name ? <Icon name={name} size={inner} stroke={1.6} /> : <Glyph e={e} size={inner} />}
+    </span>
+  )
+}

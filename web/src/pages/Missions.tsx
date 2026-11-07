@@ -6,6 +6,7 @@ import { BackBar } from '../components/BackBar'
 import { Card, Empty, Loading } from '../components/ui'
 import { SeasonBoard } from '../components/SeasonBoard'
 import { Icon } from '../components/Icon'
+import { MarcusFace } from '../components/Faces'
 
 /** The campaign log (Season 1): every mission in order, Marcus's lines for the ones behind you, the one you're on open, the rest locked. */
 export default function Missions() {
@@ -18,7 +19,7 @@ export default function Missions() {
   return (
     <div className="page">
       <BackBar fallback="/" right={<span className="muted small">{data.season?.name}</span>} />
-      <Card title="The campaign" right={<small className="tabular">{done} of {data.missions.length} done</small>}>
+      <Card title={<><span className="mring" aria-hidden><MarcusFace size={28} /></span>The campaign</>} right={<small className="tabular">{done} of {data.missions.length} done</small>}>
         {data.missions.map(m => {
           const state = m.claimed ? 'done' : m.key === current ? 'now' : 'later'
           return (

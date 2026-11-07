@@ -958,7 +958,7 @@ textarea.input { resize: vertical; font: inherit; }
 .find-tag { font-size: 11.5px; color: #c9b6ff; }
 .find-tag b { color: var(--purple-soft); font-weight: 600; }
 .find-modal { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.find-modal .big { font-size: 54px; line-height: 1; filter: drop-shadow(0 0 18px rgba(170,140,255,.55)); animation: find-pop .6s cubic-bezier(.2,1.6,.4,1) both; }
+.find-modal .big { line-height: 0; animation: find-pop .6s cubic-bezier(.2,1.6,.4,1) both; }
 .find-modal .name { font-family: var(--display); font-size: 26px; color: var(--purple-soft); }
 @keyframes find-pop { from { transform: scale(.2) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .row.drop-only .t { color: var(--purple-soft); }
@@ -1003,12 +1003,25 @@ textarea.input { resize: vertical; font: inherit; }
 .drop-odds .row.jackpot .t, .drop-odds .row.jackpot b { color: var(--gold); }
 .drop-odds .pill { margin-left: 6px; font-size: 10.5px; }
 .crate-open { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 6px; }
+/* a reveal (components/Icon.tsx Reveal): the icon on a lit disc with a ring; gold for a jackpot, purple for a rare find */
+.reveal {
+  display: inline-grid; place-items: center; border-radius: 50%; color: var(--gold); flex: none;
+  background: radial-gradient(circle at 50% 35%, rgba(242,163,58,.28), rgba(242,163,58,.06) 60%, transparent 72%), var(--surface-2);
+  box-shadow: inset 0 0 0 1px rgba(242,163,58,.35), 0 0 0 6px rgba(242,163,58,.06), 0 12px 30px rgba(0,0,0,.5);
+}
+.reveal.gold { color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(255,196,107,.6), 0 0 0 8px rgba(242,163,58,.1), 0 0 36px rgba(242,163,58,.45), 0 12px 30px rgba(0,0,0,.5); }
+.reveal.purple {
+  color: var(--purple-soft);
+  background: radial-gradient(circle at 50% 35%, rgba(160,130,255,.3), rgba(160,130,255,.06) 60%, transparent 72%), var(--surface-2);
+  box-shadow: inset 0 0 0 1px rgba(160,130,255,.4), 0 0 0 8px rgba(160,130,255,.08), 0 0 36px rgba(160,130,255,.4), 0 12px 30px rgba(0,0,0,.5);
+}
+.reveal.shake { animation: crate-shake .45s ease-in-out infinite; }
 /* opening a crate: it shakes while the server rolls, then the prize pops; a jackpot glows */
 .crate-shake { font-size: 64px; line-height: 1; animation: crate-shake .45s ease-in-out infinite; }
 @keyframes crate-shake { 0%, 100% { transform: rotate(0) } 20% { transform: rotate(-9deg) translateY(-2px) } 40% { transform: rotate(8deg) } 60% { transform: rotate(-6deg) translateY(-3px) } 80% { transform: rotate(5deg) } }
 .drop-prize .big { animation: find-pop .5s cubic-bezier(.2,1.6,.4,1) both; filter: none; }
 .drop-prize .name { color: #f6e7b8; }
-.drop-prize.jackpot .big { font-size: 68px; filter: drop-shadow(0 0 22px rgba(255,210,90,.85)); }
+.drop-prize.jackpot .big { animation-duration: .8s; }
 .drop-prize.jackpot .name { color: var(--gold); font-size: 30px; }
 
 /* Combos: one colour per style, as a pill; the setup panel, the wheel and the city board */
@@ -1279,12 +1292,12 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .card.hood-head { border-color: rgba(242,163,58,.25); background: linear-gradient(180deg, #221f14 0%, #121a18 100%); }
 
 /* Season 1: Marcus and the gate ------------------------------------------ */
-/* Marcus's mark: an M in an amber ring, until he has a face */
+/* Marcus's face (components/Faces.tsx) in an amber ring */
 .mring {
-  display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 6px; border-radius: 50%; flex: none;
-  font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--gold); background: var(--surface-2);
+  display: inline-grid; place-items: center; margin-right: 8px; border-radius: 50%; flex: none; line-height: 0;
   box-shadow: 0 0 0 2px var(--gold-lo), 0 0 0 2.5px rgba(255,196,107,.5);
 }
+.face { display: block; border-radius: 50%; }
 .marcus.card { border-color: rgba(242,163,58,.28); background: linear-gradient(180deg, #262012 0%, #1a1a14 38%, #121a18 100%); }
 .marcus .line { font-style: italic; }
 .marcus .objective { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.05); }
