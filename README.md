@@ -1,6 +1,6 @@
-# Cartel Wars
+# Thug Empire
 
-A web reconstruction of SMLSD's *The Cartel* / *Cartel Wars* (iPhone, 2009–2010,
+Thug Empire (called Cartel Wars until 2026-11-07) is a web reconstruction of SMLSD's *The Cartel* / *Cartel Wars* (iPhone, 2009–2010,
 later *Cartel Reloaded* under Roasted Brains): a multiplayer crime-economy game
 about producing and moving product, one-on-one fights with equipped gear, Heat
 and jail, Crews and Cartels, turf wars over Hoods and Blocks, and a casino with

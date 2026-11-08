@@ -53,7 +53,7 @@ const Ctx = createContext<GameState | null>(null)
 function CantReach({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="auth">
-      <div className="logo"><h1>Cartel Wars</h1></div>
+      <div className="logo"><h1>Thug Empire</h1></div>
       <div className="card">
         <div className="hd"><span>Can't reach the city</span></div>
         <div className="bd stack">

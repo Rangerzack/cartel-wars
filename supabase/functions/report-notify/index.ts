@@ -4,7 +4,7 @@
 // email through Resend, whichever is configured. Secrets and setup: docs/ops.md.
 
 const ADMIN_URL = 'https://rangerzack.github.io/cartel-wars/admin'
-const DEFAULT_FROM = 'Cartel Wars <noreply@rangelab.io>'
+const DEFAULT_FROM = 'Thug Empire <noreply@rangelab.io>'
 
 type Latest = { reason?: string; note?: string; target?: string | null; reporter?: string | null; at?: string }
 type Payload = { kind?: string; open_targets?: number; open_reports?: number; latest?: Latest }

@@ -5,8 +5,8 @@ name: iOS to TestFlight
 #
 # One-time setup, all in a browser:
 # 1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers → "+" → App IDs → App:
-#    bundle ID io.rangelab.cartelwars (explicit), description "Cartel Wars".
-# 2. appstoreconnect.apple.com → Apps → "+" → New App: iOS, name "Cartel Wars", that bundle ID, SKU cartel-wars.
+#    bundle ID io.rangelab.cartelwars (explicit), description "Thug Empire".
+# 2. appstoreconnect.apple.com → Apps → "+" → New App: iOS, name "Thug Empire", that bundle ID, SKU cartel-wars.
 #    (The API key below can't create the app record; everything after this is automatic.)
 # 3. Create a new, empty, private GitHub repo for the signing files, e.g. Rangerzack/cartel-wars-certs.
 # 4. Repo Settings → Secrets and variables → Actions → New repository secret, one per line below:

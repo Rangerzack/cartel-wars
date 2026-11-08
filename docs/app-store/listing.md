@@ -4,17 +4,15 @@ Everything App Store Connect asks for in text, ready to paste. The counts are ch
 
 ## 1. Name (30 max)
 
-**Cartel Wars** — 11/30
+**Thug Empire** — 11/30 *(renamed from Cartel Wars, 2026-11-07)*
 
-The catch (#4): *Narcos: Cartel Wars* is already on the store. App Store Connect only refuses a name that's taken exactly, so "Cartel Wars" may well go through when the app record is created. But it's the same two words as a big licensed game, and its publisher can file a name dispute with Apple later (guideline 5.2.1), which would mean renaming after launch. Try "Cartel Wars" first. If it's refused, or you'd rather not carry the risk, use a fallback:
+The reason for the rename: *Narcos: Cartel Wars* is already on the store, and a name that shares both words with a big
+licensed game invites a name dispute (guideline 5.2.1) even if App Store Connect accepts it. "Thug Empire" shares nothing
+with it. Check it's free when the app record is created; if it's taken exactly, add the tagline: **Thug Empire: Hold the
+Block** — 27/30.
 
-1. **Cartel Wars: Hold the Block** — 27/30. Keeps the name and adds the tagline, so it can't be an exact match. Still shares the two words.
-2. **Hold the Block** — 14/30. The tagline from the sign-in screen, and it says what the turf war is about. No "cartel" or "wars" to collide with.
-3. **Street Cartel** — 13/30. Keeps "cartel", drops "wars". Short and plain.
-4. **Cartel City** — 11/30. The 81-hood map is the heart of the game. Check it's free; short names often aren't.
-5. **Turf Kings** — 10/30. Crews and blocks, no "cartel" at all. The safest one for review, the furthest from the game's own name.
-
-The name under the icon on the home screen comes from the app (`CFBundleDisplayName`, "Cartel Wars"), not the store listing, and only shows about 12 characters. "Cartel Wars" fits.
+The name under the icon on the home screen comes from the app (`CFBundleDisplayName`, "Thug Empire"), not the store
+listing, and only shows about 12 characters. "Thug Empire" fits.
 
 ## 2. Subtitle (30 max)
 
@@ -37,7 +35,7 @@ This sits above the description and can be changed at any time without a review.
 ## 4. Description (4,000 max) — 3098/4000
 
 ```text
-Cartel Wars is a crime strategy MMO set in a city that never shuts off. You start with a little cash and a few street jobs. Build an operation, find a crew, and take the city one block at a time.
+Thug Empire is a crime strategy MMO set in a city that never shuts off. You start with a little cash and a few street jobs. Build an operation, find a crew, and take the city one block at a time.
 
 PRODUCE AND MOVE PRODUCT
 Build grow houses for herb, dust and pills. They produce while you're away. Collect into storage, then move it: send hustlers out to sell on the street, list it on the marketplace, or fill another player's buy order. Street prices move, and dumping a pile at once pushes them down. When you're ready, pick a path: Producers run the grow houses, Traders work the street.
@@ -69,7 +67,7 @@ The city runs all the time. Your grow houses produce and other players make thei
 FREE TO PLAY
 Free to play, with no ads. Optional in-app purchases: diamond packs, and the Daily Drop, a monthly subscription that leaves a crate every day. Diamonds buy refills, upgrades and extra setup slots. Every crate's prizes and odds are shown in the game. The Daily Drop renews each month until you cancel it in Settings at least 24 hours before the period ends.
 
-For players 18 and over. Cartel Wars is fiction: the people, crews and places in it are made up. Needs an internet connection.
+For players 18 and over. Thug Empire is fiction: the people, crews and places in it are made up. Needs an internet connection.
 
 Terms of Service: https://rangerzack.github.io/cartel-wars/terms.html
 Privacy Policy: https://rangerzack.github.io/cartel-wars/privacy.html
@@ -149,7 +147,7 @@ The 2025 questionnaire, item by item. "Frequent" is Apple's "Frequent or Intense
 Fill in the two blanks before submitting.
 
 ```text
-Cartel Wars is a multiplayer crime strategy game. The world is live and shared: every player you see is a real person on the same server, apart from the 200 NPC "thugs" on Fight > Thugs. The city keeps running between sessions. The app needs a network connection.
+Thug Empire is a multiplayer crime strategy game. The world is live and shared: every player you see is a real person on the same server, apart from the 200 NPC "thugs" on Fight > Thugs. The city keeps running between sessions. The app needs a network connection.
 
 DEMO ACCOUNT
 Email:

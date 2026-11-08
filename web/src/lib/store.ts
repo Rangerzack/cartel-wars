@@ -108,7 +108,7 @@ export async function restorePurchases(): Promise<{ active: number }> {
   } catch (e) {
     const x = e as { code?: unknown; message?: string }
     if (String(x?.code) === E.RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR || String(x?.code) === E.RECEIPT_ALREADY_IN_USE_ERROR) {
-      throw new Error('Those purchases belong to another Cartel Wars account')
+      throw new Error('Those purchases belong to another Thug Empire account')
     }
     throw new Error(x?.message || "Couldn't restore purchases")
   }

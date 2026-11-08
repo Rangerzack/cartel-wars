@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // Build with BASE_PATH=/ (`npm run build:ios`) — inside the shell the app is served from capacitor://localhost/.
 const config: CapacitorConfig = {
   appId: 'io.rangelab.cartelwars',
-  appName: 'Cartel Wars',
+  appName: 'Thug Empire',
   webDir: 'dist',
   backgroundColor: '#0a1214',
   ios: {

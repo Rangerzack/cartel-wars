@@ -43,7 +43,7 @@ If both are set, Discord wins.
 | `DISCORD_WEBHOOK_URL` | The webhook URL (Discord). |
 | `RESEND_API_KEY` | The Resend API key (email). |
 | `REPORT_EMAIL_TO` | Where to send the email; separate several addresses with commas (email). |
-| `REPORT_EMAIL_FROM` | Optional sender, default `Cartel Wars <noreply@rangelab.io>` (email). |
+| `REPORT_EMAIL_FROM` | Optional sender, default `Thug Empire <noreply@rangelab.io>` (email). |
 
 ```sh
 npx supabase login
@@ -183,7 +183,7 @@ the phone and tells the game through a webhook. Nothing is sold on the web. Rule
 
 1. **Business → Agreements**: the Paid Apps agreement has to be active, with bank and tax details. Nothing can be
    sold without it, not even in the sandbox.
-2. **Apps → Cartel Wars → Monetization → In-App Purchases → "+"**, type **Consumable**, one per row of `store_packs`,
+2. **Apps → Thug Empire → Monetization → In-App Purchases → "+"**, type **Consumable**, one per row of `store_packs`,
    with exactly these product ids:
 
    | Product id | Diamonds |
@@ -205,14 +205,14 @@ the phone and tells the game through a webhook. Nothing is sold on the web. Rule
 
 ### 2. RevenueCat
 
-1. Create a project "Cartel Wars" and add an **App Store** app: bundle id `io.rangelab.cartelwars`, the In-App
+1. Create a project "Thug Empire" and add an **App Store** app: bundle id `io.rangelab.cartelwars`, the In-App
    Purchase key from above (with its key id and your issuer id).
-2. The app's page shows an **Apple Server Notification URL**. Paste it into App Store Connect → Cartel Wars → App
+2. The app's page shows an **Apple Server Notification URL**. Paste it into App Store Connect → Thug Empire → App
    Information → App Store Server Notifications (production and sandbox, version 2). Refunds reach RevenueCat this way.
 3. **Product catalog → Products**: add the seven product ids. An entitlement or an Offering isn't needed: the app asks
    StoreKit for the ids in `store_packs` and `app_text`.
-4. **Project settings → General → Restore behavior**: *Keep with original App User ID*. A restore on another Cartel
-   Wars account can't move a subscription to it; the app says "Those purchases belong to another Cartel Wars account".
+4. **Project settings → General → Restore behavior**: *Keep with original App User ID*. A restore on another Thug
+   Empire account can't move a subscription to it; the app says "Those purchases belong to another Thug Empire account".
 5. **API keys**: copy the App Store app's public key (`appl_…`) into a GitHub repository variable
    `REVENUECAT_IOS_KEY` (Settings → Secrets and variables → Actions → Variables). The iOS workflow builds with it as
    `VITE_REVENUECAT_IOS_KEY`. It's a public key, meant to ship inside the app. A build without it shows the Store

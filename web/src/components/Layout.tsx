@@ -98,7 +98,7 @@ export default function Layout() {
   const unread = (me?.unread_activity ?? 0) + (me?.unread_dms ?? 0)
   // (2) in the browser tab title, and the home-screen app icon badge where the platform supports it
   useEffect(() => {
-    document.title = unread ? `(${unread}) Cartel Wars` : 'Cartel Wars'
+    document.title = unread ? `(${unread}) Thug Empire` : 'Thug Empire'
     const n = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
     try { if (unread) n.setAppBadge?.(unread)?.catch(() => {}); else n.clearAppBadge?.()?.catch(() => {}) } catch { /* unsupported */ }
   }, [unread])
@@ -147,7 +147,7 @@ export default function Layout() {
       {/* the strip only says what nothing else on screen does: offline anywhere, the hospital off Home (the top bar's
           JAIL tag covers jail, and Home's Next up covers both) */}
       <main id="main">
-      {me && <h1 className="sr-only">{TITLES[pathname.split('/')[1] ?? ''] ?? 'Cartel Wars'}</h1>}
+      {me && <h1 className="sr-only">{TITLES[pathname.split('/')[1] ?? ''] ?? 'Thug Empire'}</h1>}
       {me && (netDown || (me.hospital && !onHome)) && (
         <div className="status-strip">
           {netDown && <span className="pill red"><Icon name="warn" size={13} />Offline · retrying</span>}

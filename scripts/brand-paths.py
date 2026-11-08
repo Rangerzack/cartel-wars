@@ -24,8 +24,8 @@ def outline(weight: int, text: str, size: float, tracking: float = 0):
     return {'d': ' '.join(parts), 'w': round(cx - tracking, 1), 'cap': round(f['OS/2'].sCapHeight * scale, 1)}
 
 out = {
-    'cw': outline(700, 'CW', 200, tracking=6),
-    'title': outline(700, 'CARTEL WARS', 120, tracking=9),
+    'cw': outline(700, 'TE', 200, tracking=6),
+    'title': outline(700, 'THUG EMPIRE', 120, tracking=9),
     'tag': outline(500, 'PRODUCE. MOVE PRODUCT. HOLD THE BLOCK.', 26, tracking=5.5),
 }
 (HERE / 'brand-paths.json').write_text(json.dumps(out))
