@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { SlotsResult } from '../../lib/types'
+import { Icon } from '../Icon'
 import { Card } from '../ui'
 import { BetPicker, Net, useBet } from './shared'
 import { haptic } from '../../lib/haptics'
@@ -36,7 +37,7 @@ export default function Slots() {
 
   return (
     <>
-      <Card title="🎰 One-Armed Bandit" className="table-card" right={<small>3 reels · up to 100×</small>}>
+      <Card title={<><Icon name="dice" size={18} />One-Armed Bandit</>} className="table-card" right={<small>3 reels · up to 100×</small>}>
         <div className="bd stack">
           <div className={`reels ${last && last.mult >= 4 ? 'win' : ''}`}>
             {reels.map((s, i) => <div key={i} className={`reel ${spinning ? 'spinning' : ''}`}>{SYM[s]}</div>)}

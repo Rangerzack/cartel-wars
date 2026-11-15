@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { BlackjackHand, BlackjackOutcome, BlackjackState } from '../../lib/types'
+import { Icon } from '../Icon'
 import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Net, PlayingCard, useBet } from './shared'
 import { basicStrategy, type BjMove } from './strategy'
@@ -99,7 +100,7 @@ export default function Blackjack() {
   const settleDelay = done ? Math.max(0, (dealerCards.length - 2)) * DEALER_GAP + 0.35 : 0
 
   return (
-    <Card title="🃏 Blackjack" className="table-card" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
+    <Card title="♠ Blackjack" className="table-card" right={<small>6 decks · S17 · 3:2 · DAS</small>}>
       <div className="bd stack">
         {!g ? <Loading error={error} onRetry={reload} /> : (
           <div className={`bj-felt ${done && g.result ? (g.result.net > 0 ? 'won' : g.result.net < 0 ? 'lost' : 'push') : ''}`}>
@@ -162,7 +163,7 @@ export default function Blackjack() {
 
         {playing ? (
           <>
-            {book && <div className="bj-hintline">📖 The book says: <b>{book === 'split' ? 'Split' : book[0].toUpperCase() + book.slice(1)}</b></div>}
+            {book && <div className="bj-hintline"><Icon name="book" size={14} /> The book says: <b>{book === 'split' ? 'Split' : book[0].toUpperCase() + book.slice(1)}</b></div>}
             {/* the hand's buttons, and the chips and Deal between hands, ride above the tab bar under the felt */}
             <div className="table-bar">
               <div className="bj-actions">

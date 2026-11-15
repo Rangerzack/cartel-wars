@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { chips, money } from '../../lib/format'
 import type { RouletteBet, RouletteBetType, RouletteResult } from '../../lib/types'
+import { Icon } from '../Icon'
 import { Card } from '../ui'
 import { BetPicker, Net, useBet } from './shared'
 import { haptic } from '../../lib/haptics'
@@ -59,7 +60,7 @@ export default function Roulette() {
 
   return (
     <>
-      <Card title="🎡 Roulette" className="table-card" right={<small>European · single zero</small>}>
+      <Card title={<><Icon name="target" size={18} />Roulette</>} className="table-card" right={<small>European · single zero</small>}>
         <div className="bd stack">
           <div className={`wheel-result ${spinning ? 'spinning' : ''} ${last ? last.color : ''}`}>
             {spinning ? <span className="spin" role="img" aria-label="Working" /> : last ? <>{last.number}</> : '—'}

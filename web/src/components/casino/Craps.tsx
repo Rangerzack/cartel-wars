@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { useGame, useMe } from '../../lib/game'
 import { money } from '../../lib/format'
 import type { CrapsBetKind, CrapsEvent, CrapsLogLine, CrapsRoll } from '../../lib/types'
+import { Icon } from '../Icon'
 import { Card, Loading } from '../ui'
 import { BetPicker, ChipStack, Die, Net, useBet } from './shared'
 import { useLoad } from '../../lib/useLoad'
@@ -136,7 +137,7 @@ export default function Craps() {
   const settled = roll?.log.filter((l: CrapsLogLine) => l.result === 'win' || l.result === 'lose' || l.result === 'push') ?? []
 
   return (
-    <Card title="🎲 Craps" className="table-card" right={<small>{point ? `Point is ${point}` : 'Come-out roll'}</small>}>
+    <Card title={<><Icon name="dice" size={18} />Craps</>} className="table-card" right={<small>{point ? `Point is ${point}` : 'Come-out roll'}</small>}>
       <div className="bd stack">
         {!st ? <Loading error={error} onRetry={reload} /> : (
           <div className="cr-table">
@@ -253,8 +254,8 @@ export default function Craps() {
           </div>
         )}
 
-        {point !== null && (bets.pass ?? 0) > 0 && !(bets.pass_odds) && <div className="cr-tip">💡 Take odds behind your Pass Line — it's the only bet in the house with no edge.</div>}
-        {comePoints.some(n => !(bets[`come${n}_odds`])) && (!(bets.pass ?? 0) || (bets.pass_odds ?? 0) > 0) && <div className="cr-tip">💡 Back your come bets with odds too — same true-odds payout, no edge.</div>}
+        {point !== null && (bets.pass ?? 0) > 0 && !(bets.pass_odds) && <div className="cr-tip"><Icon name="bulb" size={14} /> Take odds behind your Pass Line — it's the only bet in the house with no edge.</div>}
+        {comePoints.some(n => !(bets[`come${n}_odds`])) && (!(bets.pass ?? 0) || (bets.pass_odds ?? 0) > 0) && <div className="cr-tip"><Icon name="bulb" size={14} /> Back your come bets with odds too — same true-odds payout, no edge.</div>}
         {point === null && ((bets.place4 ?? 0) + (bets.place5 ?? 0) + (bets.place6 ?? 0) + (bets.place8 ?? 0) + (bets.place9 ?? 0) + (bets.place10 ?? 0) + (bets.hard4 ?? 0) + (bets.hard6 ?? 0) + (bets.hard8 ?? 0) + (bets.hard10 ?? 0)) > 0 &&
           <div className="small muted center">Place bets and hardways are off on the come-out roll.</div>}
 
