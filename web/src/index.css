@@ -17,8 +17,11 @@
    - Icons are the one line set in components/Icon.tsx (24-unit, 1.8 stroke), drawn in currentColor. No emoji in the
      chrome; a player's avatar and a crew's emblem stay theirs.
    - Type: 11 / 12.5 / 14 / 15 / 17 / 21 / 28. Radius: 4 / 8 / 12 / 16 / pill. Space: 4 / 8 / 12 / 16 / 24.
-   - Motion: --t-fast (presses, hovers), --t-base (fades, toggles), --t-slow (sheets, toasts), all on --ease.
-     Animations are feedback for something that happened (a deal, a roll, a win); nothing loops for decoration.
+   - Motion: --t-fast (presses, hovers), --t-base (fades, toggles), --t-slow (sheets, toasts), on --ease (a strong
+     ease-out) and sheets on --ease-drawer. Animations are feedback for something that happened (a deal, a roll, a win);
+     nothing loops for decoration, and what players see dozens of times a session (switching tabs) doesn't animate.
+     Everything pressable answers the press (scale .97). A thick colored stripe down one side of a panel or row is
+     not used; tone lives in the wash, the 1 px edge or the icon well.
    - Every control is at least 44 pt to the touch (--tap): drawn smaller, it reaches with an invisible ::after.
      The exceptions are game boards (the city map, the roulette layout) and links inside a sentence.
    ========================================================================================================== */
@@ -103,7 +106,10 @@
   --t-fast: .12s;
   --t-base: .2s;
   --t-slow: .32s;
-  --ease: cubic-bezier(.2,.8,.2,1);
+  /* a strong ease-out: the movement starts at once, so a press or a sheet feels like it answered (the built-in curves
+     are too soft); sheets ride the iOS drawer curve */
+  --ease: cubic-bezier(.23,1,.32,1);
+  --ease-drawer: cubic-bezier(.32,.72,0,1);
   /* touch and layout */
   --tap: 44px;
   --tab-h: 60px;
@@ -140,6 +146,8 @@ a:not([class]) { text-decoration: underline; text-decoration-thickness: 1px; tex
 button { font: inherit; }
 input, select, textarea { font: inherit; }
 ::selection { background: rgba(242,163,58,.35); }
+/* the parts the browser draws carry the palette too: checkboxes, radios and ranges in amber, an amber caret, dark scrollbars */
+:root { accent-color: var(--gold); caret-color: var(--gold); scrollbar-color: var(--surface-4) transparent; }
 
 /* a fieldset used only to switch everything inside it off at once (the casino while jailed, a felt mid-spin): no box of its own */
 fieldset.lockable { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -196,7 +204,8 @@ fieldset.lockable:disabled { pointer-events: none; }
 .bar .lbl span:first-child { display: inline-flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: .9px; font-weight: 600; color: var(--text-3); }
 .bar .lbl span:last-child { font-family: var(--display); font-size: 13px; letter-spacing: 0; color: var(--text); }
 .bar .track { position: relative; height: 6px; background: var(--sunken); border-radius: var(--r-pill); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
-.bar .fill { position: relative; height: 100%; border-radius: var(--r-pill); transition: width .5s var(--ease); }
+/* the bars move after nearly every action, so the move is short */
+.bar .fill { position: relative; height: 100%; border-radius: var(--r-pill); transition: width .24s var(--ease); }
 .bar.mini { width: 70px; font-weight: 500; }
 .bar.mini .lbl { margin-bottom: 2px; }
 .bar.mini .lbl span:last-child { font-size: 12px; }
@@ -249,7 +258,8 @@ fieldset.lockable:disabled { pointer-events: none; }
 }
 
 /* Page building blocks --------------------------------------------------- */
-.page { padding: 12px; display: flex; flex-direction: column; gap: 12px; animation: fadein var(--t-base) var(--ease); }
+/* no entrance on the page itself: players switch tabs dozens of times a session, and a fade on every switch reads as lag */
+.page { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
 h1, h2, h3 { margin: 0; }
 /* a section heading in the page: small tracked caps in ash, with a hairline running on from it */
@@ -322,13 +332,14 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 /* a value wider than its tile is stepped down by Stat (ui.tsx) to 16, 14 or 12.5 px, measured, so "$8,420,000" and "1,640/10,936" fit a 375 px three-column grid */
 .stat .v.gold { color: var(--gold); }
 .empty { padding: 24px 12px; text-align: center; color: var(--text-2); font-style: italic; }
-/* Notices: a tinted panel with its tone on the left edge. Red stops play, gold is good news or a nudge, blue explains */
+/* Notices: a tinted panel with its tone in the wash and the 1 px edge all round (a thick colored stripe down one side
+   is the template look). Red stops play, gold is good news or a nudge, blue explains */
 .notice {
-  padding: 10px 12px 10px 13px; border-radius: var(--r-md); font-size: 13.5px; border: 1px solid; border-left-width: 3px;
+  padding: 10px 12px; border-radius: var(--r-md); font-size: 13.5px; border: 1px solid;
 }
-.notice.red { background: var(--red-tint); border-color: var(--red-edge); border-left-color: var(--red); color: var(--red-soft); }
-.notice.blue { background: var(--blue-tint); border-color: var(--blue-edge); border-left-color: var(--blue); color: var(--blue-soft); }
-.notice.gold { background: var(--gold-tint); border-color: var(--gold-edge); border-left-color: var(--gold); color: var(--gold-soft); }
+.notice.red { background: var(--red-tint); border-color: var(--red-edge); color: var(--red-soft); }
+.notice.blue { background: var(--blue-tint); border-color: var(--blue-edge); color: var(--blue-soft); }
+.notice.gold { background: var(--gold-tint); border-color: var(--gold-edge); color: var(--gold-soft); }
 
 /* Buttons ---------------------------------------------------------------- */
 /* Which style (P3-9, Phase 4): filled gold = spends money or diamonds, or confirms · tinted gold (doit) = the screen's
@@ -345,6 +356,10 @@ a.row.link:last-child, button.row.link:last-child { border-bottom: 0; }
 @media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.12); } }
 .btn:active:not(:disabled) { transform: scale(.97); filter: brightness(.9); }
 .btn:disabled { opacity: .4; cursor: default; filter: saturate(.4); }
+/* a filled button that can't be pressed drops its metal: a flat well with ash text, not a muddy brown amber or rust */
+.btn.gold:disabled, .btn.red:disabled, .btn.doit:disabled {
+  opacity: 1; filter: none; color: var(--text-3); background: var(--surface-2); border-color: var(--line); box-shadow: none;
+}
 .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* the amber that spends, confirms or is the screen's one hero action (.gold): the metal. A row's main action in a list
    (.doit: Do It, Collect, Claim) is amber-tinted with an amber edge, so a list of jobs isn't a wall of gold */
@@ -438,14 +453,14 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
   /* sheets clear the notch and the home indicator */
   padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
   background: rgba(0,0,0,.72); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-  animation: fadebg var(--t-base) ease-out;
+  animation: fadebg var(--t-base) var(--ease);
 }
 @keyframes fadebg { from { opacity: 0 } to { opacity: 1 } }
 .modal {
   position: relative; width: 100%; max-width: 500px; max-height: min(90dvh, 100%); overflow-y: auto; padding: 22px 16px 16px;
   background: var(--grad-card); border: 1px solid var(--line-strong); border-radius: 20px;
   box-shadow: var(--hl), var(--shadow-2);
-  animation: up var(--t-slow) var(--ease);
+  animation: up var(--t-slow) var(--ease-drawer);
 }
 .modal::before { content: ''; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--line-strong); }
 @keyframes up { from { transform: translateY(26px); opacity: 0 } to { transform: none; opacity: 1 } }
@@ -491,7 +506,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
 /* the logo is the one place the chrome lettering stays: it's the brand mark */
 .logo h1 {
   font-family: var(--display); font-size: 50px; line-height: 1; letter-spacing: 4px; font-weight: 700; text-transform: uppercase;
-  background: linear-gradient(#ffffff, #d6d6de 45%, #8a8a98 52%, #c9c9d2); -webkit-background-clip: text; background-clip: text; color: transparent;
+  /* the warm bone metal of the splash and app icon (Border Night art pass), not the cool silver of the black-and-gold era */
+  background: linear-gradient(#fffdf6, #ece4d3 45%, #918a7c 52%, #d8d0bf); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 2px 0 #000);
 }
 .logo h1::after { content: ''; display: block; height: 2px; margin: 10px auto 0; width: 44%; background: var(--gold); }
@@ -517,6 +533,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s
   transition: transform var(--t-fast) var(--ease), border-color var(--t-fast);
 }
 @media (hover: hover) { .block:not(.btn):hover { transform: translateY(-1px); border-color: var(--line-strong); } }
+/* on a phone there's no hover: the tile answers the press instead */
+.block:not(.btn):active { transform: scale(.97); }
 .block b { font-family: var(--display); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; font-size: 13px; }
 .block.mine { border-color: var(--green-edge); background: linear-gradient(180deg, rgba(88,196,122,.14), rgba(88,196,122,.04)), var(--grad-tile); }
 .block.enemy { border-color: var(--red-edge); background: var(--grad-tile-red); }
@@ -757,8 +775,12 @@ textarea.input { resize: vertical; font: inherit; }
 .row.activity .ico { margin-top: 1px; }
 .row.activity .t2 { font-size: var(--fs-md); line-height: 1.35; }
 .row.activity .t2 b { font-weight: 600; }
-/* something new: a gold edge and a faint gold wash (one tint for "new" everywhere: activity, action results, Next up) */
-.row.activity.fresh { background: rgba(242,163,58,.06); box-shadow: inset 3px 0 0 var(--gold); }
+/* something new: a faint gold wash and a gold edge on its icon well (one tint for "new" everywhere: activity, action
+   results, Next up). The icon carries the edge, not a thick stripe down the row's side */
+.row.activity.fresh { background: rgba(242,163,58,.06); }
+.getting-started .row.next .check { color: var(--gold); }
+.row.activity.fresh .ico, .next-up .row.ready .ico { box-shadow: inset 0 0 0 1px var(--gold-edge); }
+.next-up .row.urgent .ico { box-shadow: inset 0 0 0 1px var(--red-edge); }
 .card.away .hd { background: rgba(242,163,58,.08); }
 .row.more { padding-top: 8px; padding-bottom: 8px; }
 .row.unread .t { color: #fff; }
@@ -1110,9 +1132,10 @@ button, .btn, .row.link, .seg button, .tabbar a { touch-action: manipulation; }
   position: relative; min-width: 0; min-height: 84px; padding: 10px 4px 9px; border-radius: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
   color: inherit; text-decoration: none; background: var(--grad-tile); border: 1px solid var(--line); box-shadow: var(--hl);
-  transition: background-color var(--t-fast);
+  transition: background-color var(--t-fast), transform var(--t-fast) var(--ease);
 }
-.quick a:active { background: var(--gold-tint); }
+/* a tile presses in like a button does */
+.quick a:active { background: var(--gold-tint); transform: scale(.97); }
 .quick .ico { position: relative; width: 30px; height: 30px; background: none; box-shadow: none; color: var(--text-2); font-size: 24px; }
 .quick .lbl { max-width: 100%; font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quick .tbadge { top: -7px; left: calc(100% - 10px); box-shadow: 0 0 0 2px #10191a; }
@@ -1238,13 +1261,13 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; gap:
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* Home's Next up: what needs you, most urgent first. A red edge for a state that stops play (jail, the hospital), gold
    for something ready to take; paying is a full-width button under the line, collecting sits at its right */
-.next-up .row.urgent { box-shadow: inset 3px 0 0 var(--red); background: rgba(224,85,43,.07); }
-.next-up .row.ready { box-shadow: inset 3px 0 0 var(--gold); }
+.next-up .row.urgent { background: rgba(224,85,43,.07); }
+.next-up .row.ready { background: rgba(242,163,58,.04); }
 .next-up .row.wide { align-items: flex-start; }
 .next-up .row .act { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .next-up .row > .btn { flex: none; min-width: 84px; }
 /* Getting started: the next step, gold-edged; the rest open under it */
-.getting-started .row.next { box-shadow: inset 3px 0 0 var(--gold); background: rgba(242,163,58,.06); }
+.getting-started .row.next { background: rgba(242,163,58,.06); }
 .getting-started .row.done { opacity: .5; }
 .getting-started .check { width: 22px; text-align: center; flex: none; }
 .getting-started .row.more { min-height: var(--tap); padding-top: 8px; padding-bottom: 8px; }
@@ -1263,11 +1286,16 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .grow-fill { background: var(--green); }
 
 /* Motion off ----------------------------------------------------------------------------------------------- */
-/* with Reduce Motion on, nothing animates or transitions, and the +$ floaters aren't drawn at all */
+/* with Reduce Motion on, nothing moves and the +$ floaters aren't drawn at all. Reduced is not zero: sheets, their
+   backdrop and toasts still fade in (a short opacity change, no travel) so they don't pop, and a loading spinner still
+   turns, slower, so a wait never looks like a freeze */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .floater { display: none; }
+  .modal, .modal-bg, .toast { animation: fadeonly var(--t-base) ease !important; }
+  .spin { animation: rot 1.6s linear infinite !important; }
 }
+@keyframes fadeonly { from { opacity: 0 } to { opacity: 1 } }
 
 /* Season 1: Your Hood ---------------------------------------------------- */
 /* six private blocks in Territory's tile style: amber edge means yours, the next one up is rust-edged, the rest wait dashed */
@@ -1308,7 +1336,6 @@ body:has(.table-bar) .app .toasts { top: calc(env(safe-area-inset-top) + 96px); 
 .marcus .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); }
 .marcus .parts li.done { color: var(--text-2); }
 .marcus .bar.mini { width: 100%; }
-.marcus.card { animation: fadein var(--t-base) var(--ease); }
 .marcus.row.done { align-items: center; }
 /* a locked tab or tile: the icon dimmed and a lock where the count badge sits; the label keeps its contrast; still 44 pt */
 .tabbar a.locked, .quick a.locked { cursor: default; }
