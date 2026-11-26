@@ -77,10 +77,11 @@ or a plugged-in iPhone. After changing web code, run `npm run build:ios` again.
 
 ## Icon and splash
 
-`scripts/app-art.mjs` draws both from the game's own mark and fonts and writes every file Xcode reads: the gold shield
-with the CW monogram, full-bleed on the dark gradient (iOS rounds the corners; the PNG has no alpha channel, which Apple
-requires), and the launch screen with the sign-in screen's wordmark centred on `#121216`, kept inside the middle
-1,100 px because phones crop the sides. Run `node scripts/app-art.mjs` from the repo root after changing the art and
+`scripts/brand-assets.mjs` draws both from the design tokens and writes every file Xcode reads: the amber shield
+with the TE monogram on the teal-black ground, full-bleed (iOS rounds the corners; the PNG has no alpha channel, which
+Apple requires), and the launch screen with the sign-in screen's wordmark centred on `#0a1214`, kept inside the middle
+1,100 px because phones crop the sides. The lettering is Oswald outlined to paths by `python3 scripts/brand-paths.py`
+(needs fontTools and brotli), so change the name there first. Run `node scripts/brand-assets.mjs` from `scripts/` after changing the art and
 commit `web/assets/` and `web/ios/App/App/Assets.xcassets/`.
 
 To use art made elsewhere (#21) instead, overwrite the files in `web/assets/`:

@@ -1,6 +1,6 @@
-# Cartel Wars — reconstructed design spec
+# Thug Empire — reconstructed design spec
 
-A web clone of SMLSD's *The Cartel* / *Cartel Wars* (iPhone, 2009–2010; later
+Thug Empire (Cartel Wars until 2026-11-07, renamed by Zack) is a web clone of SMLSD's *The Cartel* / *Cartel Wars* (iPhone, 2009–2010; later
 *Cartel Reloaded* under Roasted Brains). This is not a Mafia-Wars-style
 "add me" mob game. It is a crime economy sim: produce and move product, fight
 one-on-one with equipped gear, manage Heat and jail, band into Crews and

@@ -93,7 +93,7 @@ export function SetNewPassword() {
   return (
     <div className="auth">
       <Toasts />
-      <div className="logo"><h1>Cartel Wars</h1><p>Set a new password</p></div>
+      <div className="logo"><h1>Thug Empire</h1><p>Set a new password</p></div>
       <Card>
         <div className="bd stack">
           <div className="small muted">You opened a password reset link. Pick a new password to get back in.</div>

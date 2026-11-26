@@ -6,10 +6,11 @@ import { goLabel } from '../lib/gate'
 import { haptic } from '../lib/haptics'
 import { Btn, Card } from './ui'
 import { Icon } from './Icon'
+import { MarcusFace } from './Faces'
 
 const MARCUS = { name: 'Marcus' }
-/** Marcus's mark until he has a face: an M in an amber ring. */
-const Mark = () => <span className="mring" aria-hidden>M</span>
+/** Marcus's face (components/Faces.tsx) in the amber ring. */
+const Mark = ({ size = 32 }: { size?: number }) => <span className="mring" aria-hidden><MarcusFace size={size} /></span>
 
 /**
  * Marcus, your right-hand man, and the mission you're on (Season 1): one card at the top of Home. His line, the
@@ -25,7 +26,7 @@ export function Marcus() {
   if ('finished' in m) {
     return (
       <Link to="/missions" className="card row link marcus done" data-marcus="finished">
-        <Mark />
+        <Mark size={36} />
         <div className="grow"><div className="t">Campaign complete · {me.season.name}</div><div className="s">The hood's yours and the city's open. Every line, in the log.</div></div>
         <span className="chev">›</span>
       </Link>

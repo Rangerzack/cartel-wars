@@ -8,7 +8,7 @@ import { BailButton } from '../components/Bail'
 import { HealButton } from '../components/Heal'
 import type { ActionDef, RareFind, RecentFind } from '../lib/types'
 import { haptic } from '../lib/haptics'
-import { Glyph, Icon } from '../components/Icon'
+import { Icon, Reveal } from '../components/Icon'
 
 type Sort = 'default' | 'cash' | 'rep'
 type Result = { a: ActionDef; pay: number; rep: number; busted: boolean; heat: number; stamina: number }
@@ -151,7 +151,7 @@ export default function Actions() {
       {found && (
         <Modal title="Rare find" onClose={() => { const b = found.res; setFound(null); if (b.busted) setBust(b) }}>
           <div className="find-modal">
-            <div className="big"><Glyph e={findIcon[found.item.category]} size={54} /></div>
+            <div className="big"><Reveal e={findIcon[found.item.category]} tone="purple" size={104} /></div>
             <div className="name">{found.item.name}</div>
             <div className="small muted tabular">{found.item.att ? `att ${found.item.att}` : ''}{found.item.att && found.item.def ? ' · ' : ''}{found.item.def ? `def ${found.item.def}` : ''} · you own {num(found.item.owned)}</div>
             <div className="small">Turned up on {found.res.a.name}. The best {found.item.category === 'jail_weapon' ? 'jail weapon' : found.item.category === 'transport' ? 'vehicle' : found.item.category} in the game — it can't be bought or sold.</div>

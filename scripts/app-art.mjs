@@ -38,7 +38,7 @@ const icon = `<div class="icon"><svg viewBox="0 0 512 512">
   <path d="M256 92 L392 150 V256 C392 338 332 394 256 424 C180 394 120 338 120 256 V150 Z" fill="none" stroke="rgba(246,215,122,.22)" stroke-width="3" stroke-linejoin="round"/>
   <text x="256" y="318" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="190" letter-spacing="-4" fill="url(#gold)" style="paint-order: stroke; stroke: #000; stroke-width: 6">CW</text>
 </svg></div>`
-const splash = `<div class="splash"><div class="wordmark">Cartel Wars</div><div class="rule"></div><div class="tag">Produce. Move product. Hold the block.</div></div>`
+const splash = `<div class="splash"><div class="wordmark">Thug Empire</div><div class="rule"></div><div class="tag">Produce. Move product. Hold the block.</div></div>`
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const shots = [

@@ -62,7 +62,7 @@ export default function Auth() {
     <div className="auth">
       <Toasts />
       <div className="logo">
-        <h1>Cartel Wars</h1>
+        <h1>Thug Empire</h1>
         <p>Produce. Move product. Hold the block.</p>
       </div>
       {!configured && (

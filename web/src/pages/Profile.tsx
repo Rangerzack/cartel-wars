@@ -68,7 +68,7 @@ export default function Profile() {
       <BlockedPlayers />
       <AccountCard onSignedOut={() => nav('/')} />
       <HelpPolicies />
-      <p className="muted small center">Cartel Wars is an independent fan project and is not affiliated with the creators of the original 2009 game.</p>
+      <p className="muted small center">Thug Empire is an independent fan project and is not affiliated with the creators of the original 2009 game, Cartel Wars.</p>
     </div>
   )
 }
