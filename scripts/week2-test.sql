@@ -40,7 +40,7 @@ do $$ declare r jsonb; p jsonb; f jsonb; begin
   update profiles set cash = 100000, stamina = 25, health = 100 where id in ('b1111111-1111-1111-1111-111111111111', 'b2222222-2222-2222-2222-222222222222');
   p := fight_preview('b2222222-2222-2222-2222-222222222222');
   assert (p->>'win_pct')::int between 0 and 100 and (p->>'dmg_min')::int <= (p->>'dmg_max')::int, 'preview: ' || p::text;
-  assert not (p->>'dry')::boolean and (p->>'stamina_cost')::int = 2 and (p->>'setup') = 'offense';
+  assert not (p->>'dry')::boolean and (p->>'stamina_cost')::int = 0 and (p->>'setup') = 'offense';
   perform expect_error('select fight_preview(auth.uid())', 'yourself');
   perform attack('b2222222-2222-2222-2222-222222222222');
   update profiles set health = 100 where id in ('b1111111-1111-1111-1111-111111111111', 'b2222222-2222-2222-2222-222222222222');

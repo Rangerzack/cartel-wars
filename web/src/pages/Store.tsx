@@ -65,7 +65,7 @@ export default function Store() {
       <BackBar fallback="/" />
       <h2>Store</h2>
       <Card id="diamonds" title={<><Icon name="gem" size={18} />Diamonds</>} right={<small className="dia tabular"><Icon name="gem" size={12} /> {num(me.diamonds)}</small>}>
-        {!storeReady && <div className="bd"><div className="notice blue">{isNative ? 'Purchases aren\'t available in this build.' : 'Diamonds are sold in the iPhone app. Everything they buy can also be earned: milestones, the Daily Drop and the casino pay out in diamonds.'}</div></div>}
+        {!storeReady && <div className="bd"><div className="notice blue">{isNative ? 'Purchases aren\'t available in this build.' : 'Diamonds are sold in the iPhone app. Everything they buy can also be earned: milestones and the casino pay out in diamonds.'}</div></div>}
         {storeReady && error && !products && <Loading error={error} onRetry={reload} />}
         {shown.map(p => (
           <div key={p.id} className={`row store-pack${storeReady ? '' : ' off'}`}>
@@ -79,7 +79,7 @@ export default function Store() {
         <div className="bd stack">
           {storeReady && products && !error && !shown.length && <div className="notice blue">Nothing's on sale right now. Try again later.</div>}
           <div className="small muted">Diamonds buy refills, upgrades, setup slots, boosts and extra grow houses. Diamonds you buy never expire. Only diamonds you earn in the game can be sent to other players.</div>
-          {storeReady && <div className="hstack"><Btn className="ghost sm" onClick={restore}>Restore Purchases</Btn><span className="small muted">Brings back a Daily Drop bought on this Apple ID.</span></div>}
+          {storeReady && <div className="hstack"><Btn className="ghost sm" onClick={restore}>Restore Purchases</Btn><span className="small muted">Diamond packs are spent when bought, so there's nothing to bring back for them.</span></div>}
         </div>
       </Card>
       <DailyDrop />

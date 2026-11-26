@@ -6,6 +6,7 @@ import { drugRefill } from '../lib/market'
 import { perk } from '../lib/perks'
 import { Btn, Modal } from './ui'
 import { Glyph, Icon } from './Icon'
+import { features } from '../lib/features'
 
 /** The sheet that opens when a job, a fight or a turf war needs more stamina than the player has: every way to refill,
  *  priced, with what each one restores, so the next tap is the refill rather than a trip to Services. The same rules as
@@ -58,7 +59,7 @@ export function RefillSheet() {
         <div className="small muted">
           {me.diamonds < cfg.refill_diamonds && <><Link to="/store" onClick={closeRefill}>Get diamonds ›</Link> · </>}
           <Link to="/services?focus=refills" onClick={closeRefill}>All refills ›</Link>
-          {' '}· Each drug fills you up {me.refills?.full ?? cfg.refill_full ?? 3} times a day{me.drop?.subscribed ? '' : ` (${me.refills?.sub_full ?? 5} with the Daily Drop)`}, then restores half your stamina.
+          {' '}· Each drug fills you up {me.refills?.full ?? cfg.refill_full ?? 3} times a day{me.drop?.subscribed || features.dropPaused ? '' : ` (${me.refills?.sub_full ?? 5} with the Daily Drop)`}, then restores half your stamina.
         </div>
       </div>
     </Modal>

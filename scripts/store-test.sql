@@ -16,19 +16,21 @@ insert into auth.users (id, raw_user_meta_data) values
 create function _iap(ev text, tx text, product text, who text, expires timestamptz default null, raw jsonb default '{}')
 returns jsonb language sql as $$ select iap_apply('revenuecat', ev, tx, product, who::uuid, expires, raw) $$;
 create temp table _test_store as select (select count(*) from iap_grants) as grants0;
+-- these accounts buy in the sandbox, which credits only testers (20261125000029_launch_fixes; launch-test.sql covers the rest)
+update profiles set iap_tester = true where id::text like 'ee%';
 
 -- The catalog: active packs in order, the subscription's product, no prices ------------------------------------------
 select as_user('ee111111-1111-1111-1111-111111111111');
 do $$ declare s jsonb := get_catalog()->'store'; begin
   assert jsonb_array_length(s->'packs') = 6, s::text;
-  assert s->'packs'->0 = '{"id": "io.rangelab.cartelwars.diamonds.100", "diamonds": 100}'::jsonb, s::text;
-  assert s->'packs'->5 = '{"id": "io.rangelab.cartelwars.diamonds.15000", "diamonds": 15000}'::jsonb, s::text;
-  assert s->>'drop_product' = 'io.rangelab.cartelwars.drop.monthly';
+  assert s->'packs'->0 = '{"id": "io.github.rangerzack.thugempire.diamonds.100", "diamonds": 100}'::jsonb, s::text;
+  assert s->'packs'->5 = '{"id": "io.github.rangerzack.thugempire.diamonds.15000", "diamonds": 15000}'::jsonb, s::text;
+  assert s->>'drop_product' = 'io.github.rangerzack.thugempire.drop.monthly';
   assert s::text not like '%price%', 'prices come from StoreKit';
   -- a pack switched off leaves the store
-  update store_packs set active = false where id = 'io.rangelab.cartelwars.diamonds.15000';
+  update store_packs set active = false where id = 'io.github.rangerzack.thugempire.diamonds.15000';
   assert jsonb_array_length(get_catalog()->'store'->'packs') = 5;
-  update store_packs set active = true where id = 'io.rangelab.cartelwars.diamonds.15000';
+  update store_packs set active = true where id = 'io.github.rangerzack.thugempire.diamonds.15000';
   -- new players: nothing bought, not on a paid plan
   assert (get_me()->'drop'->>'drop_paid')::boolean = false;
   assert (select diamonds_bought = 0 and diamonds_bought_unspent = 0 from profiles where id = auth.uid());
@@ -37,7 +39,7 @@ end $$;
 -- A pack: credited once, with an activity line and an audit row ----------------------------------------------------------
 do $$ declare u uuid := 'ee111111-1111-1111-1111-111111111111'; r jsonb; p profiles; begin
   update profiles set diamonds = 10 where id = u;    -- 10 earned
-  r := _iap('NON_RENEWING_PURCHASE', 'tx-1', 'io.rangelab.cartelwars.diamonds.100', u::text, null, '{"environment": "SANDBOX"}');
+  r := _iap('NON_RENEWING_PURCHASE', 'tx-1', 'io.github.rangerzack.thugempire.diamonds.100', u::text, null, '{"environment": "SANDBOX"}');
   assert r = '{"credited": 100}', r::text;
   select * into p from profiles where id = u;
   assert p.diamonds = 110 and p.diamonds_bought = 100 and p.diamonds_bought_unspent = 100, row_to_json(p)::text;
@@ -45,15 +47,15 @@ do $$ declare u uuid := 'ee111111-1111-1111-1111-111111111111'; r jsonb; p profi
   assert (select diamonds from iap_grants where transaction_id = 'tx-1') = 100;
   assert (select raw->>'environment' from iap_grants where transaction_id = 'tx-1') = 'SANDBOX', 'the payload is kept';
   -- RevenueCat retries: the same event again changes nothing and isn't logged twice
-  r := _iap('NON_RENEWING_PURCHASE', 'tx-1', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  r := _iap('NON_RENEWING_PURCHASE', 'tx-1', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   assert r = '{"duplicate": true}', r::text;
   assert (select diamonds from profiles where id = u) = 110;
   assert (select count(*) from iap_grants where transaction_id = 'tx-1') = 1;
   assert (select count(*) from activity where player_id = u and kind = 'purchase') = 1;
   -- INITIAL_PURCHASE credits a pack too; RENEWAL isn't a pack event
-  r := _iap('INITIAL_PURCHASE', 'tx-2', 'io.rangelab.cartelwars.diamonds.550', u::text);
+  r := _iap('INITIAL_PURCHASE', 'tx-2', 'io.github.rangerzack.thugempire.diamonds.550', u::text);
   assert r = '{"credited": 550}', r::text;
-  r := _iap('RENEWAL', 'tx-2', 'io.rangelab.cartelwars.diamonds.550', u::text);
+  r := _iap('RENEWAL', 'tx-2', 'io.github.rangerzack.thugempire.diamonds.550', u::text);
   assert r = '{"ignored": "RENEWAL"}', r::text;
   select * into p from profiles where id = u;
   assert p.diamonds = 660 and p.diamonds_bought = 650 and p.diamonds_bought_unspent = 650, row_to_json(p)::text;
@@ -94,9 +96,9 @@ end $$;
 do $$ declare u uuid := 'ee111111-1111-1111-1111-111111111111'; pal uuid := 'ee222222-2222-2222-2222-222222222222'; p profiles; r jsonb; begin
   update profiles set diamonds = 0, diamonds_bought = 0, diamonds_bought_unspent = 0 where id = u;
   update profiles set diamonds = 40 where id = u;    -- 40 earned
-  perform _iap('NON_RENEWING_PURCHASE', 'tx-3', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  perform _iap('NON_RENEWING_PURCHASE', 'tx-3', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   -- refunded while all 100 are still there: they go, the 40 earned stay
-  r := _iap('CANCELLATION', 'tx-3', 'io.rangelab.cartelwars.diamonds.100', u::text, null, '{"cancel_reason": "CUSTOMER_SUPPORT"}');
+  r := _iap('CANCELLATION', 'tx-3', 'io.github.rangerzack.thugempire.diamonds.100', u::text, null, '{"cancel_reason": "CUSTOMER_SUPPORT"}');
   assert r = '{"revoked": 100}', r::text;
   select * into p from profiles where id = u;
   assert p.diamonds = 40 and p.diamonds_bought = 0 and p.diamonds_bought_unspent = 0, row_to_json(p)::text;
@@ -105,32 +107,32 @@ do $$ declare u uuid := 'ee111111-1111-1111-1111-111111111111'; pal uuid := 'ee2
   assert (select raw->>'cancel_reason' from iap_grants where transaction_id = 'tx-3' and event = 'CANCELLATION') = 'CUSTOMER_SUPPORT';
 
   -- bought, then 110 of the 140 spent (purchased first), then refunded: only the 30 left can go, never below 0
-  perform _iap('NON_RENEWING_PURCHASE', 'tx-4', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  perform _iap('NON_RENEWING_PURCHASE', 'tx-4', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   update profiles set diamonds = 30 where id = u;
-  r := _iap('REFUND', 'tx-4', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  r := _iap('REFUND', 'tx-4', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   assert r = '{"revoked": 30}', r::text;
   select * into p from profiles where id = u;
   assert p.diamonds = 0 and p.diamonds_bought_unspent = 0 and p.diamonds_bought = 0, row_to_json(p)::text;
   assert (select diamonds from iap_grants where transaction_id = 'tx-4' and event = 'REFUND') = -30;
   -- a second refund event for the same purchase takes nothing more
   update profiles set diamonds = 500 where id = u;
-  r := _iap('CANCELLATION', 'tx-4', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  r := _iap('CANCELLATION', 'tx-4', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   assert r = '{"ignored": "already refunded"}', r::text;
   assert (select diamonds from profiles where id = u) = 500;
 
   -- the refund takes what the purchase credited, even if the pack changed since
-  perform _iap('NON_RENEWING_PURCHASE', 'tx-5', 'io.rangelab.cartelwars.diamonds.550', u::text);
-  update store_packs set diamonds = 600 where id = 'io.rangelab.cartelwars.diamonds.550';
-  r := _iap('CANCELLATION', 'tx-5', 'io.rangelab.cartelwars.diamonds.550', u::text);
+  perform _iap('NON_RENEWING_PURCHASE', 'tx-5', 'io.github.rangerzack.thugempire.diamonds.550', u::text);
+  update store_packs set diamonds = 600 where id = 'io.github.rangerzack.thugempire.diamonds.550';
+  r := _iap('CANCELLATION', 'tx-5', 'io.github.rangerzack.thugempire.diamonds.550', u::text);
   assert r = '{"revoked": 550}', r::text;
-  update store_packs set diamonds = 550 where id = 'io.rangelab.cartelwars.diamonds.550';
+  update store_packs set diamonds = 550 where id = 'io.github.rangerzack.thugempire.diamonds.550';
   assert (select diamonds from profiles where id = u) = 500;
 end $$;
 
 -- The Daily Drop subscription --------------------------------------------------------------------------------------
 select as_user('ee333333-3333-3333-3333-333333333333');
 do $$ declare u uuid := 'ee333333-3333-3333-3333-333333333333'; m jsonb; r jsonb; t timestamptz := now() + interval '30 days'; p profiles;
-         prod text := 'io.rangelab.cartelwars.drop.monthly'; begin
+         prod text := 'io.github.rangerzack.thugempire.drop.monthly'; begin
   r := _iap('INITIAL_PURCHASE', 'sub-1', prod, u::text, t);
   assert r ? 'subscribed', r::text;
   m := get_me()->'drop';
@@ -185,7 +187,7 @@ do $$ declare u uuid := 'ee444444-4444-4444-4444-444444444444'; since timestampt
   perform subscribe_drop();
   since := (select drop_since from profiles where id = u);
   assert not (get_me()->'drop'->>'drop_paid')::boolean;
-  perform _iap('INITIAL_PURCHASE', 'sub-4', 'io.rangelab.cartelwars.drop.monthly', u::text, now() + interval '30 days');
+  perform _iap('INITIAL_PURCHASE', 'sub-4', 'io.github.rangerzack.thugempire.drop.monthly', u::text, now() + interval '30 days');
   assert (select drop_since from profiles where id = u) = since and (get_me()->'drop'->>'drop_paid')::boolean;
   assert (select drop_crates from profiles where id = u) = 1, 'no second crate the same day';
 end $$;
@@ -194,9 +196,9 @@ end $$;
 do $$ declare r jsonb; n0 bigint := (select grants0 from _test_store); begin
   r := _iap('TEST', 'evt-test', 'test_product', 'ee111111-1111-1111-1111-111111111111');
   assert r = '{"ignored": "unknown product"}', r::text;
-  r := _iap('NON_RENEWING_PURCHASE', 'tx-ghost', 'io.rangelab.cartelwars.diamonds.100', '00000000-0000-0000-0000-00000000dead');
+  r := _iap('NON_RENEWING_PURCHASE', 'tx-ghost', 'io.github.rangerzack.thugempire.diamonds.100', '00000000-0000-0000-0000-00000000dead');
   assert r = '{"ignored": "unknown player"}', r::text;
-  r := _iap('NON_RENEWING_PURCHASE', 'tx-anon', 'io.rangelab.cartelwars.diamonds.100', null);
+  r := _iap('NON_RENEWING_PURCHASE', 'tx-anon', 'io.github.rangerzack.thugempire.diamonds.100', null);
   assert r = '{"ignored": "unknown player"}', r::text;
   assert (select player_id is null and diamonds = 0 from iap_grants where transaction_id = 'tx-ghost');
   -- every call above that wasn't a duplicate wrote exactly one row
@@ -208,7 +210,7 @@ end $$;
 -- Deleting an account that bought diamonds: the tally says it paid, the purchase rows stay without the player ----------
 select as_user('ee222222-2222-2222-2222-222222222222');
 do $$ declare u uuid := 'ee222222-2222-2222-2222-222222222222'; begin
-  perform _iap('NON_RENEWING_PURCHASE', 'tx-pal', 'io.rangelab.cartelwars.diamonds.100', u::text);
+  perform _iap('NON_RENEWING_PURCHASE', 'tx-pal', 'io.github.rangerzack.thugempire.diamonds.100', u::text);
   perform delete_account('Pal');
   assert (select had_purchases from deleted_accounts order by id desc limit 1), 'bought diamonds counts as paid';
   assert (select player_id is null and diamonds = 100 from iap_grants where transaction_id = 'tx-pal'), 'the record stays';

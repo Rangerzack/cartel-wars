@@ -73,8 +73,8 @@ lists *(wiki: profile avatar)*.
 
 ## Fighting
 
-Attack from any player's profile (**One On One**). Requirements: attacker
-Stamina ≥2 (not consumed — intended), both players' Health >19, target not in
+Attack from any player's profile (**One On One**). Fights cost no stamina
+*(Zack, 2026-11-25; until then 2 were required but never taken)*. Requirements: both players' Health >19, target not in
 Hospital, and both on the same side of the bars: jailed players only fight
 jailed players, and nobody outside can attack someone inside *(Zack)*.
 No new-player immunity: new accounts can be attacked right away *(ours)*.
@@ -609,7 +609,7 @@ Diamonds) lists the packs with "Diamonds are sold in the iPhone app" and no pric
 - **The webhook is idempotent and on the record.** Every call writes one `iap_grants` row, keyed on (provider,
   transaction, event), so RevenueCat's retries change nothing; ignored calls (unknown products, unknown players,
   events we don't use) are recorded too. The rows stay, without the player, when an account is deleted.
-- **The Daily Drop subscription** (`io.rangelab.cartelwars.drop.monthly`, monthly, renews until cancelled): a
+- **The Daily Drop subscription** (`io.github.rangerzack.thugempire.drop.monthly`, monthly, renews until cancelled): a
   purchase, renewal, re-enabled renewal or plan change pays it through the end of the period Apple reports
   (`drop_until`), and a late event never moves that date back. Expiry lets it lapse; a refund ends it at once;
   turning off renewal or a billing problem changes nothing until Apple says it has expired (a billing problem gets
@@ -684,7 +684,7 @@ of cash, the button is off and points at the bank. After the Bribe Police job, a
 deliberate trip in, **Stay inside** is the main button and bail is the quiet one.
 A fight's result sheet has Attack again under the result, with the same checks as
 Attack (hospital, jail), so a streak is one tap per fight. Short on stamina is
-never a dead button: Do It, Attack and a turf attack open the refill sheet (free,
+never a dead button: Do It and a turf attack open the refill sheet (free,
 diamonds, or product, each priced with what it restores), and so does any server
 refusal for stamina (crew fights). The server still checks every refill.
 **Reliability rules** *(Zack, 2026-10-02, Phase 2)*: a screen's first fetch never leaves

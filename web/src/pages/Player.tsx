@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame, useMe } from '../lib/game'
 import { api } from '../lib/api'
-import { ago, every, money, num, toInt } from '../lib/format'
+import { ago, money, num, toInt } from '../lib/format'
 import { Btn, Card, Loading, Modal, Stat } from '../components/ui'
 import { BailButton } from '../components/Bail'
 import { HealButton } from '../components/Heal'
@@ -21,7 +21,7 @@ import { Icon, type IconName } from '../components/Icon'
 export default function Player() {
   const { id = '' } = useParams()
   const me = useMe()
-  const { run, catalog, askRefill, ask } = useGame()
+  const { run, catalog, ask } = useGame()
   const nav = useNavigate()
   const [result, setResult] = useState<FightResult | null>(null)
   const [amount, setAmount] = useState(0)
@@ -41,10 +41,8 @@ export default function Player() {
   // Season 1: Fight opens with Marcus's First Blood; until then a profile is for looking and talking
   const fightLocked = isLocked(me, 'fight')
   const cantFight = isMe || me.hospital || p.hospital || jailWall || fightLocked
-  const tired = me.stamina < 2   // not a dead button: Attack offers a refill
 
   async function fight() {
-    if (me.stamina < 2) { askRefill(2); return }
     const r = await run(() => api.attack(p!.id), { silent: true })
     if (r) { setResult(r); haptic(r.busted ? 'warning' : r.won ? 'success' : 'error') }
     // reload either way: a refusal (they just went to the hospital, say) is what disables Attack again
@@ -90,7 +88,6 @@ export default function Player() {
           {!isMe && fightLocked && <div className="why">{LOCK_LINE}</div>}
           {!isMe && !fightLocked && me.hospital && <><div className="why">You're in the hospital — heal to full to fight again, or wait it out.</div><HealButton /></>}
           {!isMe && jailWall && <div className="why">{me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."}</div>}
-          {!isMe && !cantFight && tired && <div className="why">You need 2 stamina to fight — it comes back {catalog?.config.stamina_regen_amount ?? 2} {every(catalog?.config.stamina_regen_minutes ?? 10)}, or tap Attack to refill.</div>}
           {!isMe && pv && !p.hospital && !me.hospital && !jailWall && !fightLocked && <Odds pv={pv} name={p.name} />}
           {!isMe && p.blocked && <div className="small muted">You've blocked them — no messages either way</div>}
           {!isMe && p.hospital && <div className="small muted">They're in the hospital — let them heal up.</div>}
@@ -158,12 +155,12 @@ export default function Player() {
             {result.busted && <div className="notice red">A patrol rolled up after the fight — you're in jail.</div>}
             {result.busted && me.jailed && <BailButton />}
             {/* a streak is one tap per fight: the same checks as the Attack button, on the refreshed me and p */}
-            <Btn className="doit red block" disabled={cantFight} onClick={fight}><Icon name="swords" size={16} /> Attack Again · <Icon name="bolt" size={13} />2 · {num(me.stamina)} left</Btn>
+            <Btn className="doit red block" disabled={cantFight} onClick={fight}><Icon name="swords" size={16} /> Attack Again</Btn>
             {cantFight ? <div className="why">{
               p.hospital ? `${p.name} is in the hospital — let them heal up.`
               : me.hospital ? "You're in the hospital — heal to full above, or wait it out."
               : me.jailed ? "You're locked up — you can only fight other inmates." : "They're locked up — only other inmates can get at them."
-            }</div> : tired && <div className="why">You're out of stamina — Attack again offers a refill.</div>}
+            }</div> : null}
           </div>
         </Modal>
       )}
@@ -202,7 +199,7 @@ function Odds({ pv, name }: { pv: FightPreview; name: string }) {
           </div>
         </div>
       )}
-      <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · costs <Icon name="bolt" size={11} />{pv.stamina_cost} · <Icon name="flame" size={11} />+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
+      <div className="small muted tabular">You'd take {pv.dmg_min}–{pv.dmg_max} damage · no stamina · <Icon name="flame" size={11} />+{pv.heat_gain}{pv.setup === 'jail' ? ' · fighting with your jail setup' : ''}</div>
       {pv.dry && <div className="warn">You've hit them {pv.hits_this_hour}× this hour — you can still fight, but no cash changes hands.</div>}
       {pv.hospital_risk && <div className="warn">At {pv.my_health} health, a bad fight could put you in the hospital.</div>}
       {pv.bust_pct > 0 && <div className="warn">Your heat is in the red — about {pv.bust_pct}% chance a patrol picks you up after.</div>}

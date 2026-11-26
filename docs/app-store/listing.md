@@ -30,7 +30,7 @@ This sits above the description and can be changed at any time without a review.
 
 1. **Grow it, move it, defend it. The rivals, crews and traders around you are real players, and the city keeps moving while you're away.** — 132/170
 2. **Start a crew, take a block and hold it. A held block falls only after 50 hits, so your crew has time to fight back.** — 115/170
-3. **The Daily Drop leaves a crate every day: cash, product, diamonds or a jackpot. Every prize and its odds are in the game.** — 120/170 (once purchases ship)
+3. **The Daily Drop leaves a crate every day: cash, product, diamonds or a jackpot. Every prize and its odds are in the game.** — 120/170 (not in 1.0: the Daily Drop is paused until 1.1)
 
 ## 4. Description (4,000 max) — 3098/4000
 
@@ -65,7 +65,7 @@ A PERSISTENT WORLD
 The city runs all the time. Your grow houses produce and other players make their moves while you're offline. Everyone you fight, trade with and talk to is a real player, apart from the thugs: 200 street-level NPCs to practice on. Live chat, crew and cartel chat, direct messages, a forum and weekly boards. You can report or block any player from their profile.
 
 FREE TO PLAY
-Free to play, with no ads. Optional in-app purchases: diamond packs, and the Daily Drop, a monthly subscription that leaves a crate every day. Diamonds buy refills, upgrades and extra setup slots. Every crate's prizes and odds are shown in the game. The Daily Drop renews each month until you cancel it in Settings at least 24 hours before the period ends.
+Free to play, with no ads. Optional in-app purchases: diamond packs. Diamonds buy refills, upgrades and extra setup slots, and can also be earned in the game.
 
 For players 18 and over. Thug Empire is fiction: the people, crews and places in it are made up. Needs an internet connection.
 
@@ -119,7 +119,7 @@ The 2025 questionnaire, item by item. "Frequent" is Apple's "Frequent or Intense
 | Chance-based activities | Simulated gambling | Frequent | Five casino games (Hold'em, blackjack, craps, roulette, slots) played with the game's cash. |
 | | Contests | None | The weekly boards give a stripe, not a prize. |
 | | Gambling (real money) | No | Nothing in the game can be cashed out. |
-| | Loot boxes | Yes | The Daily Drop crates: a random prize from a fixed table, with the odds shown in the game. |
+| | Loot boxes | No (1.0) | Nothing random is sold in 1.0: the Daily Drop is paused. Answer Yes when it comes back as a subscription in 1.1. |
 
 **Expected result: 18+.** Frequent simulated gambling should be enough on its own. If it comes out lower, choose a higher rating and set 18+: the Terms and the Privacy Policy both say players must be 18.
 
@@ -131,7 +131,7 @@ The 2025 questionnaire, item by item. "Frequent" is Apple's "Frequent or Intense
 |---|---|---|---|---|
 | Contact Info → Email Address | Sign-in, confirmation and reset emails, support replies | App Functionality | Yes | No |
 | Identifiers → User ID | The account ID and the street name | App Functionality | Yes | No |
-| Purchases → Purchase History | Diamond packs and the Daily Drop status, through RevenueCat (once purchases ship) | App Functionality | Yes | No |
+| Purchases → Purchase History | Diamond packs, through RevenueCat | App Functionality | Yes | No |
 | User Content → Emails or Text Messages | Chat lines and DMs | App Functionality | Yes | No |
 | User Content → Gameplay Content | Cash, product, gear, fights, casino hands, crews, territory | App Functionality | Yes | No |
 | User Content → Other User Content | Avatar, bio, crew names and descriptions, forum threads and replies, reports | App Functionality | Yes | No |
@@ -155,7 +155,7 @@ Password:
 The account already has cash, diamonds, gear, a crew and product in storage, so every screen has something on it. You can also make a new account on the sign-in screen (New Player).
 
 WHERE THINGS ARE
-- Home: stats, recent activity, the Daily Drop card, and links to Territory, Casino, Forum, Crew and Top Users.
+- Home: stats, recent activity, and links to Territory, Casino, Forum, Crew and Top Users.
 - Actions: jobs that cost stamina and pay cash or reputation.
 - Economy: grow houses, hustlers and the marketplace.
 - Fight: other players and the NPC thugs. Tap one to see your odds and attack.
@@ -164,7 +164,7 @@ WHERE THINGS ARE
 - Profile: tap your name at the top left.
 
 IN-APP PURCHASES
-Diamond packs are in the Store tab. The Daily Drop subscription is on the Daily Drop card on Home. "What can drop? See the odds" on that card lists every prize and its odds before you buy. Purchases go through Apple in-app purchase (via RevenueCat). Diamonds are spent in the game only.
+Diamond packs are in the Store (tap the diamond count in the top bar). There are no subscriptions. Purchases go through Apple in-app purchase (via RevenueCat). Diamonds are spent in the game only. Please make test purchases on the demo account above: it is set up to receive sandbox purchases, and test purchases on other accounts are recorded but not credited, so free TestFlight purchases can't reach other players.
 
 CASINO
 Hold'em, blackjack, craps, roulette and slots, played with the game's own cash. No real money can be wagered or won, and nothing in the game can be cashed out.
@@ -205,7 +205,8 @@ Contact: support@rangelab.io
      if me is null then raise exception 'No account with that email'; end if;
      update profiles set cash = 500000, bank = 2000000, diamonds = 300,
             stamina_max = 100, stamina = 100, health_max = 200, health = 200, heat = 0,
-            storage_cap = 2000, inventory_slots = 8, jail_until = null, in_hospital = false
+            storage_cap = 2000, inventory_slots = 8, jail_until = null, in_hospital = false,
+            iap_tester = true   -- sandbox purchases (App Review's) credit this account (20261125000029)
       where id = me;
      update storage set qty = case commodity when 'herb' then 800 when 'dust' then 300 else 60 end where player_id = me;
      insert into grow_houses (player_id, commodity, level, running, started_at) values (me, 'herb', 3, true, now())

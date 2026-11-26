@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // Native iOS shell (Apple guideline 4.2): the app ships its own build of web/dist, it never loads the Pages site.
 // Build with BASE_PATH=/ (`npm run build:ios`) — inside the shell the app is served from capacitor://localhost/.
 const config: CapacitorConfig = {
-  appId: 'io.rangelab.cartelwars',
+  appId: 'io.github.rangerzack.thugempire',
   appName: 'Thug Empire',
   webDir: 'dist',
   backgroundColor: '#0a1214',

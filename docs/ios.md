@@ -10,9 +10,6 @@ Purchases (in-app purchases, see `docs/ops.md`), pulled in with Swift Package Ma
 
 `.github/workflows/ios.yml` runs on GitHub's macOS runner (Xcode 26). You don't need a Mac.
 
-> The workflow was written as `docs/ios-workflow.yml` because the tools that push from this machine can't write under
-> `.github/workflows/`. Move it once, then delete this note:
-> `git mv docs/ios-workflow.yml .github/workflows/ios.yml && git commit -m "iOS workflow" && git push`
 
 1. `npm ci && npm run build:ios` in `web/`: Vite build with the live Supabase URL and key (the same ones as
    `pages.yml`), then `cap sync ios`.
@@ -39,7 +36,7 @@ The comment at the top of `ios.yml` has the step-by-step version. In short:
 | `MATCH_GIT_AUTH` | Access to that repo | A fine-grained token for that repo only (Contents: Read and write), stored as base64 of `username:token` |
 | `MATCH_PASSWORD` | Encrypts the files in that repo | A passphrase you make up. Keep a copy. |
 
-Before the first run, register the bundle ID `io.rangelab.cartelwars` (developer.apple.com → Identifiers)
+Before the first run, register the bundle ID `io.github.rangerzack.thugempire` (developer.apple.com → Identifiers)
 and create the app in App Store Connect (Apps → "+" → New App). The API key can't create the app record.
 
 ## Versions
