@@ -34,6 +34,7 @@ build", which is fine for a first TestFlight build but not for submission.
 | B3 | Sandbox (free) purchases would credit real diamonds into the live economy | `iap_apply` credited regardless of `environment`; `docs/ops.md` said so | Fixed in the same migration, applied live 2026-11-25: sandbox credits only `iap_tester` accounts and admins | A sandbox buy on a non-tester account is recorded as ignored; one on the demo account is credited |
 | B4 | App Store screenshots are out of date | `docs/app-store/screenshots-6.7` last changed 2026-10-04, before the Border Night redesign and the rename | Open | New 6.7"/6.9" set from the current build, uploaded in App Store Connect |
 | B5 | Purchases not set up | No RevenueCat key in the build; the webhook secret and products are not configured (`iap_grants` is empty) | Needs Zack (see below) | A sandbox pack bought on TestFlight lands on the demo account within seconds |
+| B7 | Password reset and other auth emails don't reach players | Custom SMTP is off, so Supabase only emails its own team, at 2 an hour. The Site URL was `http://localhost:3000` with no redirect URLs allowed | URLs fixed 2026-11-25 (Site URL `https://rangerzack.github.io/cartel-wars/`, redirect `https://rangerzack.github.io/cartel-wars/**`). SMTP needs Zack: a provider account and a sender address, entered in Authentication → Emails → SMTP Settings | A reset email sent to a non-team address arrives and its link opens the game's new-password screen, on the web and from the iPhone app |
 | B6 | Submission metadata incomplete | Review notes have blank demo credentials; the age rating questionnaire now has two new required questions (see below) | Open | App Store Connect shows no missing fields |
 
 ## Unverified concerns
@@ -107,6 +108,9 @@ Never paste keys, passwords or tokens into a chat. Each one goes straight into t
 | D5 | Age rating answers | Frequent simulated gambling → 18+. The two descriptors Apple added on 2026-11-16 (required by 2027-01-12): Shared Location **No**, Dating and Relationships **No** |
 
 ## Open questions for Zack
+
+- **Repo visibility.** `Rangerzack/cartel-wars` is public. Making it private takes the GitHub Pages site down on a free
+  plan, and macOS build minutes stop being free.
 
 - **Legal pages and support email still say Range Lab.** `web/public/privacy.html`, `terms.html`, `support.html` and
   `HelpPolicies.tsx` name Range Lab as the operator and `support@rangelab.io` as the contact. For a private project
