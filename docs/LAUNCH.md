@@ -112,10 +112,9 @@ Never paste keys, passwords or tokens into a chat. Each one goes straight into t
 - **Repo visibility.** `Rangerzack/cartel-wars` is public. Making it private takes the GitHub Pages site down on a free
   plan, and macOS build minutes stop being free.
 
-- **Legal pages and support email still say Range Lab.** `web/public/privacy.html`, `terms.html`, `support.html` and
-  `HelpPolicies.tsx` name Range Lab as the operator and `support@rangelab.io` as the contact. For a private project
-  these need your name (or a trade name) and an email you'll answer. App Store Connect's Support URL and the privacy
-  policy must match what's in them.
+- **Legal pages and support email:** done 2026-11-25. The operator is "the independent developer" and the contact is
+  `Zack@apheleia.me`. Use the same address as the Support email in App Store Connect. Add your name to the privacy policy if
+  you want a named data controller.
 - **Apple Developer account type.** A private project ships under your individual account; the seller name on the
   store is then your legal name.
 

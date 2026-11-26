@@ -90,7 +90,7 @@ No word from the name. Apple already matches the name, subtitle and category, so
 - **Support URL:** https://rangerzack.github.io/cartel-wars/support.html
 - **Privacy Policy URL:** https://rangerzack.github.io/cartel-wars/privacy.html
 - **Marketing URL:** https://rangerzack.github.io/cartel-wars/
-- **Copyright:** © 2026 Range Lab
+- **Copyright:** © 2026 followed by your name as it appears as the seller on your Apple developer account
 
 ## 7. Age rating questionnaire (#25)
 
@@ -185,22 +185,22 @@ Profile (tap your name at the top left) > Account > Delete account. Type the str
 CONTENT
 Rated 18+. Everything in the game is fiction: the products (herb, dust, pills), people, crews and places are made up. There are no images of drugs or violence; the game is text, numbers and emoji.
 
-Contact: support@rangelab.io
+Contact: Zack@apheleia.me
 ```
 
 ## 10. Demo account checklist (#26)
 
-1. **Make the account in the app** (or on the web build) with **New Player**: a street name such as `AppReview` and an inbox you can read, such as `appreview@rangelab.io`. Click the confirmation link in the email. Signing up in the app gives it a real street name; an account made in the Supabase dashboard starts as `player_xxxxxxxx` and opens on a rename prompt.
+1. **Make the account in the app** (or on the web build) with **New Player**: a street name such as `AppReview` and an inbox you can read, such as `appreview@apheleia.me`. Click the confirmation link in the email. Signing up in the app gives it a real street name; an account made in the Supabase dashboard starts as `player_xxxxxxxx` and opens on a rename prompt.
 2. **Check it** in the Supabase SQL editor:
    ```sql
    select p.id, p.name, u.email_confirmed_at
      from profiles p join auth.users u on u.id = p.id
-    where u.email = 'appreview@rangelab.io';
+    where u.email = 'appreview@apheleia.me';
    ```
 3. **Stock it.** Cash, diamonds, gear in all three setups (with a combo in offense and defense), product, a herb grow house, some thugs, and a crew of its own. Change the crew name if it's taken.
    ```sql
    do $$
-   declare me uuid := (select id from auth.users where email = 'appreview@rangelab.io'); c uuid;
+   declare me uuid := (select id from auth.users where email = 'appreview@apheleia.me'); c uuid;
    begin
      if me is null then raise exception 'No account with that email'; end if;
      update profiles set cash = 500000, bank = 2000000, diamonds = 300,
