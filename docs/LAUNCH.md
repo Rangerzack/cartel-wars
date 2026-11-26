@@ -9,9 +9,8 @@ queries) and Apple's published requirements.
 
 ## Shortest path to the first TestFlight build
 
-1. **[done, on `staging`]** Workflow moved to `.github/workflows/ios.yml`.
-2. **[needs Zack]** Promote it to `main`. "Run workflow" only appears for workflows on the default branch. (A pushed
-   `ios-v*` tag also triggers it from any branch.)
+1. **[done]** Workflow moved to `.github/workflows/ios.yml`.
+2. **[done 2026-11-25]** Promoted to `main`, so "Run workflow" is available.
 3. **[needs Zack]** Apple setup, all in a browser (steps are in the comment at the top of `ios.yml`):
    1. Register the bundle ID `io.github.rangerzack.thugempire`.
    2. Create the app record "Thug Empire", SKU `cartel-wars`.
@@ -30,9 +29,9 @@ build", which is fine for a first TestFlight build but not for submission.
 
 | # | Blocker | Evidence it's real | Status | Evidence needed to close it |
 |---|---|---|---|---|
-| B1 | iOS workflow parked in `docs/`, so no build can run | File was at `docs/ios-workflow.yml`; repo has no `ios-v*` tags; no iOS run has ever happened | Moved on `staging`; needs promoting to `main` | First green "iOS to TestFlight" run |
-| B2 | Fights checked for 2 stamina, never took it, and the app said they cost 2 | Deployed `attack()` refused below 2 and took nothing; `fight_preview` and the Player page quoted ⚡2. SPEC called "not consumed" intended | **Decided (Zack, 2026-11-25): fights cost no stamina.** Check removed, preview says 0, app wording updated (`20261125000029_launch_fixes.sql`, `launch-test.sql`) | Live fight at 0 stamina works; Player page shows no stamina cost |
-| B3 | Sandbox (free) purchases would credit real diamonds into the live economy | `iap_apply` credited regardless of `environment`; `docs/ops.md` said so | Fixed in the same migration: sandbox credits only `iap_tester` accounts and admins | A sandbox buy on a non-tester account is recorded as ignored; one on the demo account is credited |
+| B1 | iOS workflow parked in `docs/`, so no build can run | File was at `docs/ios-workflow.yml`; repo has no `ios-v*` tags; no iOS run has ever happened | Moved and live on `main` (2026-11-25) | First green "iOS to TestFlight" run |
+| B2 | Fights checked for 2 stamina, never took it, and the app said they cost 2 | Deployed `attack()` refused below 2 and took nothing; `fight_preview` and the Player page quoted ⚡2. SPEC called "not consumed" intended | **Decided (Zack, 2026-11-25): fights cost no stamina.** Check removed, preview says 0, app wording updated (`20261125000029_launch_fixes.sql`, `launch-test.sql`). **Applied to the live database and promoted 2026-11-25** | Live fight at 0 stamina works; Player page shows no stamina cost |
+| B3 | Sandbox (free) purchases would credit real diamonds into the live economy | `iap_apply` credited regardless of `environment`; `docs/ops.md` said so | Fixed in the same migration, applied live 2026-11-25: sandbox credits only `iap_tester` accounts and admins | A sandbox buy on a non-tester account is recorded as ignored; one on the demo account is credited |
 | B4 | App Store screenshots are out of date | `docs/app-store/screenshots-6.7` last changed 2026-10-04, before the Border Night redesign and the rename | Open | New 6.7"/6.9" set from the current build, uploaded in App Store Connect |
 | B5 | Purchases not set up | No RevenueCat key in the build; the webhook secret and products are not configured (`iap_grants` is empty) | Needs Zack (see below) | A sandbox pack bought on TestFlight lands on the demo account within seconds |
 | B6 | Submission metadata incomplete | Review notes have blank demo credentials; the age rating questionnaire now has two new required questions (see below) | Open | App Store Connect shows no missing fields |
@@ -52,6 +51,16 @@ build", which is fine for a first TestFlight build but not for submission.
 | Polish branch `design-skills-pass` | One commit, CSS and copy only, CI green | Review, merge into `staging`, run the full suites and e2e, look at it on a phone |
 
 ## Done (with evidence)
+
+- **2026-11-25:** `20261125000029_launch_fixes.sql` applied to the live project by Zack in the SQL editor. A read-only check
+  afterwards confirmed:
+  - `attack()` has no stamina check, and `fight_preview` quotes 0
+  - `iap_apply` has the sandbox gate and players can't call it
+  - `drop_paused` = 1; 11 subscriptions saved in `drop_pause_backup`, 0 still active
+  - store packs are on `io.github.rangerzack.thugempire.*`
+  - main promoted (`5cef922`); CI and the Pages deploy passed
+- Note: this migration was run in the SQL editor, so it isn't recorded in `supabase_migrations.schema_migrations`.
+  Don't `supabase db push` this repo against the live project without checking what's recorded there first.
 
 - **2026-11-25:** full SQL suite (27 files, `scripts/local-db.sh test`) passes on `staging` with the launch fixes.
   New `scripts/launch-test.sql` checks four things:
