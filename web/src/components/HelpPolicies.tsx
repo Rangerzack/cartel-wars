@@ -16,7 +16,7 @@ export function HelpPolicies() {
           <div className="grow t">{label}</div><span className="chev">›</span>
         </a>
       ))}
-      <div className="bd small muted"><a href="mailto:support@rangelab.io" style={{ color: 'inherit' }}>support@rangelab.io</a></div>
+      <div className="bd small muted"><a href="mailto:Zack@apheleia.me" style={{ color: 'inherit' }}>Zack@apheleia.me</a></div>
     </Card>
   )
 }

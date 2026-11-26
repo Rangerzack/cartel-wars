@@ -30,8 +30,8 @@ report comes in, and you check the queue once a day either way.
 
 - **Discord** (instant push to your phone): in a channel only you can read, Edit Channel → Integrations → Webhooks →
   New Webhook → Copy Webhook URL. Anyone with that URL can post to the channel, so treat it as a secret.
-- **Email**: a [Resend](https://resend.com) account and API key. Verify `rangelab.io` under Domains so mail from
-  `noreply@rangelab.io` gets delivered, or set `REPORT_EMAIL_FROM` to an address on a domain you have verified.
+- **Email**: a [Resend](https://resend.com) account and API key. Verify `apheleia.me` under Domains so mail from
+  `noreply@apheleia.me` gets delivered, or set `REPORT_EMAIL_FROM` to an address on a domain you have verified.
 
 If both are set, Discord wins.
 
@@ -43,14 +43,14 @@ If both are set, Discord wins.
 | `DISCORD_WEBHOOK_URL` | The webhook URL (Discord). |
 | `RESEND_API_KEY` | The Resend API key (email). |
 | `REPORT_EMAIL_TO` | Where to send the email; separate several addresses with commas (email). |
-| `REPORT_EMAIL_FROM` | Optional sender, default `Thug Empire <noreply@rangelab.io>` (email). |
+| `REPORT_EMAIL_FROM` | Optional sender, default `Thug Empire <noreply@apheleia.me>` (email). |
 
 ```sh
 npx supabase login
 npx supabase link --project-ref bghoornhtsgzlebrbdoh
 npx supabase secrets set REPORT_SECRET=<random> DISCORD_WEBHOOK_URL=<webhook URL>
 # or, for email:
-npx supabase secrets set REPORT_SECRET=<random> RESEND_API_KEY=<key> REPORT_EMAIL_TO=zack@rangelab.io
+npx supabase secrets set REPORT_SECRET=<random> RESEND_API_KEY=<key> REPORT_EMAIL_TO=Zack@apheleia.me
 ```
 
 Or set them in the dashboard under Edge Functions → Secrets. Changing a secret doesn't need a redeploy.
