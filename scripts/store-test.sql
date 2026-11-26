@@ -16,6 +16,8 @@ insert into auth.users (id, raw_user_meta_data) values
 create function _iap(ev text, tx text, product text, who text, expires timestamptz default null, raw jsonb default '{}')
 returns jsonb language sql as $$ select iap_apply('revenuecat', ev, tx, product, who::uuid, expires, raw) $$;
 create temp table _test_store as select (select count(*) from iap_grants) as grants0;
+-- these accounts buy in the sandbox, which credits only testers (20261125000029_launch_fixes; launch-test.sql covers the rest)
+update profiles set iap_tester = true where id::text like 'ee%';
 
 -- The catalog: active packs in order, the subscription's product, no prices ------------------------------------------
 select as_user('ee111111-1111-1111-1111-111111111111');

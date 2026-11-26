@@ -164,7 +164,7 @@ WHERE THINGS ARE
 - Profile: tap your name at the top left.
 
 IN-APP PURCHASES
-Diamond packs are in the Store tab. The Daily Drop subscription is on the Daily Drop card on Home. "What can drop? See the odds" on that card lists every prize and its odds before you buy. Purchases go through Apple in-app purchase (via RevenueCat). Diamonds are spent in the game only.
+Diamond packs are in the Store tab. The Daily Drop subscription is on the Daily Drop card on Home. "What can drop? See the odds" on that card lists every prize and its odds before you buy. Purchases go through Apple in-app purchase (via RevenueCat). Diamonds are spent in the game only. Please make test purchases on the demo account above: it is set up to receive sandbox purchases, and test purchases on other accounts are recorded but not credited, so free TestFlight purchases can't reach other players.
 
 CASINO
 Hold'em, blackjack, craps, roulette and slots, played with the game's own cash. No real money can be wagered or won, and nothing in the game can be cashed out.
@@ -205,7 +205,8 @@ Contact: support@rangelab.io
      if me is null then raise exception 'No account with that email'; end if;
      update profiles set cash = 500000, bank = 2000000, diamonds = 300,
             stamina_max = 100, stamina = 100, health_max = 200, health = 200, heat = 0,
-            storage_cap = 2000, inventory_slots = 8, jail_until = null, in_hospital = false
+            storage_cap = 2000, inventory_slots = 8, jail_until = null, in_hospital = false,
+            iap_tester = true   -- sandbox purchases (App Review's) credit this account (20261125000029)
       where id = me;
      update storage set qty = case commodity when 'herb' then 800 when 'dust' then 300 else 60 end where player_id = me;
      insert into grow_houses (player_id, commodity, level, running, started_at) values (me, 'herb', 3, true, now())

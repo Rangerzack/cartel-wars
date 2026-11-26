@@ -10,9 +10,6 @@ Purchases (in-app purchases, see `docs/ops.md`), pulled in with Swift Package Ma
 
 `.github/workflows/ios.yml` runs on GitHub's macOS runner (Xcode 26). You don't need a Mac.
 
-> The workflow was written as `docs/ios-workflow.yml` because the tools that push from this machine can't write under
-> `.github/workflows/`. Move it once, then delete this note:
-> `git mv docs/ios-workflow.yml .github/workflows/ios.yml && git commit -m "iOS workflow" && git push`
 
 1. `npm ci && npm run build:ios` in `web/`: Vite build with the live Supabase URL and key (the same ones as
    `pages.yml`), then `cap sync ios`.

@@ -169,9 +169,12 @@ the phone and tells the game through a webhook. Nothing is sold on the web. Rule
 - **Retries are safe.** RevenueCat retries anything but a 2xx. `iap_grants` is unique on (provider, transaction, event),
   so a repeat answers `{"duplicate":true}` and changes nothing. Events the game doesn't use still get 200, recorded as
   `{"ignored": …}`; only a database error answers 500, so RevenueCat tries again.
-- **Sandbox counts.** TestFlight and App Review purchases are sandbox purchases: free, and the webhook credits them
-  like real ones (App Review has to see the diamonds arrive). Anyone with a TestFlight build can get free diamonds,
-  so only invite testers you trust. `raw->>'environment'` says which it was.
+- **Sandbox counts only for testers.** TestFlight and App Review purchases are sandbox purchases: Apple doesn't charge
+  for them. The webhook credits a sandbox purchase only to an account marked as a tester (or an admin); anyone else's
+  is recorded in `iap_grants` and answered `{"ignored": "sandbox purchase by a non-tester"}`, so a TestFlight build
+  can't mint diamonds into the live economy. Mark the App Review demo account and your own test accounts:
+  `select admin_set_iap_tester('<player id>', true);` (as an admin), or in the SQL editor
+  `update profiles set iap_tester = true where id = '<player id>';`. `raw->>'environment'` says which it was.
 - **Refunds.** Players ask Apple (reportaproblem.apple.com). RevenueCat reports a refund as a `CANCELLATION` with
   `cancel_reason` `CUSTOMER_SUPPORT`: a pack's diamonds come back off the balance (never below 0), a subscription ends
   at once. A plain `CANCELLATION` of the subscription is the player turning off renewal: it runs to its paid-through
