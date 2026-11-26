@@ -191,16 +191,16 @@ the phone and tells the game through a webhook. Nothing is sold on the web. Rule
 
    | Product id | Diamonds |
    |---|---|
-   | `io.rangelab.cartelwars.diamonds.100` | 100 |
-   | `io.rangelab.cartelwars.diamonds.550` | 550 |
-   | `io.rangelab.cartelwars.diamonds.1200` | 1,200 |
-   | `io.rangelab.cartelwars.diamonds.2600` | 2,600 |
-   | `io.rangelab.cartelwars.diamonds.7000` | 7,000 |
-   | `io.rangelab.cartelwars.diamonds.15000` | 15,000 |
+   | `io.github.rangerzack.thugempire.diamonds.100` | 100 |
+   | `io.github.rangerzack.thugempire.diamonds.550` | 550 |
+   | `io.github.rangerzack.thugempire.diamonds.1200` | 1,200 |
+   | `io.github.rangerzack.thugempire.diamonds.2600` | 2,600 |
+   | `io.github.rangerzack.thugempire.diamonds.7000` | 7,000 |
+   | `io.github.rangerzack.thugempire.diamonds.15000` | 15,000 |
 
    Pick the price, a display name like "1,200 Diamonds" (it's on Apple's payment sheet) and a review screenshot of
    the Store.
-3. **Subscriptions → "+"**: a group "Daily Drop", then an auto-renewable subscription `io.rangelab.cartelwars.drop.monthly`,
+3. **Subscriptions → "+"**: a group "Daily Drop", then an auto-renewable subscription `io.github.rangerzack.thugempire.drop.monthly`,
    duration 1 month, with its price and a screenshot of the Daily Drop card.
 4. **Users and Access → Integrations → In-App Purchase → "+"**: an In-App Purchase key for RevenueCat. Download the
    `.p8` (offered once).
@@ -208,7 +208,7 @@ the phone and tells the game through a webhook. Nothing is sold on the web. Rule
 
 ### 2. RevenueCat
 
-1. Create a project "Thug Empire" and add an **App Store** app: bundle id `io.rangelab.cartelwars`, the In-App
+1. Create a project "Thug Empire" and add an **App Store** app: bundle id `io.github.rangerzack.thugempire`, the In-App
    Purchase key from above (with its key id and your issuer id).
 2. The app's page shows an **Apple Server Notification URL**. Paste it into App Store Connect → Thug Empire → App
    Information → App Store Server Notifications (production and sandbox, version 2). Refunds reach RevenueCat this way.
@@ -283,7 +283,7 @@ To credit one by hand (a purchase that found no player, after checking it in Rev
 it's on the record. The `manual` provider keeps it apart from RevenueCat's own events:
 
 ```sql
-select iap_apply('manual', 'NON_RENEWING_PURCHASE', '<Apple transaction id>', 'io.rangelab.cartelwars.diamonds.550',
+select iap_apply('manual', 'NON_RENEWING_PURCHASE', '<Apple transaction id>', 'io.github.rangerzack.thugempire.diamonds.550',
                  '<player id>', null, '{"note": "credited by hand"}');
 ```
 
@@ -293,17 +293,27 @@ Packs are rows in `store_packs`; the price lives only in App Store Connect. The 
 
 ```sql
 -- a new pack: create the product in App Store Connect first, with the same id
-insert into store_packs (id, diamonds, sort) values ('io.rangelab.cartelwars.diamonds.30000', 30000, 7);
+insert into store_packs (id, diamonds, sort) values ('io.github.rangerzack.thugempire.diamonds.30000', 30000, 7);
 -- what a pack gives (purchases already made keep what they got; a refund takes back what that purchase gave)
-update store_packs set diamonds = 1300 where id = 'io.rangelab.cartelwars.diamonds.1200';
+update store_packs set diamonds = 1300 where id = 'io.github.rangerzack.thugempire.diamonds.1200';
 -- stop selling one (a purchase of it still pays out)
-update store_packs set active = false where id = 'io.rangelab.cartelwars.diamonds.15000';
+update store_packs set active = false where id = 'io.github.rangerzack.thugempire.diamonds.15000';
 ```
 
 Keep the display name in App Store Connect in step with the diamonds. In the app the Store shows only packs the App
 Store returns, so a row whose product isn't live yet stays hidden there.
 
 ## Turning the Daily Drop's paid plan on
+
+**1.0 ships with the Daily Drop paused** (`app_text` key `drop_paused` = `1`, 20261125000029_launch_fixes). To bring it
+back in 1.1, first unpause and give the players who were subscribed at the pause their plan back, then flip
+`features.dropPaused` to `false` in `web/src/lib/features.ts`:
+
+```sql
+delete from app_text where key = 'drop_paused';
+update profiles p set drop_since = b.drop_since, drop_day = null
+  from drop_pause_backup b where b.player_id = p.id and p.drop_since is null;
+```
 
 `drop_free` is a constant in `_cfg`, so it changes with a migration. `docs/drop-paid.sql` is that migration, written
 and waiting: copy it to `supabase/migrations/` under the next free number (check first that no later migration has

@@ -42,7 +42,7 @@ const one = async (sql, args = []) => (await db.query(sql, args)).rows[0]
 const iap = (event, tx, product, player, days = null, raw = {}) => one(
   `select iap_apply('revenuecat', $1, $2, $3, $4, case when $5::int is null then null else now() + make_interval(days => $5::int) end, $6) as r`,
   [event, tx, product, player, days, raw])
-const PACK = 'io.rangelab.cartelwars.diamonds.550', DROP = 'io.rangelab.cartelwars.drop.monthly'
+const PACK = 'io.github.rangerzack.thugempire.diamonds.550', DROP = 'io.github.rangerzack.thugempire.drop.monthly'
 
 try {
   const b = await newPlayer(N('Recv'))

@@ -27,7 +27,7 @@ const post = (body, auth = 'Bearer rc-secret') => handler(new Request('http://x/
   body: typeof body === 'string' ? body : JSON.stringify(body),
 }))
 const event = (e) => ({ api_version: '1.0', event: { id: 'evt-1', app_user_id: USER, environment: 'SANDBOX', ...e } })
-const pack = event({ type: 'NON_RENEWING_PURCHASE', product_id: 'io.rangelab.cartelwars.diamonds.100', transaction_id: '2000000123', expiration_at_ms: null })
+const pack = event({ type: 'NON_RENEWING_PURCHASE', product_id: 'io.github.rangerzack.thugempire.diamonds.100', transaction_id: '2000000123', expiration_at_ms: null })
 
 // Locked until the secret is set, and then only with it
 let r = await post(pack)
@@ -53,13 +53,13 @@ assert.equal(c.url, 'https://example.supabase.co')
 assert.equal(c.key, 'service-key')
 assert.deepEqual(c.args, {
   provider: 'revenuecat', event: 'NON_RENEWING_PURCHASE', transaction_id: '2000000123',
-  product_id: 'io.rangelab.cartelwars.diamonds.100', player: USER, expires_at: null, raw: pack.event,
+  product_id: 'io.github.rangerzack.thugempire.diamonds.100', player: USER, expires_at: null, raw: pack.event,
 })
 
 // The subscription: the expiry becomes a timestamp; a refund keeps its cancel_reason in raw for iap_apply
-await post(event({ type: 'RENEWAL', product_id: 'io.rangelab.cartelwars.drop.monthly', transaction_id: '2000000456', expiration_at_ms: Date.UTC(2026, 10, 1, 12) }))
+await post(event({ type: 'RENEWAL', product_id: 'io.github.rangerzack.thugempire.drop.monthly', transaction_id: '2000000456', expiration_at_ms: Date.UTC(2026, 10, 1, 12) }))
 assert.equal(calls.at(-1).args.expires_at, '2026-11-01T12:00:00.000Z')
-const refund = event({ type: 'CANCELLATION', product_id: 'io.rangelab.cartelwars.drop.monthly', transaction_id: '2000000456', cancel_reason: 'CUSTOMER_SUPPORT' })
+const refund = event({ type: 'CANCELLATION', product_id: 'io.github.rangerzack.thugempire.drop.monthly', transaction_id: '2000000456', cancel_reason: 'CUSTOMER_SUPPORT' })
 await post(refund)
 assert.equal(calls.at(-1).args.event, 'CANCELLATION')
 assert.equal(calls.at(-1).args.raw.cancel_reason, 'CUSTOMER_SUPPORT')
@@ -72,7 +72,7 @@ assert.equal(c.args.player, null)
 
 // Something we don't use is still a 200, or RevenueCat keeps retrying it
 reply = { data: { ignored: 'unknown product' }, error: null }
-r = await post(event({ type: 'NON_RENEWING_PURCHASE', product_id: 'io.rangelab.cartelwars.gold', transaction_id: '2000000789' }))
+r = await post(event({ type: 'NON_RENEWING_PURCHASE', product_id: 'io.github.rangerzack.thugempire.gold', transaction_id: '2000000789' }))
 assert.equal(r.status, 200)
 assert.deepEqual(await r.json(), { ignored: 'unknown product' })
 

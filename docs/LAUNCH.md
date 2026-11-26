@@ -13,7 +13,7 @@ queries) and Apple's published requirements.
 2. **[needs Zack]** Promote it to `main`. "Run workflow" only appears for workflows on the default branch. (A pushed
    `ios-v*` tag also triggers it from any branch.)
 3. **[needs Zack]** Apple setup, all in a browser (steps are in the comment at the top of `ios.yml`):
-   1. Register the bundle ID `io.rangelab.cartelwars`.
+   1. Register the bundle ID `io.github.rangerzack.thugempire`.
    2. Create the app record "Thug Empire", SKU `cartel-wars`.
    3. Create an App Store Connect API key (Admin access).
 4. **[needs Zack]** Create the private `Rangerzack/cartel-wars-certs` repo and a fine-grained token for it.
@@ -31,8 +31,8 @@ build", which is fine for a first TestFlight build but not for submission.
 | # | Blocker | Evidence it's real | Status | Evidence needed to close it |
 |---|---|---|---|---|
 | B1 | iOS workflow parked in `docs/`, so no build can run | File was at `docs/ios-workflow.yml`; repo has no `ios-v*` tags; no iOS run has ever happened | Moved on `staging`; needs promoting to `main` | First green "iOS to TestFlight" run |
-| B2 | Player and thug fights cost no stamina | Deployed `attack()` checks `stamina < 2` but never subtracts (function source identical to `20261002000001_combos_jail.sql`). `fight_preview` tells players a fight "costs ⚡2" | Fixed in `20261125000029_launch_fixes.sql`, tested (`scripts/launch-test.sql`) and race-checked locally. **Not applied to the live database yet** | Migration applied; a live fight drops stamina by 2 |
-| B3 | Sandbox (free) purchases would credit real diamonds into the live economy | `iap_apply` credited regardless of `environment`; `docs/ops.md` said so | Fixed in the same migration: sandbox credits only `iap_tester` accounts and admins. Store tests updated | Migration applied; a sandbox buy on a non-tester account is recorded as ignored, and one on the demo account is credited |
+| B2 | Fights checked for 2 stamina, never took it, and the app said they cost 2 | Deployed `attack()` refused below 2 and took nothing; `fight_preview` and the Player page quoted ⚡2. SPEC called "not consumed" intended | **Decided (Zack, 2026-11-25): fights cost no stamina.** Check removed, preview says 0, app wording updated (`20261125000029_launch_fixes.sql`, `launch-test.sql`) | Live fight at 0 stamina works; Player page shows no stamina cost |
+| B3 | Sandbox (free) purchases would credit real diamonds into the live economy | `iap_apply` credited regardless of `environment`; `docs/ops.md` said so | Fixed in the same migration: sandbox credits only `iap_tester` accounts and admins | A sandbox buy on a non-tester account is recorded as ignored; one on the demo account is credited |
 | B4 | App Store screenshots are out of date | `docs/app-store/screenshots-6.7` last changed 2026-10-04, before the Border Night redesign and the rename | Open | New 6.7"/6.9" set from the current build, uploaded in App Store Connect |
 | B5 | Purchases not set up | No RevenueCat key in the build; the webhook secret and products are not configured (`iap_grants` is empty) | Needs Zack (see below) | A sandbox pack bought on TestFlight lands on the demo account within seconds |
 | B6 | Submission metadata incomplete | Review notes have blank demo credentials; the age rating questionnaire now has two new required questions (see below) | Open | App Store Connect shows no missing fields |
@@ -83,20 +83,28 @@ Never paste keys, passwords or tokens into a chat. Each one goes straight into t
 - **Supabase:**
   - Set `REVENUECAT_WEBHOOK_AUTH` (Dashboard → Edge Functions → Secrets).
   - Deploy `iap-webhook` with `--no-verify-jwt`.
-- **App Store Connect products:** the consumable diamond packs from `store_packs` (and the subscription, if decision
-  D3 says so).
+- **App Store Connect products:** the six consumable diamond packs from `store_packs` (ids above). No subscription in 1.0.
 - **Demo account:** create `appreview@rangelab.io` and run the seed in `docs/app-store/listing.md`. Fill the
   credentials into App Store Connect → App Review Information. Never put them in the repo.
 
-## Needs Zack: decisions
+## Decisions
 
-| # | Decision | Recommendation |
+| # | Decision | Outcome |
 |---|---|---|
-| D1 | Apply `20261125000029_launch_fixes.sql` to the live database (shared by live and staging) | **Yes.** All 294 players' fights start costing the 2 stamina the game already quotes, effective immediately. The sandbox gate changes nothing today because no purchases exist. Rollback: re-run the old `attack()` and `iap_apply()` (named in the migration header) |
-| D2 | Bundle ID: keep `io.rangelab.cartelwars` or switch to e.g. `io.rangelab.thugempire` before the first upload | **Keep.** Players never see it. It becomes permanent at the first upload, so this is the last free moment to change it, and renaming means editing `capacitor.config.ts`, the Xcode project, `Appfile` and `Matchfile` |
-| D3 | Ship the Daily Drop subscription in 1.0, or launch with diamond packs only and keep the Drop free | **Packs only for 1.0.** A paid Drop needs subscription review (3.1.2), a delivery model that doesn't lose paid days (crates stack to 7, then a day is lost), and the paid random-prize disclosures. Keeping it free keeps every player's current benefit. Ship it in 1.1 |
-| D4 | Sandbox purchases: credit testers only (built), or also brand-new accounts so App Review can buy on an account it makes itself | **Testers only**, with review notes pointing App Review to the demo account. Crediting new accounts lets any TestFlight tester mint diamonds |
-| D5 | Age rating answers | Frequent simulated gambling → 18+ (already the plan). Also answer the two descriptors Apple added on 2026-11-16, required by 2027-01-12: Shared Location **No**, Dating and Relationships **No** |
+| D1 | Fight stamina | **Zero** (Zack, 2026-11-25). Fights against players and thugs cost no stamina. Crew fights, turf wars and Personal Hood fights keep their costs |
+| D2 | Bundle ID | **`io.github.rangerzack.thugempire`** (Zack, 2026-11-25: private project, no Range Lab). Product ids follow it: `io.github.rangerzack.thugempire.diamonds.100` … `.15000`. Permanent after the first upload |
+| D3 | Daily Drop in 1.0 | **Paused until 1.1** (Zack, 2026-11-25). Nobody can subscribe; the free subscriptions running at the pause stopped and are saved in `drop_pause_backup`; crates and credits already earned still work. 1.0 sells diamond packs only, so don't create the subscription product in App Store Connect yet |
+| D4 | Sandbox purchases | **Testers only** (recommended; built). App Review buys on the demo account |
+| D5 | Age rating answers | Frequent simulated gambling → 18+. The two descriptors Apple added on 2026-11-16 (required by 2027-01-12): Shared Location **No**, Dating and Relationships **No** |
+
+## Open questions for Zack
+
+- **Legal pages and support email still say Range Lab.** `web/public/privacy.html`, `terms.html`, `support.html` and
+  `HelpPolicies.tsx` name Range Lab as the operator and `support@rangelab.io` as the contact. For a private project
+  these need your name (or a trade name) and an email you'll answer. App Store Connect's Support URL and the privacy
+  policy must match what's in them.
+- **Apple Developer account type.** A private project ships under your individual account; the seller name on the
+  store is then your legal name.
 
 ## Device checks (TestFlight, Zack's iPhone)
 
@@ -107,4 +115,5 @@ Not automatable from here; tick each when done:
 - [ ] Background the app, then resume; airplane mode mid-action ("Can't reach the city", then recovery)
 - [ ] Marcus campaign on a fresh account: tabs unlock in order
 - [ ] Buy a pack on the demo account (credited), and on a non-tester account (not credited, shown as "on its way")
-- [ ] Restore purchases; delete account from Profile; reinstall and sign in
+- [ ] Delete account from Profile; reinstall and sign in
+- [ ] Daily Drop card says paused; a player with crates left can still open them

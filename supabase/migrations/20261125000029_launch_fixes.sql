@@ -1,14 +1,18 @@
--- Launch fixes, part 1 (docs/LAUNCH.md).
+-- Launch fixes (docs/LAUNCH.md), Zack's calls of 2026-11-25.
 --
--- 1. attack(): fights against players and thugs now take the 2 stamina that fight_preview has always quoted. The
---    function checked for 2 and never took them, so fights were free (playtest note: "can grind out millions on an
---    empty energy bar"). Crew fights, turf wars and hood fights already charged; this brings attack() in line.
--- 2. iap_apply(): sandbox purchases (TestFlight and App Review, which Apple doesn't charge for) credit only accounts
---    marked iap_tester, and admins. Anyone else's sandbox purchase is still recorded in iap_grants, and ignored.
---    admin_set_iap_tester(player, enabled) marks an account; mark the App Review demo account before submitting.
+-- 1. Fights cost no stamina. attack() checked for 2 stamina and never took them; now it doesn't check either, and
+--    fight_preview quotes 0. (Crew fights, turf wars and Personal Hood fights keep their own stamina costs.)
+-- 2. Sandbox purchases (TestFlight and App Review, which Apple doesn't charge for) credit only accounts marked
+--    iap_tester, and admins. Anyone else's is recorded in iap_grants and ignored. admin_set_iap_tester(player, enabled)
+--    marks an account; mark the App Review demo account before submitting.
+-- 3. The Daily Drop is paused until 1.1. Nobody can subscribe, and the free subscriptions running now stop (their rows
+--    are kept in drop_pause_backup so 1.1 can put them back). Unopened crates and free credits stay and still open.
+--    Resume: delete from app_text where key = 'drop_paused'; then restore drop_since from drop_pause_backup.
+-- 4. Store product ids move off the old bundle id to io.github.rangerzack.thugempire.* (the bundle id is now io.github.rangerzack.thugempire). No purchase has ever been
+--    made (iap_grants was empty), so nothing refers to the old ids.
 --
--- Rollback: re-run attack() from 20261002000001_combos_jail.sql and iap_apply() from 20261004000012_store.sql.
--- The new column and function are harmless to leave in place.
+-- Rollback: re-run attack() from 20261002000001_combos_jail.sql, fight_preview() from 20261004000003_heat_upgrade.sql, iap_apply() from
+-- 20261004000012_store.sql and subscribe_drop() from 20261001000001_daily_drop.sql; unpause as above.
 
 alter table profiles add column if not exists iap_tester boolean not null default false;
 
@@ -26,7 +30,7 @@ begin
 
   if _hospital(me) then perform _fail('You are in the hospital'); end if;
   if _hospital(them) then perform _fail('That player is in the hospital'); end if;
-  if me.stamina < 2 then perform _fail('You need at least 2 stamina to fight'); end if;
+  -- fights cost no stamina (Zack, 2026-11-25): no stamina check, nothing taken
   perform _jail_check(me, them);
   if them.immune_until > now() then perform _fail('That player has new-player immunity'); end if;
   if me.immune_until > now() then me.immune_until := now(); end if;   -- attacking forfeits your own immunity
@@ -55,11 +59,10 @@ begin
   end if;
   them.health := greatest(0, them.health - dmg_a);
   me.health   := greatest(0, me.health - dmg_d);
-  me.stamina := me.stamina - 2;                       -- the 2 stamina fight_preview quotes (was checked, never taken)
   me.heat := least(me.heat_max, me.heat + 4);
   me := _bust_roll(me);
 
-  update profiles set stamina = me.stamina, cash = me.cash, health = me.health, heat = me.heat, jail_until = me.jail_until,
+  update profiles set cash = me.cash, health = me.health, heat = me.heat, jail_until = me.jail_until,
          fights_won = me.fights_won, fights_lost = me.fights_lost, immune_until = me.immune_until where id = u;
   update profiles set cash = them.cash, health = them.health, fights_won = them.fights_won, fights_lost = them.fights_lost where id = target;
 
@@ -69,7 +72,7 @@ begin
   returning * into f;
   if win then perform _event(u, 'fight_win'); else perform _event(target, 'defense'); end if;
   perform _award_milestones(u);
-  return jsonb_build_object('won', win, 'stamina', me.stamina, 'damage_dealt', dmg_a, 'damage_taken', dmg_d, 'cash', taken, 'dry', recent >= 3,
+  return jsonb_build_object('won', win, 'damage_dealt', dmg_a, 'damage_taken', dmg_d, 'cash', taken, 'dry', recent >= 3,
                             'their_health', them.health, 'my_health', me.health,
                             'hospitalized_them', them.health <= 19, 'hospitalized_me', me.health <= 19,
                             'busted', _jailed(me) and fs.sa <> 'jail',
@@ -80,6 +83,63 @@ begin
                             'my_combo', fs.a_code, 'their_combo', fs.d_code,
                             'my_combo_bonus', ca, 'their_combo_bonus', cd,
                             'my_combo_max', fs.a_max, 'their_combo_max', fs.d_max);
+end $$;
+
+create or replace function fight_preview(target uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid(); me profiles; them profiles; fs record; recent int; heat_after int; red int;
+        counter numeric := _cfg('counter_pct') / 100.0; wins bigint; n bigint; dmin int; dmax int;
+        known boolean; seen_combo text; seen_at timestamptz; their text; amax int; dmx int;
+begin
+  perform _nn(target, 'target');
+  if target = u then perform _fail('You cannot attack yourself'); end if;
+  if not exists (select 1 from profiles where id = target) then perform _fail('No such player'); end if;
+  -- tick both (heat and cash feed the edges), locking in id order like attack()
+  if u < target then me := _tick(u); them := _tick(target); else them := _tick(target); me := _tick(u); end if;
+  perform _jail_check(me, them);
+  select * into fs from _fight_setup(me, them);
+  -- Whether they run a combo shows (you can see they're kitted out); which one doesn't, unless they're a thug
+  -- or you've hit them before — then it's what they ran that time, which may have changed since.
+  if them.is_bot or fs.d_code is null then
+    known := true; their := fs.d_code;
+  else
+    select f.defender_combo, f.created_at into seen_combo, seen_at
+      from fights f where f.attacker_id = u and f.defender_id = target and f.combos_logged and f.defender_combo is not null
+     order by f.id desc limit 1;
+    known := seen_combo is not null; their := seen_combo;
+  end if;
+  if known then
+    amax := _combo_max(fs.a_code, their); dmx := _combo_max(their, fs.a_code);
+  else
+    amax := _combo_max(fs.a_code, null); dmx := _cfg('combo_neutral')::int;   -- neither counters, as far as you know
+  end if;
+  select count(*) filter (where x.sa > x.sd), count(*),
+         min(least(80, round(case when x.sa > x.sd then counter * x.sd else x.sd end))::int),
+         max(least(80, round(case when x.sa > x.sd then counter * x.sd else x.sd end))::int)
+    into wins, n, dmin, dmax
+    from (select fs.base_a + least(10, ra + fs.edge_a) + ca as sa, fs.base_d + least(10, rd + fs.edge_d) + cd as sd
+            from generate_series(0, 6) ra, generate_series(0, 6) rd,
+                 generate_series(0, amax) ca, generate_series(0, dmx) cd) x;
+  select count(*) into recent from fights where attacker_id = u and defender_id = target and created_at > now() - interval '1 hour';
+  heat_after := least(me.heat_max, me.heat + 4);
+  red := _heat_red(me);                       -- this attacker's red line (heat upgrades move it up)
+  return jsonb_build_object(
+    'win_pct', round(100.0 * wins / n)::int,
+    'win_exact', round(100.0 * wins / n, 1),
+    'dmg_min', dmin, 'dmg_max', dmax,
+    'my_health', me.health, 'hospital_risk', me.health - dmax <= 19,
+    'dry', recent >= 3, 'hits_this_hour', recent,
+    'stamina_cost', 0, 'heat_gain', 4,
+    'bust_pct', case when _jailed(me) or heat_after < red then 0 else round(100.0 * (heat_after - red + 1) / 40)::int end,
+    'setup', fs.sa, 'their_setup', fs.sd,
+    'edges', fs.edges, 'edge_you', fs.edge_a, 'edge_them', fs.edge_d,
+    'base_you', round(fs.base_a, 1), 'base_them', round(fs.base_d, 1),
+    'combo_you', fs.a_code is not null, 'combo_them', dmx > 0,
+    'my_combo', fs.a_code, 'their_combo', their, 'their_combo_known', known, 'their_combo_seen_at', seen_at,
+    'their_has_combo', fs.d_code is not null,
+    'my_combo_max', amax, 'their_combo_max', dmx,
+    'my_att', round(fs.a_att)::int, 'my_def', round(fs.a_def)::int,
+    'their_att', round(fs.d_att)::int, 'their_def', round(fs.d_def)::int);
 end $$;
 
 create or replace function iap_apply(provider text, event text, transaction_id text, product_id text, player uuid,
@@ -167,13 +227,46 @@ begin
   return jsonb_build_object('player', player, 'iap_tester', coalesce(enabled, false));
 end $$;
 
+-- the Daily Drop pause
+create table if not exists drop_pause_backup (
+  player_id  uuid primary key references profiles(id) on delete cascade,
+  drop_since timestamptz not null,
+  drop_until timestamptz,
+  paused_at  timestamptz not null default now()
+);
+alter table drop_pause_backup enable row level security;
+revoke all on drop_pause_backup from anon, authenticated;
+insert into app_text (key, value) values ('drop_paused', '1') on conflict (key) do update set value = excluded.value;
+insert into drop_pause_backup (player_id, drop_since, drop_until)
+  select id, drop_since, drop_until from profiles where drop_since is not null and (drop_until is null or drop_until > now())
+  on conflict (player_id) do nothing;
+update profiles set drop_since = null, drop_until = null
+ where drop_since is not null and (drop_until is null or drop_until > now());
+
+create or replace function subscribe_drop() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u uuid := _uid(); pr profiles;
+begin
+  if _cfg_text('drop_paused') = '1' then perform _fail('The Daily Drop is paused until the next update'); end if;
+  pr := _tick(u);
+  if _drop_active(pr) then perform _fail('You''re already subscribed'); end if;
+  -- The paid plan hooks in here: once drop_free is 0, subscriptions only start from the payment webhook.
+  if _cfg('drop_free') = 0 then perform _fail('Subscribe through the store'); end if;
+  pr := _drop_subscribe(u, null);
+  return jsonb_build_object('crates', pr.drop_crates, 'since', pr.drop_since);
+end $$;
+
+-- product ids on the new bundle id
+update store_packs set id = replace(id, 'io.rangelab.cartelwars.', 'io.github.rangerzack.thugempire.') where id like 'io.rangelab.cartelwars.%';
+update app_text set value = replace(value, 'io.rangelab.cartelwars.', 'io.github.rangerzack.thugempire.') where key = 'store_drop_product';
+
 do $$ declare f record; begin
   for f in select p.oid::regprocedure::text as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.proname in ('iap_apply') loop
     execute format('revoke all on function %s from public, anon, authenticated', f.sig);
   end loop;
   for f in select p.oid::regprocedure::text as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.proname in ('attack', 'admin_set_iap_tester') loop
+           where n.nspname = 'public' and p.proname in ('attack', 'fight_preview', 'subscribe_drop', 'admin_set_iap_tester') loop
     execute format('revoke all on function %s from public, anon', f.sig);
     execute format('grant execute on function %s to authenticated', f.sig);
   end loop;

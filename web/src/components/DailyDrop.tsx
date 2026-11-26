@@ -12,6 +12,7 @@ import { Btn, Card, RowLink } from './ui'
 import { useCrateOpener } from './CrateOpener'
 import { errorText } from '../lib/errors'
 import { Glyph, Icon } from './Icon'
+import { features } from '../lib/features'
 
 // 70 of 1,000 → "7%", 5 of 1,000 → "0.5%" (rounded to a tenth, no float noise)
 const pct = (weight: number, total: number) => `${Math.round((weight / total) * 1000) / 10}%`
@@ -56,6 +57,33 @@ export function DailyDrop({ compact = false }: { compact?: boolean }) {
   const full = d.crates >= d.max
   const credits = (me.free_refills ?? 0) > 0 || (me.free_hustlers ?? 0) > 0
   const pitch = !d.subscribed && !compact
+  // Paused until 1.1: no pitch, odds or Subscribe; a player with crates or credits left can still use them.
+  if (features.dropPaused && !d.subscribed) {
+    if (d.crates === 0 && !credits) {
+      return compact ? null : (
+        <Card id="drop" title={<><Icon name="gift" size={18} />Daily Drop</>} className="drop-card">
+          <div className="bd small muted">The Daily Drop is paused until the next update.</div>
+        </Card>
+      )
+    }
+    return (
+      <>
+        <Card id="drop" title={<><Icon name="gift" size={18} />Daily Drop</>} className={`drop-card${d.crates > 0 ? ' has-crates' : ''}`}>
+          <div className="bd stack">
+            {d.crates > 0 && <Btn className="doit block" onClick={crate.open}>Open Crate{d.crates > 1 ? ` · ${d.crates} waiting` : ''}</Btn>}
+            <div className="small muted">The Daily Drop is paused until the next update. Crates and credits you already have are still yours.</div>
+            {credits && (
+              <div className="hstack drop-credits">
+                {(me.free_refills ?? 0) > 0 && <button className="btn sm ghost" onClick={() => nav('/services?focus=refills')}><Icon name="bolt" size={14} className="gold" /> {me.free_refills} Free Refill{me.free_refills === 1 ? '' : 's'} ›</button>}
+                {(me.free_hustlers ?? 0) > 0 && me.path !== 'producer' && <button className="btn sm ghost" onClick={() => nav('/economy?tab=hustlers')}><Icon name="walk" size={14} /> {num(me.free_hustlers)} Free Hustler{me.free_hustlers === 1 ? '' : 's'} ›</button>}
+              </div>
+            )}
+          </div>
+        </Card>
+        {crate.sheet}
+      </>
+    )
+  }
   if (compact && !d.subscribed && d.crates === 0 && !credits) {
     return (
       <Card id="drop" className="drop-card">

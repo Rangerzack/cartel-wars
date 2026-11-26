@@ -36,7 +36,7 @@ The comment at the top of `ios.yml` has the step-by-step version. In short:
 | `MATCH_GIT_AUTH` | Access to that repo | A fine-grained token for that repo only (Contents: Read and write), stored as base64 of `username:token` |
 | `MATCH_PASSWORD` | Encrypts the files in that repo | A passphrase you make up. Keep a copy. |
 
-Before the first run, register the bundle ID `io.rangelab.cartelwars` (developer.apple.com → Identifiers)
+Before the first run, register the bundle ID `io.github.rangerzack.thugempire` (developer.apple.com → Identifiers)
 and create the app in App Store Connect (Apps → "+" → New App). The API key can't create the app record.
 
 ## Versions

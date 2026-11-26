@@ -3,6 +3,8 @@
 -- Run after the other suites (reuses their helpers): scripts/local-db.sh test
 \set ON_ERROR_STOP on
 \set QUIET on
+-- these tests run the Daily Drop unpaused; launch-test.sql puts the 1.0 pause back and tests it
+delete from app_text where key = 'drop_paused';
 
 insert into auth.users (id, raw_user_meta_data) values
   ('c2222222-2222-2222-2222-222222222222', '{"name":"Francesca"}'),

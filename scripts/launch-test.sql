@@ -1,6 +1,6 @@
--- Tests for the launch fixes (20261125000029_launch_fixes, docs/LAUNCH.md): attack() takes the 2 stamina it quotes,
--- refuses below 2 and allows exactly 2; sandbox purchases credit only
--- testers and admins (production purchases credit anyone); only admins can mark a tester.
+-- Tests for the launch fixes (20261125000029_launch_fixes, docs/LAUNCH.md): fights cost no stamina; sandbox purchases
+-- credit only testers and admins (production purchases credit anyone); only admins can mark a tester; the Daily Drop
+-- is paused (no subscribing, crates already left still open); store products are on the new bundle id.
 -- Run after the other suites (reuses their helpers): scripts/local-db.sh test
 \set ON_ERROR_STOP on
 \set QUIET on
@@ -15,27 +15,17 @@ update profiles set health = health_max, in_hospital = false, jail_until = null,
        stamina_tick = now(), cash = 100000
  where id::text like '1a000000-0029-%';
 
--- attack() takes 2 stamina, at exactly 2 too, and refuses at 1 ----------------------------------------------------------
+-- Fights cost no stamina: a fight on 0 stamina goes through and takes nothing ----------------------------------------------
 select as_user('1a000000-0029-4000-8000-000000000001');
-do $$ declare me uuid := '1a000000-0029-4000-8000-000000000001'; them uuid := '1a000000-0029-4000-8000-000000000002';
-             r jsonb; before int; begin
-  update profiles set stamina = 10 where id = me;
-  r := attack(them);
-  assert (select stamina from profiles where id = me) = 8, 'a fight takes 2 stamina';
-  assert (r->>'stamina')::int = 8, 'the result reports the stamina left: ' || r::text;
-  -- exactly 2 is enough
-  update profiles set stamina = 2, health = health_max, in_hospital = false, jail_until = null, heat = 0 where id in (me, them);
+do $$ declare me uuid := '1a000000-0029-4000-8000-000000000001'; them uuid := '1a000000-0029-4000-8000-000000000002'; begin
+  update profiles set stamina = 0, stamina_tick = now() where id = me;
+  perform attack(them);
+  assert (select stamina from profiles where id = me) = 0, 'a fight takes no stamina';
+  update profiles set stamina = 7, stamina_tick = now(), health = health_max, in_hospital = false, jail_until = null, heat = 0 where id = me;
   update profiles set health = health_max, in_hospital = false where id = them;
-  r := attack(them);
-  assert (select stamina from profiles where id = me) = 0, 'exactly 2 stamina fights, leaving 0';
-  -- 1 is not
-  update profiles set stamina = 1, health = health_max, in_hospital = false, jail_until = null, heat = 0 where id = me;
-  update profiles set health = health_max, in_hospital = false where id = them;
-  perform expect_error(format('select attack(%L)', them), 'at least 2 stamina');
-  assert (select stamina from profiles where id = me) = 1, 'a refused fight takes nothing';
-  -- the preview still quotes what the fight takes
-  update profiles set stamina = 10 where id = me;
-  assert (fight_preview(them)->>'stamina_cost')::int = 2;
+  perform attack(them);
+  assert (select stamina from profiles where id = me) = 7, 'still nothing at 7';
+  assert (fight_preview(them)->>'stamina_cost')::int = 0, 'the preview quotes 0';
 end $$;
 
 -- Sandbox purchases credit testers and admins only; production credits anyone ---------------------------------------------
@@ -44,21 +34,21 @@ do $$ declare buyer uuid := '1a000000-0029-4000-8000-000000000003'; tester uuid 
   update profiles set iap_tester = true where id = tester;
   update profiles set is_admin = true where id = adm;
   select diamonds into d0 from profiles where id = buyer;
-  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-1', 'io.rangelab.cartelwars.diamonds.100', buyer, null, '{"environment": "SANDBOX"}');
+  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-1', 'io.github.rangerzack.thugempire.diamonds.100', buyer, null, '{"environment": "SANDBOX"}');
   assert r->>'ignored' = 'sandbox purchase by a non-tester', r::text;
   assert (select diamonds from profiles where id = buyer) = d0, 'no diamonds from a non-tester sandbox buy';
   assert exists (select 1 from iap_grants where transaction_id = 'lx-sb-1' and player_id = buyer), 'still on the record';
   -- a retry of the same event is a duplicate, not a second chance
-  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-1', 'io.rangelab.cartelwars.diamonds.100', buyer, null, '{"environment": "SANDBOX"}');
+  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-1', 'io.github.rangerzack.thugempire.diamonds.100', buyer, null, '{"environment": "SANDBOX"}');
   assert (r->>'duplicate')::boolean, r::text;
   -- a real purchase credits anyone
-  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-pr-1', 'io.rangelab.cartelwars.diamonds.100', buyer, null, '{"environment": "PRODUCTION"}');
+  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-pr-1', 'io.github.rangerzack.thugempire.diamonds.100', buyer, null, '{"environment": "PRODUCTION"}');
   assert (r->>'credited')::int = 100, r::text;
   assert (select diamonds from profiles where id = buyer) = d0 + 100;
   -- testers and admins get sandbox credit (App Review's demo account is marked as a tester)
-  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-2', 'io.rangelab.cartelwars.diamonds.100', tester, null, '{"environment": "sandbox"}');
+  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-2', 'io.github.rangerzack.thugempire.diamonds.100', tester, null, '{"environment": "sandbox"}');
   assert (r->>'credited')::int = 100, r::text;
-  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-3', 'io.rangelab.cartelwars.diamonds.100', adm, null, '{"environment": "SANDBOX"}');
+  r := iap_apply('revenuecat', 'NON_RENEWING_PURCHASE', 'lx-sb-3', 'io.github.rangerzack.thugempire.diamonds.100', adm, null, '{"environment": "SANDBOX"}');
   assert (r->>'credited')::int = 100, r::text;
 end $$;
 
@@ -72,6 +62,18 @@ do $$ begin
   assert (select iap_tester from profiles where id = '1a000000-0029-4000-8000-000000000003');
   perform admin_set_iap_tester('1a000000-0029-4000-8000-000000000003', false);
   assert not (select iap_tester from profiles where id = '1a000000-0029-4000-8000-000000000003');
+end $$;
+
+-- The Daily Drop is paused for 1.0: no subscribing, but crates already left open --------------------------------------------
+insert into app_text (key, value) values ('drop_paused', '1') on conflict (key) do update set value = '1';
+select as_user('1a000000-0029-4000-8000-000000000003');
+select expect_error('select subscribe_drop()', 'paused until the next update');
+do $$ declare u uuid := '1a000000-0029-4000-8000-000000000003'; r jsonb; begin
+  update profiles set drop_since = null, drop_until = null, drop_crates = 2 where id = u;
+  r := open_crate();
+  assert (select drop_crates from profiles where id = u) = 1, 'a crate already left still opens: ' || r::text;
+  assert (select count(*) from store_packs where id not like 'io.github.rangerzack.thugempire.diamonds.%') = 0, 'packs on the new bundle id';
+  assert _cfg_text('store_drop_product') = 'io.github.rangerzack.thugempire.drop.monthly';
 end $$;
 
 select '  LAUNCH TEST PASSED';

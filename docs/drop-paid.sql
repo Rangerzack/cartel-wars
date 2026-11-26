@@ -1,5 +1,5 @@
 -- Turning the Daily Drop's paid plan on (#16). NOT applied yet: copy this file to supabase/migrations/2026100400000N_drop_paid.sql
--- (next free N) and ship it on the day the io.rangelab.cartelwars.drop.monthly subscription is approved and live in App
+-- (next free N) and ship it on the day the io.github.rangerzack.thugempire.drop.monthly subscription is approved and live in App
 -- Store Connect. It is the newest _cfg (20261004000016_drug_refills.sql) with drop_free set to 0: from then on
 -- subscribe_drop refuses ("Subscribe through the store"), the app's Subscribe button is the App Store purchase and the
 -- web says it's an iPhone subscription. Players already on the free plan keep it, open-ended, until they cancel; to end
